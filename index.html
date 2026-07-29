@@ -1,0 +1,488 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1a6b54">
+<title>Glucides Nets — Calculateur pour pompe à insuline</title>
+<style>
+  :root {
+    --bg: #f4f7f6;
+    --card: #ffffff;
+    --text: #1c2b27;
+    --muted: #5f7370;
+    --accent: #1a6b54;
+    --accent-light: #e3f1ec;
+    --danger: #b3402e;
+    --border: #dde6e3;
+    --radius: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #101715;
+      --card: #1a2320;
+      --text: #e8efec;
+      --muted: #93a5a0;
+      --accent: #4dbd97;
+      --accent-light: #1f342d;
+      --border: #2c3a35;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 140px;
+  }
+  header {
+    background: var(--accent);
+    color: #fff;
+    padding: 18px 16px 14px;
+    text-align: center;
+  }
+  header h1 { font-size: 1.25rem; font-weight: 700; }
+  header p { font-size: 0.8rem; opacity: 0.9; margin-top: 2px; }
+
+  main { max-width: 560px; margin: 0 auto; padding: 16px; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+  .card h2 { font-size: 1rem; margin-bottom: 12px; }
+
+  label { display: block; font-size: 0.82rem; color: var(--muted); margin-bottom: 4px; font-weight: 600; }
+  input[type="text"], input[type="number"], select {
+    width: 100%;
+    padding: 12px;
+    font-size: 1.05rem;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--bg);
+    color: var(--text);
+    -moz-appearance: textfield;
+  }
+  input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; }
+  input:focus, select:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
+
+  .row { display: flex; gap: 10px; margin-bottom: 12px; }
+  .row > div { flex: 1; }
+
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 14px;
+    font-size: 1.05rem;
+    font-weight: 700;
+    border: none;
+    border-radius: 10px;
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+  }
+  .btn:active { opacity: 0.85; }
+  .btn-secondary {
+    background: var(--accent-light);
+    color: var(--accent);
+  }
+  .btn-small {
+    width: auto;
+    padding: 8px 14px;
+    font-size: 0.85rem;
+  }
+
+  /* Liste des aliments du repas */
+  .food-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .food-item:last-child { border-bottom: none; }
+  .food-item .info { flex: 1; min-width: 0; }
+  .food-item .name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .food-item .detail { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+  .food-item .net { font-weight: 700; color: var(--accent); white-space: nowrap; font-size: 1.05rem; }
+  .food-item .remove {
+    background: none;
+    border: none;
+    color: var(--danger);
+    font-size: 1.3rem;
+    cursor: pointer;
+    padding: 4px 8px;
+    line-height: 1;
+  }
+  .empty { color: var(--muted); font-size: 0.9rem; text-align: center; padding: 12px 0; }
+
+  /* Barre de total fixe en bas */
+  .total-bar {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--card);
+    border-top: 2px solid var(--accent);
+    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    box-shadow: 0 -4px 16px rgba(0,0,0,0.12);
+  }
+  .total-bar .inner {
+    max-width: 560px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+  .total-bar .label { font-size: 0.8rem; color: var(--muted); font-weight: 600; }
+  .total-bar .sub { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+  .total-bar .value {
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: var(--accent);
+    line-height: 1;
+    white-space: nowrap;
+  }
+  .total-bar .value small { font-size: 1rem; font-weight: 600; }
+
+  details.help { margin-bottom: 16px; }
+  details.help summary {
+    cursor: pointer;
+    font-size: 0.85rem;
+    color: var(--muted);
+    font-weight: 600;
+    padding: 4px 0;
+  }
+  details.help .card { margin-top: 8px; font-size: 0.85rem; color: var(--muted); }
+  details.help .card p { margin-bottom: 8px; }
+  details.help .card strong { color: var(--text); }
+
+  .disclaimer {
+    font-size: 0.72rem;
+    color: var(--muted);
+    text-align: center;
+    padding: 8px 16px 16px;
+    max-width: 560px;
+    margin: 0 auto;
+  }
+
+  .favorites-list { display: flex; flex-wrap: wrap; gap: 8px; }
+  .fav-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--accent-light);
+    color: var(--accent);
+    border: none;
+    border-radius: 20px;
+    padding: 8px 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .fav-chip .del { color: var(--danger); font-weight: 700; padding-left: 4px; }
+
+  .save-fav-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .save-fav-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
+  .save-fav-row label { margin: 0; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🧮 Glucides Nets</h1>
+  <p>Calculateur de repas pour pompe à insuline</p>
+</header>
+
+<main>
+
+  <details class="help">
+    <summary>ℹ️ Comment sont calculés les glucides nets?</summary>
+    <div class="card">
+      <p><strong>Glucides nets = Glucides totaux − Fibres − (Polyols ÷ 2)</strong></p>
+      <p>Au Canada et aux États-Unis, les fibres sont incluses dans les glucides totaux sur l'étiquette nutritionnelle. Comme les fibres ne font pas monter la glycémie, on les soustrait.</p>
+      <p>Les polyols (sucres-alcools : maltitol, sorbitol, xylitol…) sont absorbés à environ 50 %, on soustrait donc la moitié. Exception : l'érythritol n'est pas absorbé du tout — choisissez « Érythritol » pour le soustraire à 100 %.</p>
+      <p>Entrez le total affiché en bas dans votre pompe pour le calcul du bolus.</p>
+    </div>
+  </details>
+
+  <div class="card">
+    <h2>➕ Ajouter un aliment</h2>
+    <div style="margin-bottom:12px;">
+      <label for="food-name">Nom de l'aliment</label>
+      <input type="text" id="food-name" placeholder="ex. : Pain multigrain" autocomplete="off">
+    </div>
+    <div class="row">
+      <div>
+        <label for="carbs">Glucides (g)</label>
+        <input type="number" id="carbs" inputmode="decimal" min="0" step="0.1" placeholder="0">
+      </div>
+      <div>
+        <label for="fiber">Fibres (g)</label>
+        <input type="number" id="fiber" inputmode="decimal" min="0" step="0.1" placeholder="0">
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label for="polyols">Polyols (g)</label>
+        <input type="number" id="polyols" inputmode="decimal" min="0" step="0.1" placeholder="0">
+      </div>
+      <div>
+        <label for="polyol-type">Type de polyol</label>
+        <select id="polyol-type">
+          <option value="half">Autre (÷ 2)</option>
+          <option value="full">Érythritol (÷ 0)</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label for="portion-label">Portion de l'étiquette</label>
+        <input type="number" id="portion-label" inputmode="decimal" min="0" step="0.1" placeholder="ex. : 100">
+      </div>
+      <div>
+        <label for="portion-eaten">Portion consommée</label>
+        <input type="number" id="portion-eaten" inputmode="decimal" min="0" step="0.1" placeholder="ex. : 150">
+      </div>
+    </div>
+    <p style="font-size:0.72rem; color:var(--muted); margin:-6px 0 12px;">
+      Portions optionnelles (même unité : g, ml, tranches…). Si vides, les valeurs sont utilisées telles quelles.
+    </p>
+    <div class="save-fav-row" style="margin-bottom:12px;">
+      <input type="checkbox" id="save-fav">
+      <label for="save-fav">Enregistrer dans mes favoris</label>
+    </div>
+    <button class="btn" id="add-btn">Ajouter au repas</button>
+  </div>
+
+  <div class="card" id="favorites-card" style="display:none;">
+    <h2>⭐ Mes favoris</h2>
+    <div class="favorites-list" id="favorites-list"></div>
+  </div>
+
+  <div class="card">
+    <h2>🍽️ Repas en cours</h2>
+    <div id="meal-list"><p class="empty">Aucun aliment ajouté pour l'instant.</p></div>
+    <button class="btn btn-secondary" id="clear-btn" style="margin-top:12px; display:none;">Vider le repas</button>
+  </div>
+
+</main>
+
+<p class="disclaimer">
+  ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de votre équipe de soins en diabète.
+  Vérifiez toujours les valeurs entrées dans votre pompe et suivez les recommandations de votre professionnel de la santé.
+</p>
+
+<div class="total-bar">
+  <div class="inner">
+    <div>
+      <div class="label">TOTAL À ENTRER DANS LA POMPE</div>
+      <div class="sub" id="total-detail">Glucides : 0 g · Fibres : 0 g · Polyols : 0 g</div>
+    </div>
+    <div class="value" id="total-net">0<small> g</small></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var meal = [];
+  var favorites = [];
+
+  try {
+    meal = JSON.parse(localStorage.getItem('gn_meal') || '[]');
+    favorites = JSON.parse(localStorage.getItem('gn_favorites') || '[]');
+  } catch (e) { meal = []; favorites = []; }
+
+  var $ = function (id) { return document.getElementById(id); };
+
+  function round1(n) { return Math.round(n * 10) / 10; }
+
+  function netCarbs(item) {
+    var polyolDeduction = item.polyolType === 'full' ? item.polyols : item.polyols / 2;
+    var net = item.carbs - item.fiber - polyolDeduction;
+    return Math.max(0, net) * item.ratio;
+  }
+
+  function readForm() {
+    var name = $('food-name').value.trim() || 'Aliment';
+    var carbs = parseFloat($('carbs').value) || 0;
+    var fiber = parseFloat($('fiber').value) || 0;
+    var polyols = parseFloat($('polyols').value) || 0;
+    var polyolType = $('polyol-type').value;
+    var portionLabel = parseFloat($('portion-label').value) || 0;
+    var portionEaten = parseFloat($('portion-eaten').value) || 0;
+    var ratio = (portionLabel > 0 && portionEaten > 0) ? portionEaten / portionLabel : 1;
+    return {
+      name: name, carbs: carbs, fiber: fiber,
+      polyols: polyols, polyolType: polyolType, ratio: ratio
+    };
+  }
+
+  function resetForm() {
+    ['food-name', 'carbs', 'fiber', 'polyols', 'portion-label', 'portion-eaten'].forEach(function (id) {
+      $(id).value = '';
+    });
+    $('polyol-type').value = 'half';
+    $('save-fav').checked = false;
+    $('food-name').focus();
+  }
+
+  function save() {
+    localStorage.setItem('gn_meal', JSON.stringify(meal));
+    localStorage.setItem('gn_favorites', JSON.stringify(favorites));
+  }
+
+  function renderMeal() {
+    var list = $('meal-list');
+    var clearBtn = $('clear-btn');
+    if (meal.length === 0) {
+      list.innerHTML = '<p class="empty">Aucun aliment ajouté pour l’instant.</p>';
+      clearBtn.style.display = 'none';
+    } else {
+      list.innerHTML = '';
+      meal.forEach(function (item, i) {
+        var net = round1(netCarbs(item));
+        var div = document.createElement('div');
+        div.className = 'food-item';
+
+        var info = document.createElement('div');
+        info.className = 'info';
+        var nameEl = document.createElement('div');
+        nameEl.className = 'name';
+        nameEl.textContent = item.name;
+        var detail = document.createElement('div');
+        detail.className = 'detail';
+        var parts = ['Gluc. ' + round1(item.carbs * item.ratio) + ' g',
+                     'Fibres ' + round1(item.fiber * item.ratio) + ' g'];
+        if (item.polyols > 0) parts.push('Polyols ' + round1(item.polyols * item.ratio) + ' g');
+        if (item.ratio !== 1) parts.push('portion ×' + round1(item.ratio * 100) / 100);
+        detail.textContent = parts.join(' · ');
+        info.appendChild(nameEl);
+        info.appendChild(detail);
+
+        var netEl = document.createElement('div');
+        netEl.className = 'net';
+        netEl.textContent = net + ' g';
+
+        var removeBtn = document.createElement('button');
+        removeBtn.className = 'remove';
+        removeBtn.setAttribute('aria-label', 'Retirer ' + item.name);
+        removeBtn.textContent = '✕';
+        removeBtn.addEventListener('click', function () {
+          meal.splice(i, 1);
+          save();
+          renderMeal();
+        });
+
+        div.appendChild(info);
+        div.appendChild(netEl);
+        div.appendChild(removeBtn);
+        list.appendChild(div);
+      });
+      clearBtn.style.display = 'block';
+    }
+    renderTotal();
+  }
+
+  function renderTotal() {
+    var totalNet = 0, totalCarbs = 0, totalFiber = 0, totalPolyols = 0;
+    meal.forEach(function (item) {
+      totalNet += netCarbs(item);
+      totalCarbs += item.carbs * item.ratio;
+      totalFiber += item.fiber * item.ratio;
+      totalPolyols += item.polyols * item.ratio;
+    });
+    $('total-net').innerHTML = round1(totalNet) + '<small> g</small>';
+    $('total-detail').textContent =
+      'Glucides : ' + round1(totalCarbs) + ' g · Fibres : ' + round1(totalFiber) +
+      ' g · Polyols : ' + round1(totalPolyols) + ' g';
+  }
+
+  function renderFavorites() {
+    var card = $('favorites-card');
+    var list = $('favorites-list');
+    if (favorites.length === 0) {
+      card.style.display = 'none';
+      return;
+    }
+    card.style.display = 'block';
+    list.innerHTML = '';
+    favorites.forEach(function (fav, i) {
+      var chip = document.createElement('button');
+      chip.className = 'fav-chip';
+      chip.setAttribute('aria-label', 'Ajouter ' + fav.name + ' au repas');
+
+      var label = document.createElement('span');
+      label.textContent = fav.name + ' (' + round1(Math.max(0, fav.carbs - fav.fiber -
+        (fav.polyolType === 'full' ? fav.polyols : fav.polyols / 2))) + ' g)';
+
+      var del = document.createElement('span');
+      del.className = 'del';
+      del.textContent = '✕';
+      del.setAttribute('role', 'button');
+      del.setAttribute('aria-label', 'Supprimer le favori ' + fav.name);
+      del.addEventListener('click', function (e) {
+        e.stopPropagation();
+        favorites.splice(i, 1);
+        save();
+        renderFavorites();
+      });
+
+      chip.appendChild(label);
+      chip.appendChild(del);
+      chip.addEventListener('click', function () {
+        meal.push({
+          name: fav.name, carbs: fav.carbs, fiber: fav.fiber,
+          polyols: fav.polyols, polyolType: fav.polyolType, ratio: 1
+        });
+        save();
+        renderMeal();
+      });
+      list.appendChild(chip);
+    });
+  }
+
+  $('add-btn').addEventListener('click', function () {
+    var item = readForm();
+    if (item.carbs === 0 && item.fiber === 0 && item.polyols === 0) {
+      $('carbs').focus();
+      return;
+    }
+    meal.push(item);
+    if ($('save-fav').checked) {
+      favorites.push({
+        name: item.name, carbs: item.carbs, fiber: item.fiber,
+        polyols: item.polyols, polyolType: item.polyolType
+      });
+    }
+    save();
+    renderMeal();
+    renderFavorites();
+    resetForm();
+  });
+
+  $('clear-btn').addEventListener('click', function () {
+    meal = [];
+    save();
+    renderMeal();
+  });
+
+  renderMeal();
+  renderFavorites();
+})();
+</script>
+</body>
+</html>
