@@ -4,6 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <meta name="theme-color" content="#1a6b54">
+<meta name="description" content="Calculateur de glucides nets pour pompe à insuline — diabète de type 1">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon-192.png" type="image/png">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Glucides Nets — Calculateur pour pompe à insuline</title>
 <style>
   :root {
@@ -56,14 +62,15 @@
   }
   .tab-btn {
     flex: 1;
-    padding: 12px 8px;
+    padding: 12px 2px;
     background: none;
     border: none;
     color: rgba(255,255,255,0.75);
-    font-size: 0.95rem;
+    font-size: 0.82rem;
     font-weight: 700;
     cursor: pointer;
     border-bottom: 3px solid transparent;
+    white-space: nowrap;
   }
   .tab-btn.active {
     color: #fff;
@@ -391,6 +398,96 @@
   .inverse-box input { flex: 1; }
   .inverse-box .result { flex: 1.4; font-size: 0.9rem; }
   .inverse-box .result b { color: var(--chart); font-size: 1.15rem; }
+
+  /* Scanner de code-barres */
+  #scan-video {
+    width: 100%;
+    max-height: 260px;
+    border-radius: 10px;
+    background: #000;
+    object-fit: cover;
+    display: none;
+    margin-bottom: 10px;
+  }
+  .scan-row { display: flex; gap: 8px; }
+  .scan-row input { flex: 1; }
+  .scan-row .btn { width: auto; padding: 12px 18px; }
+
+  /* Journal */
+  .day-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    padding: 10px 0 6px;
+    border-bottom: 2px solid var(--accent);
+    margin-top: 8px;
+  }
+  .day-header .date { font-weight: 700; font-size: 0.92rem; text-transform: capitalize; }
+  .day-header .day-total { font-size: 0.85rem; color: var(--accent); font-weight: 700; }
+  .journal-meal {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .journal-meal .time { font-size: 0.8rem; color: var(--muted); font-weight: 700; width: 44px; flex-shrink: 0; }
+  .journal-meal .foods {
+    flex: 1;
+    min-width: 0;
+    font-size: 0.85rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .journal-meal .net { font-weight: 700; color: var(--accent); white-space: nowrap; }
+  .journal-meal .icon-btn {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 1.05rem;
+    padding: 4px 6px;
+    color: var(--muted);
+  }
+  .journal-meal .icon-btn.del { color: var(--danger); }
+  .week-chart text { fill: var(--muted); font-size: 10px; font-family: inherit; }
+  .week-chart .bar { fill: var(--chart); }
+  .week-chart .bar-label { fill: var(--text); font-weight: 700; }
+  .week-chart .baseline { stroke: var(--border); stroke-width: 1; }
+
+  /* Ingrédients */
+  .ing-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 0.88rem;
+  }
+  .ing-item .detail { color: var(--muted); font-size: 0.76rem; }
+  .ing-item .remove { background: none; border: none; color: var(--danger); font-size: 1.1rem; cursor: pointer; padding: 2px 6px; }
+  .ing-total { font-size: 0.88rem; margin: 10px 0; color: var(--muted); }
+  .ing-total b { color: var(--accent); }
+
+  /* Partage sur carte recette */
+  .recipe-card .share {
+    position: absolute;
+    top: 6px;
+    left: 6px;
+    background: rgba(0,0,0,0.55);
+    color: #fff;
+    border: none;
+    border-radius: 50%;
+    width: 28px;
+    height: 28px;
+    font-size: 0.85rem;
+    cursor: pointer;
+    line-height: 1;
+  }
+
+  .btn-row { display: flex; gap: 10px; }
+  .btn-row .btn { flex: 1; }
 </style>
 </head>
 <body>
@@ -402,6 +499,7 @@
     <button class="tab-btn active" data-tab="meal">🍽️ Repas</button>
     <button class="tab-btn" data-tab="recipes">📖 Recettes</button>
     <button class="tab-btn" data-tab="tool">📈 Outil</button>
+    <button class="tab-btn" data-tab="journal">📅 Journal</button>
   </nav>
 </header>
 
@@ -420,6 +518,12 @@
         <p>Entrez le total affiché en bas dans votre pompe pour le calcul du bolus.</p>
       </div>
     </details>
+
+    <div class="card">
+      <h2>📷 Scanner un produit</h2>
+      <p class="hint" style="margin:0 0 10px;">Scannez le code-barres d'un produit emballé — ses valeurs nutritionnelles sont récupérées automatiquement depuis Open Food Facts (connexion Internet requise).</p>
+      <button class="btn btn-secondary" id="scan-open-btn" type="button">📷 Scanner un code-barres</button>
+    </div>
 
     <div class="card">
       <h2>🔍 Base d'aliments courants</h2>
@@ -483,13 +587,56 @@
     <div class="card">
       <h2>🍽️ Repas en cours</h2>
       <div id="meal-list"><p class="empty">Aucun aliment ajouté pour l'instant.</p></div>
-      <button class="btn btn-secondary" id="clear-btn" style="margin-top:12px; display:none;">Vider le repas</button>
+      <div class="btn-row" style="margin-top:12px; display:none;" id="meal-actions">
+        <button class="btn btn-secondary" id="clear-btn">Vider</button>
+        <button class="btn" id="finish-btn">✅ Enregistrer au journal</button>
+      </div>
     </div>
 
   </section>
 
   <!-- ═══════════ ONGLET RECETTES ═══════════ -->
   <section class="tab-panel" id="panel-recipes">
+
+    <div class="card">
+      <h2>🧑‍🍳 Calculer à partir des ingrédients</h2>
+      <p class="hint" style="margin:0 0 10px;">Ajoutez chaque ingrédient pesé — l'app calcule automatiquement les valeurs par 100 g du plat final.</p>
+      <input type="search" id="ing-search" placeholder="Chercher dans la base… (ex. : riz)" autocomplete="off">
+      <div class="search-results" id="ing-results"></div>
+      <div class="row" style="margin-top:10px;">
+        <div style="flex:2;">
+          <label for="ing-name">Ingrédient</label>
+          <input type="text" id="ing-name" placeholder="ex. : Farine" autocomplete="off">
+        </div>
+        <div>
+          <label for="ing-weight">Poids (g)</label>
+          <input type="number" id="ing-weight" inputmode="decimal" min="0" step="1" placeholder="0">
+        </div>
+      </div>
+      <div class="row">
+        <div>
+          <label for="ing-carbs">Glucides / 100 g</label>
+          <input type="number" id="ing-carbs" inputmode="decimal" min="0" step="0.1" placeholder="0">
+        </div>
+        <div>
+          <label for="ing-fiber">Fibres / 100 g</label>
+          <input type="number" id="ing-fiber" inputmode="decimal" min="0" step="0.1" placeholder="0">
+        </div>
+      </div>
+      <button class="btn btn-secondary" id="ing-add-btn" type="button">+ Ajouter l'ingrédient</button>
+      <div id="ing-list"></div>
+      <div id="ing-summary" style="display:none;">
+        <p class="ing-total" id="ing-totals"></p>
+        <div class="row">
+          <div>
+            <label for="ing-cooked-weight">Poids final du plat cuit (g)</label>
+            <input type="number" id="ing-cooked-weight" inputmode="decimal" min="0" step="1" placeholder="pesez le plat fini">
+          </div>
+        </div>
+        <p class="hint">Le plat cuit pèse souvent moins que la somme des ingrédients (évaporation) — pesez-le pour un résultat exact.</p>
+        <button class="btn" id="ing-use-btn" type="button">→ Reporter dans la nouvelle recette</button>
+      </div>
+    </div>
 
     <div class="card">
       <h2>📷 Nouvelle recette</h2>
@@ -587,12 +734,56 @@
 
   </section>
 
+  <!-- ═══════════ ONGLET JOURNAL ═══════════ -->
+  <section class="tab-panel" id="panel-journal">
+
+    <div class="card">
+      <h2>📊 7 derniers jours</h2>
+      <p class="hint" style="margin:0 0 8px;" id="week-summary">Aucun repas enregistré pour l'instant.</p>
+      <svg class="week-chart" id="week-chart" viewBox="0 0 340 130" role="img"
+           aria-label="Glucides nets par jour, 7 derniers jours"></svg>
+    </div>
+
+    <div class="card">
+      <h2>📅 Repas enregistrés</h2>
+      <p class="hint" style="margin:0 0 8px;">Terminez un repas avec « ✅ Enregistrer au journal » dans l'onglet Repas. Touchez ↻ pour recharger un repas passé.</p>
+      <div id="journal-list"><p class="empty">Aucun repas enregistré pour l'instant.</p></div>
+    </div>
+
+    <div class="card">
+      <h2>💾 Sauvegarde et partage</h2>
+      <p class="hint" style="margin:0 0 10px;">Vos données restent sur cet appareil. Exportez un fichier pour les sauvegarder ou les transférer sur un autre appareil.</p>
+      <div class="btn-row">
+        <button class="btn btn-secondary" id="export-btn" type="button">⬇️ Exporter</button>
+        <button class="btn btn-secondary" id="import-btn" type="button">⬆️ Importer</button>
+      </div>
+      <input type="file" id="import-input" accept="application/json,.json" style="display:none;">
+      <p class="hint" id="backup-status" style="margin-top:10px;"></p>
+    </div>
+
+  </section>
+
 </main>
 
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de votre équipe de soins en diabète.
   Vérifiez toujours les valeurs entrées dans votre pompe et suivez les recommandations de votre professionnel de la santé.
 </p>
+
+<!-- Modal : scanner de code-barres -->
+<div class="modal-overlay" id="scan-modal">
+  <div class="modal">
+    <h3>📷 Scanner un code-barres</h3>
+    <p class="stats-line" id="scan-status">Pointez la caméra vers le code-barres du produit.</p>
+    <video id="scan-video" autoplay playsinline muted></video>
+    <label for="barcode-manual">Ou entrez le code manuellement</label>
+    <div class="scan-row">
+      <input type="text" id="barcode-manual" inputmode="numeric" autocomplete="off" placeholder="ex. : 3017620422003">
+      <button class="btn" id="barcode-lookup" type="button">OK</button>
+    </div>
+    <button class="btn btn-secondary" id="scan-close" type="button" style="margin-top:12px;">Fermer</button>
+  </div>
+</div>
 
 <!-- Modal : quantité consommée -->
 <div class="modal-overlay" id="qty-modal">
@@ -672,6 +863,8 @@
   var meal = [];
   var favorites = [];
   var recipes = [];
+  var history = [];
+  var ingredients = [];
   var pendingPhoto = null;
   var modalRecipe = null;
 
@@ -679,7 +872,8 @@
     meal = JSON.parse(localStorage.getItem('gn_meal') || '[]');
     favorites = JSON.parse(localStorage.getItem('gn_favorites') || '[]');
     recipes = JSON.parse(localStorage.getItem('gn_recipes') || '[]');
-  } catch (e) { meal = []; favorites = []; recipes = []; }
+    history = JSON.parse(localStorage.getItem('gn_history') || '[]');
+  } catch (e) { meal = []; favorites = []; recipes = []; history = []; }
 
   var $ = function (id) { return document.getElementById(id); };
 
@@ -699,6 +893,7 @@
   function save() {
     localStorage.setItem('gn_meal', JSON.stringify(meal));
     localStorage.setItem('gn_favorites', JSON.stringify(favorites));
+    localStorage.setItem('gn_history', JSON.stringify(history));
     try {
       localStorage.setItem('gn_recipes', JSON.stringify(recipes));
     } catch (e) {
@@ -719,40 +914,46 @@
     document.querySelector('.tab-btn[data-tab="' + name + '"]').click();
   }
 
-  /* ── Recherche dans la base d'aliments ── */
+  /* ── Recherche dans la base d'aliments (réutilisable) ── */
   function normalize(s) {
     return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
   }
-  $('db-search').addEventListener('input', function () {
-    var q = normalize(this.value.trim());
-    var box = $('db-results');
-    box.innerHTML = '';
-    if (q.length < 2) { box.classList.remove('open'); return; }
-    var matches = FOOD_DB.filter(function (f) { return normalize(f.n).indexOf(q) !== -1; }).slice(0, 8);
-    if (matches.length === 0) { box.classList.remove('open'); return; }
-    matches.forEach(function (f) {
-      var b = document.createElement('button');
-      var name = document.createElement('span');
-      name.textContent = f.n;
-      var val = document.createElement('span');
-      val.className = 'val';
-      val.textContent = f.c + ' g gluc. / 100 g';
-      b.appendChild(name);
-      b.appendChild(val);
-      b.addEventListener('click', function () {
-        $('food-name').value = f.n;
-        $('carbs').value = f.c;
-        $('fiber').value = f.f;
-        $('polyols').value = '';
-        $('portion-label').value = 100;
-        $('portion-eaten').value = '';
-        box.classList.remove('open');
-        $('db-search').value = '';
-        $('portion-eaten').focus();
+  function bindDbSearch(inputId, resultsId, onPick) {
+    $(inputId).addEventListener('input', function () {
+      var q = normalize(this.value.trim());
+      var box = $(resultsId);
+      box.innerHTML = '';
+      if (q.length < 2) { box.classList.remove('open'); return; }
+      var matches = FOOD_DB.filter(function (f) { return normalize(f.n).indexOf(q) !== -1; }).slice(0, 8);
+      if (matches.length === 0) { box.classList.remove('open'); return; }
+      matches.forEach(function (f) {
+        var b = document.createElement('button');
+        var name = document.createElement('span');
+        name.textContent = f.n;
+        var val = document.createElement('span');
+        val.className = 'val';
+        val.textContent = f.c + ' g gluc. / 100 g';
+        b.appendChild(name);
+        b.appendChild(val);
+        b.addEventListener('click', function () {
+          box.classList.remove('open');
+          $(inputId).value = '';
+          onPick(f);
+        });
+        box.appendChild(b);
       });
-      box.appendChild(b);
+      box.classList.add('open');
     });
-    box.classList.add('open');
+  }
+
+  bindDbSearch('db-search', 'db-results', function (f) {
+    $('food-name').value = f.n;
+    $('carbs').value = f.c;
+    $('fiber').value = f.f;
+    $('polyols').value = '';
+    $('portion-label').value = 100;
+    $('portion-eaten').value = '';
+    $('portion-eaten').focus();
   });
 
   /* ── Formulaire aliment ── */
@@ -779,10 +980,10 @@
   /* ── Rendu du repas ── */
   function renderMeal() {
     var list = $('meal-list');
-    var clearBtn = $('clear-btn');
+    var actions = $('meal-actions');
     if (meal.length === 0) {
       list.innerHTML = '<p class="empty">Aucun aliment ajouté pour l’instant.</p>';
-      clearBtn.style.display = 'none';
+      actions.style.display = 'none';
     } else {
       list.innerHTML = '';
       meal.forEach(function (item, i) {
@@ -825,7 +1026,7 @@
         div.appendChild(removeBtn);
         list.appendChild(div);
       });
-      clearBtn.style.display = 'block';
+      actions.style.display = 'flex';
     }
     renderTotal();
   }
@@ -1020,9 +1221,20 @@
         }
       });
 
+      var shareBtn = document.createElement('span');
+      shareBtn.className = 'share';
+      shareBtn.textContent = '📤';
+      shareBtn.setAttribute('role', 'button');
+      shareBtn.setAttribute('aria-label', 'Partager la recette ' + r.name);
+      shareBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        shareRecipe(r);
+      });
+
       card.appendChild(photo);
       card.appendChild(body);
       card.appendChild(del);
+      card.appendChild(shareBtn);
       card.addEventListener('click', function () { openQtyModal(r); });
       grid.appendChild(card);
     });
@@ -1277,11 +1489,419 @@
     svg.addEventListener('pointercancel', function () { dragging = false; });
   })();
 
+  /* ══════════ Scanner de code-barres (Open Food Facts) ══════════ */
+  var scanStream = null;
+  var scanTimer = null;
+
+  function scanStatus(msg) { $('scan-status').textContent = msg; }
+
+  function stopScanner() {
+    if (scanTimer) { clearInterval(scanTimer); scanTimer = null; }
+    if (scanStream) {
+      scanStream.getTracks().forEach(function (t) { t.stop(); });
+      scanStream = null;
+    }
+    $('scan-video').style.display = 'none';
+  }
+
+  function closeScanModal() {
+    stopScanner();
+    $('scan-modal').classList.remove('open');
+  }
+
+  function startScanner() {
+    $('scan-modal').classList.add('open');
+    $('barcode-manual').value = '';
+    if (!('BarcodeDetector' in window)) {
+      scanStatus('Le scan caméra n’est pas supporté par ce navigateur — entrez le code sous le code-barres manuellement.');
+      return;
+    }
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      scanStatus('Caméra inaccessible — entrez le code manuellement.');
+      return;
+    }
+    scanStatus('Pointez la caméra vers le code-barres du produit.');
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
+      .then(function (stream) {
+        scanStream = stream;
+        var video = $('scan-video');
+        video.srcObject = stream;
+        video.style.display = 'block';
+        var detector = new BarcodeDetector({
+          formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128']
+        });
+        scanTimer = setInterval(function () {
+          detector.detect(video).then(function (codes) {
+            if (codes.length > 0) {
+              stopScanner();
+              lookupBarcode(codes[0].rawValue);
+            }
+          }).catch(function () { /* image pas prête, on réessaie */ });
+        }, 350);
+      })
+      .catch(function () {
+        scanStatus('Caméra inaccessible (permission refusée ou non disponible) — entrez le code manuellement.');
+      });
+  }
+
+  function lookupBarcode(code) {
+    code = String(code).replace(/\D/g, '');
+    if (!code) { scanStatus('Code invalide.'); return; }
+    scanStatus('🔎 Recherche du produit ' + code + '…');
+    fetch('https://world.openfoodfacts.org/api/v2/product/' + encodeURIComponent(code) +
+          '?fields=product_name,product_name_fr,brands,nutriments')
+      .then(function (r) { return r.json(); })
+      .then(function (data) {
+        var p = data && data.product;
+        if (!p) { scanStatus('Produit ' + code + ' introuvable dans Open Food Facts.'); return; }
+        var nut = p.nutriments || {};
+        var carbs = nut.carbohydrates_100g;
+        if (carbs === undefined || carbs === null) {
+          scanStatus('Produit trouvé (' + (p.product_name_fr || p.product_name || code) +
+            ') mais sans données de glucides — entrez les valeurs de l’étiquette à la main.');
+          return;
+        }
+        var name = p.product_name_fr || p.product_name || 'Produit ' + code;
+        if (p.brands) name += ' (' + p.brands.split(',')[0].trim() + ')';
+        $('food-name').value = name;
+        $('carbs').value = round1(carbs);
+        $('fiber').value = round1(nut.fiber_100g || 0);
+        $('polyols').value = nut.polyols_100g ? round1(nut.polyols_100g) : '';
+        $('portion-label').value = 100;
+        $('portion-eaten').value = '';
+        closeScanModal();
+        switchTab('meal');
+        $('portion-eaten').focus();
+      })
+      .catch(function () {
+        scanStatus('Erreur réseau — vérifiez votre connexion Internet et réessayez.');
+      });
+  }
+
+  $('scan-open-btn').addEventListener('click', startScanner);
+  $('scan-close').addEventListener('click', closeScanModal);
+  $('scan-modal').addEventListener('click', function (e) { if (e.target === this) closeScanModal(); });
+  $('barcode-lookup').addEventListener('click', function () {
+    lookupBarcode($('barcode-manual').value);
+  });
+  $('barcode-manual').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') lookupBarcode(this.value);
+  });
+
+  /* ══════════ Recette à partir des ingrédients ══════════ */
+  bindDbSearch('ing-search', 'ing-results', function (f) {
+    $('ing-name').value = f.n;
+    $('ing-carbs').value = f.c;
+    $('ing-fiber').value = f.f;
+    $('ing-weight').focus();
+  });
+
+  function renderIngredients() {
+    var list = $('ing-list');
+    var summary = $('ing-summary');
+    list.innerHTML = '';
+    if (ingredients.length === 0) { summary.style.display = 'none'; return; }
+    var totC = 0, totF = 0, totW = 0;
+    ingredients.forEach(function (ing, i) {
+      var c = ing.c100 * ing.w / 100;
+      var f = ing.f100 * ing.w / 100;
+      totC += c; totF += f; totW += ing.w;
+
+      var div = document.createElement('div');
+      div.className = 'ing-item';
+      var left = document.createElement('div');
+      var nm = document.createElement('div');
+      nm.textContent = ing.name + ' — ' + ing.w + ' g';
+      var dt = document.createElement('div');
+      dt.className = 'detail';
+      dt.textContent = round1(c) + ' g gluc. · ' + round1(f) + ' g fibres';
+      left.appendChild(nm);
+      left.appendChild(dt);
+      var rm = document.createElement('button');
+      rm.className = 'remove';
+      rm.textContent = '✕';
+      rm.setAttribute('aria-label', 'Retirer ' + ing.name);
+      rm.addEventListener('click', function () {
+        ingredients.splice(i, 1);
+        renderIngredients();
+      });
+      div.appendChild(left);
+      div.appendChild(rm);
+      list.appendChild(div);
+    });
+    summary.style.display = 'block';
+    $('ing-totals').innerHTML = 'Total des ingrédients : <b>' + round1(totC) + ' g glucides</b> · ' +
+      round1(totF) + ' g fibres · ' + round1(totW) + ' g pesés';
+    if (!$('ing-cooked-weight').value) $('ing-cooked-weight').placeholder = 'ex. : ' + Math.round(totW);
+  }
+
+  $('ing-add-btn').addEventListener('click', function () {
+    var name = $('ing-name').value.trim();
+    var c100 = parseFloat($('ing-carbs').value) || 0;
+    var f100 = parseFloat($('ing-fiber').value) || 0;
+    var w = parseFloat($('ing-weight').value) || 0;
+    if (!name) { $('ing-name').focus(); return; }
+    if (w <= 0) { $('ing-weight').focus(); return; }
+    ingredients.push({ name: name, c100: c100, f100: f100, w: w });
+    ['ing-name', 'ing-carbs', 'ing-fiber', 'ing-weight'].forEach(function (id) { $(id).value = ''; });
+    renderIngredients();
+    $('ing-search').focus();
+  });
+
+  $('ing-use-btn').addEventListener('click', function () {
+    var totC = 0, totF = 0, totW = 0;
+    ingredients.forEach(function (ing) {
+      totC += ing.c100 * ing.w / 100;
+      totF += ing.f100 * ing.w / 100;
+      totW += ing.w;
+    });
+    var cooked = parseFloat($('ing-cooked-weight').value) || totW;
+    if (cooked <= 0) { $('ing-cooked-weight').focus(); return; }
+    $('recipe-carbs').value = round1(totC / cooked * 100);
+    $('recipe-fiber').value = round1(totF / cooked * 100);
+    if (!$('recipe-name').value) $('recipe-name').focus();
+    $('recipe-name').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+
+  /* ══════════ Journal des repas ══════════ */
+  $('finish-btn').addEventListener('click', function () {
+    if (meal.length === 0) return;
+    var totNet = 0, totC = 0, totF = 0, totP = 0;
+    meal.forEach(function (item) {
+      totNet += netCarbs(item);
+      totC += item.carbs * item.ratio;
+      totF += item.fiber * item.ratio;
+      totP += item.polyols * item.ratio;
+    });
+    history.unshift({
+      ts: Date.now(),
+      items: meal.slice(),
+      net: round1(totNet), carbs: round1(totC), fiber: round1(totF), polyols: round1(totP)
+    });
+    if (history.length > 300) history.length = 300;
+    meal = [];
+    save();
+    renderMeal();
+    renderJournal();
+    switchTab('journal');
+  });
+
+  function dayKey(ts) {
+    var d = new Date(ts);
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' +
+      String(d.getDate()).padStart(2, '0');
+  }
+
+  var fmtDay = new Intl.DateTimeFormat('fr-CA', { weekday: 'long', day: 'numeric', month: 'long' });
+  var fmtTime = new Intl.DateTimeFormat('fr-CA', { hour: '2-digit', minute: '2-digit' });
+
+  function renderJournal() {
+    var list = $('journal-list');
+    list.innerHTML = '';
+    if (history.length === 0) {
+      list.innerHTML = '<p class="empty">Aucun repas enregistré pour l’instant.</p>';
+      renderWeekChart();
+      return;
+    }
+    var lastDay = null;
+    history.forEach(function (entry, idx) {
+      var key = dayKey(entry.ts);
+      if (key !== lastDay) {
+        lastDay = key;
+        var dayTotal = history.filter(function (e) { return dayKey(e.ts) === key; })
+          .reduce(function (s, e) { return s + e.net; }, 0);
+        var head = document.createElement('div');
+        head.className = 'day-header';
+        var dateEl = document.createElement('span');
+        dateEl.className = 'date';
+        dateEl.textContent = fmtDay.format(new Date(entry.ts));
+        var totEl = document.createElement('span');
+        totEl.className = 'day-total';
+        totEl.textContent = round1(dayTotal) + ' g nets';
+        head.appendChild(dateEl);
+        head.appendChild(totEl);
+        list.appendChild(head);
+      }
+      var row = document.createElement('div');
+      row.className = 'journal-meal';
+      var time = document.createElement('span');
+      time.className = 'time';
+      time.textContent = fmtTime.format(new Date(entry.ts));
+      var foods = document.createElement('span');
+      foods.className = 'foods';
+      foods.textContent = entry.items.map(function (it) { return it.name; }).join(', ');
+      var net = document.createElement('span');
+      net.className = 'net';
+      net.textContent = entry.net + ' g';
+      var reload = document.createElement('button');
+      reload.className = 'icon-btn';
+      reload.textContent = '↻';
+      reload.setAttribute('aria-label', 'Recharger ce repas');
+      reload.title = 'Recharger ce repas';
+      reload.addEventListener('click', function () {
+        meal = meal.concat(entry.items.map(function (it) {
+          return JSON.parse(JSON.stringify(it));
+        }));
+        save();
+        renderMeal();
+        switchTab('meal');
+      });
+      var del = document.createElement('button');
+      del.className = 'icon-btn del';
+      del.textContent = '✕';
+      del.setAttribute('aria-label', 'Supprimer ce repas du journal');
+      del.addEventListener('click', function () {
+        history.splice(idx, 1);
+        save();
+        renderJournal();
+      });
+      row.appendChild(time);
+      row.appendChild(foods);
+      row.appendChild(net);
+      row.appendChild(reload);
+      row.appendChild(del);
+      list.appendChild(row);
+    });
+    renderWeekChart();
+  }
+
+  function renderWeekChart() {
+    var svg = $('week-chart');
+    svg.innerHTML = '';
+    var days = [];
+    var now = new Date();
+    for (var i = 6; i >= 0; i--) {
+      var d = new Date(now.getFullYear(), now.getMonth(), now.getDate() - i);
+      days.push({ key: dayKey(d.getTime()), date: d, total: 0 });
+    }
+    history.forEach(function (e) {
+      var k = dayKey(e.ts);
+      days.forEach(function (day) { if (day.key === k) day.total += e.net; });
+    });
+    var mealsCount = 0, weekTotal = 0;
+    history.forEach(function (e) {
+      if (days.some(function (day) { return day.key === dayKey(e.ts); })) {
+        mealsCount++;
+        weekTotal += e.net;
+      }
+    });
+    var activeDays = days.filter(function (d) { return d.total > 0; }).length;
+    $('week-summary').textContent = mealsCount === 0
+      ? 'Aucun repas enregistré pour l’instant.'
+      : mealsCount + ' repas cette semaine · moyenne ' +
+        round1(weekTotal / Math.max(1, activeDays)) + ' g nets par jour actif';
+
+    var W = 340, H = 130, padB = 20, padT = 18;
+    var maxV = Math.max(10, Math.ceil(Math.max.apply(null, days.map(function (d) { return d.total; })) / 10) * 10);
+    var barW = 30, gap = (W - 7 * barW) / 8;
+    var dayNames = ['di', 'lu', 'ma', 'me', 'je', 've', 'sa'];
+    var maxIdx = days.reduce(function (best, d, i) { return d.total > days[best].total ? i : best; }, 0);
+
+    svg.appendChild(svgEl('line', { x1: 0, y1: H - padB, x2: W, y2: H - padB, 'class': 'baseline' }));
+    days.forEach(function (d, i) {
+      var x = gap + i * (barW + gap);
+      var h = d.total > 0 ? Math.max(3, (d.total / maxV) * (H - padB - padT)) : 0;
+      var y = H - padB - h;
+      if (d.total > 0) {
+        var bar = svgEl('rect', { x: x, y: y, width: barW, height: h, rx: 4, 'class': 'bar' });
+        var title = svgEl('title', {});
+        title.textContent = fmtDay.format(d.date) + ' : ' + round1(d.total) + ' g nets';
+        bar.appendChild(title);
+        svg.appendChild(bar);
+      }
+      // Étiquettes directes sélectives : jour le plus élevé et aujourd'hui
+      if (d.total > 0 && (i === maxIdx || i === 6)) {
+        var lbl = svgEl('text', { x: x + barW / 2, y: y - 5, 'text-anchor': 'middle', 'class': 'bar-label' });
+        lbl.textContent = round1(d.total);
+        svg.appendChild(lbl);
+      }
+      var dn = svgEl('text', { x: x + barW / 2, y: H - 6, 'text-anchor': 'middle' });
+      dn.textContent = i === 6 ? 'auj.' : dayNames[d.date.getDay()];
+      svg.appendChild(dn);
+    });
+  }
+
+  /* ══════════ Sauvegarde, import et partage ══════════ */
+  function backupStatus(msg) { $('backup-status').textContent = msg; }
+
+  $('export-btn').addEventListener('click', function () {
+    var data = {
+      app: 'glucides-nets',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      recipes: recipes,
+      favorites: favorites,
+      history: history
+    };
+    var blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+    var a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'glucides-nets-sauvegarde-' + dayKey(Date.now()) + '.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(a.href);
+    backupStatus('✅ Sauvegarde exportée (' + recipes.length + ' recettes, ' +
+      favorites.length + ' favoris, ' + history.length + ' repas).');
+  });
+
+  $('import-btn').addEventListener('click', function () { $('import-input').click(); });
+
+  $('import-input').addEventListener('change', function () {
+    var file = this.files && this.files[0];
+    this.value = '';
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      var data;
+      try { data = JSON.parse(e.target.result); } catch (err) { backupStatus('❌ Fichier illisible.'); return; }
+      if (!data || data.app !== 'glucides-nets') {
+        backupStatus('❌ Ce fichier n’est pas une sauvegarde Glucides Nets.');
+        return;
+      }
+      if (!confirm('Remplacer vos recettes, favoris et journal actuels par ceux du fichier?')) return;
+      recipes = Array.isArray(data.recipes) ? data.recipes : [];
+      favorites = Array.isArray(data.favorites) ? data.favorites : [];
+      history = Array.isArray(data.history) ? data.history : [];
+      save();
+      renderRecipes();
+      renderFavorites();
+      renderJournal();
+      buildToolOptions();
+      drawToolChart();
+      backupStatus('✅ Importé : ' + recipes.length + ' recettes, ' + favorites.length +
+        ' favoris, ' + history.length + ' repas.');
+    };
+    reader.readAsText(file);
+  });
+
+  function shareRecipe(r) {
+    var text = 'Recette « ' + r.name + ' » — ' + round1(net100(r)) +
+      ' g de glucides nets / 100 g (glucides ' + round1(r.carbs) + ' g, fibres ' +
+      round1(r.fiber) + ' g' + (r.polyols ? ', polyols ' + round1(r.polyols) + ' g' : '') +
+      ' / 100 g). Calculé avec l’app Glucides Nets.';
+    if (navigator.share) {
+      navigator.share({ title: r.name, text: text }).catch(function () { /* annulé */ });
+    } else if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(function () {
+        alert('Recette copiée dans le presse-papiers!');
+      });
+    } else {
+      alert(text);
+    }
+  }
+
+  /* ══════════ PWA : service worker ══════════ */
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+    navigator.serviceWorker.register('sw.js').catch(function () { /* hors ligne ou non supporté */ });
+  }
+
   renderMeal();
   renderFavorites();
   renderRecipes();
   buildToolOptions();
   drawToolChart();
+  renderJournal();
 })();
 </script>
 </body>
