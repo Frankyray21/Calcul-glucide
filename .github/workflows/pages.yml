@@ -1,32 +1,24 @@
-name: Déployer sur GitHub Pages
+name: Publier le site
 
+# Le site est servi par GitHub Pages depuis la branche gh-pages.
+# À chaque poussée sur main, ce workflow synchronise gh-pages,
+# ce qui déclenche le déploiement automatique de Pages.
 on:
   push:
     branches: [main]
   workflow_dispatch:
 
 permissions:
-  contents: read
-  pages: write
-  id-token: write
+  contents: write
 
 concurrency:
   group: pages
   cancel-in-progress: true
 
 jobs:
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
+  publish:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/configure-pages@v5
-        with:
-          enablement: true
-      - uses: actions/upload-pages-artifact@v3
-        with:
-          path: '.'
-      - id: deployment
-        uses: actions/deploy-pages@v4
+      - name: Synchroniser gh-pages avec main
+        run: git push --force origin HEAD:gh-pages

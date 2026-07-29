@@ -6,11 +6,15 @@ Application web simple pour calculer les **glucides nets** d'un repas, conçue p
 
 Ouvrez simplement `index.html` dans un navigateur (téléphone, tablette ou ordinateur). Le cœur de l'app fonctionne entièrement localement, sans connexion. Deux fonctions optionnelles demandent un accès réseau ou HTTPS : le scan de code-barres (Open Food Facts) et l'installation en PWA.
 
+### 🌐 Site en ligne
+
+L'app est publiée à l'adresse : **https://frankyray21.github.io/Calcul-glucide/**
+
 ### 📱 Installer comme une vraie app (PWA)
 
-Une fois le site publié sur GitHub Pages (voir plus bas), ouvrez-le sur votre téléphone puis choisissez **« Ajouter à l'écran d'accueil »** — l'app s'installe avec son icône, s'ouvre en plein écran et fonctionne **hors ligne** (service worker).
+Ouvrez le site sur votre téléphone puis choisissez **« Ajouter à l'écran d'accueil »** — l'app s'installe avec son icône, s'ouvre en plein écran et fonctionne **hors ligne** (service worker).
 
-Pour activer GitHub Pages : *Settings → Pages → Source : GitHub Actions*. Le workflow `.github/workflows/pages.yml` déploie automatiquement à chaque poussée sur `main`.
+Le site est servi par GitHub Pages depuis la branche `gh-pages`; le workflow `.github/workflows/pages.yml` la synchronise automatiquement à chaque poussée sur `main`.
 
 ## Onglets
 
