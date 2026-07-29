@@ -488,6 +488,53 @@
 
   .btn-row { display: flex; gap: 10px; }
   .btn-row .btn { flex: 1; }
+
+  /* Bannière d'installation */
+  .install-banner {
+    display: none;
+    max-width: 560px;
+    margin: 16px auto -4px;
+    padding: 0 16px;
+  }
+  .install-banner.visible { display: block; }
+  .install-banner button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 13px;
+    font-size: 1rem;
+    font-weight: 700;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, var(--accent), #0e8a63);
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(26, 107, 84, 0.35);
+  }
+  .install-banner button:active { opacity: 0.85; }
+  .install-steps { list-style: none; margin: 12px 0; }
+  .install-steps li {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 8px 0;
+    font-size: 0.92rem;
+  }
+  .install-steps .num {
+    background: var(--accent);
+    color: #fff;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8rem;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
 </style>
 </head>
 <body>
@@ -502,6 +549,10 @@
     <button class="tab-btn" data-tab="journal">📅 Journal</button>
   </nav>
 </header>
+
+<div class="install-banner" id="install-banner">
+  <button id="install-btn" type="button">📲 Télécharger l'app sur votre appareil</button>
+</div>
 
 <main>
 
@@ -775,6 +826,26 @@
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de votre équipe de soins en diabète.
   Vérifiez toujours les valeurs entrées dans votre pompe et suivez les recommandations de votre professionnel de la santé.
 </p>
+
+<!-- Modal : instructions d'installation -->
+<div class="modal-overlay" id="install-modal">
+  <div class="modal">
+    <h3>📲 Installer Glucides Nets</h3>
+    <p class="stats-line">L'app s'installe directement depuis le navigateur — rien à télécharger sur un magasin d'applications.</p>
+    <ul class="install-steps" id="install-steps-ios" style="display:none;">
+      <li><span class="num">1</span><span>Touchez le bouton <strong>Partager</strong> <span aria-hidden="true">(carré avec flèche ↑)</span> dans la barre de Safari.</span></li>
+      <li><span class="num">2</span><span>Faites défiler et choisissez <strong>« Sur l'écran d'accueil »</strong>.</span></li>
+      <li><span class="num">3</span><span>Touchez <strong>Ajouter</strong> — l'icône verte apparaît sur votre écran d'accueil.</span></li>
+    </ul>
+    <ul class="install-steps" id="install-steps-generic" style="display:none;">
+      <li><span class="num">1</span><span>Ouvrez le <strong>menu du navigateur</strong> (⋮ ou ⋯).</span></li>
+      <li><span class="num">2</span><span>Choisissez <strong>« Ajouter à l'écran d'accueil »</strong> ou <strong>« Installer l'application »</strong>.</span></li>
+      <li><span class="num">3</span><span>Confirmez — l'icône verte apparaît sur votre écran d'accueil.</span></li>
+    </ul>
+    <p class="stats-line">Une fois installée, l'app s'ouvre en plein écran et fonctionne même sans connexion.</p>
+    <button class="btn btn-secondary" id="install-modal-close" type="button">Fermer</button>
+  </div>
+</div>
 
 <!-- Modal : scanner de code-barres -->
 <div class="modal-overlay" id="scan-modal">
@@ -1969,6 +2040,63 @@
   /* ══════════ PWA : service worker ══════════ */
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     navigator.serviceWorker.register('sw.js').catch(function () { /* hors ligne ou non supporté */ });
+  }
+
+  /* ══════════ Bouton « Télécharger l'app » ══════════ */
+  var deferredInstallPrompt = null;
+
+  function isStandalone() {
+    return window.matchMedia('(display-mode: standalone)').matches ||
+      window.navigator.standalone === true;
+  }
+  function isIOS() {
+    return /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+      (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  }
+
+  function showInstallInstructions() {
+    $('install-steps-ios').style.display = isIOS() ? 'block' : 'none';
+    $('install-steps-generic').style.display = isIOS() ? 'none' : 'block';
+    $('install-modal').classList.add('open');
+  }
+
+  // Chrome/Edge/Android : installation native en un geste
+  window.addEventListener('beforeinstallprompt', function (e) {
+    e.preventDefault();
+    deferredInstallPrompt = e;
+    $('install-banner').classList.add('visible');
+  });
+
+  window.addEventListener('appinstalled', function () {
+    deferredInstallPrompt = null;
+    $('install-banner').classList.remove('visible');
+  });
+
+  $('install-btn').addEventListener('click', function () {
+    if (deferredInstallPrompt) {
+      deferredInstallPrompt.prompt();
+      deferredInstallPrompt.userChoice.then(function (choice) {
+        if (choice && choice.outcome === 'accepted') {
+          $('install-banner').classList.remove('visible');
+        }
+        deferredInstallPrompt = null;
+      });
+    } else {
+      showInstallInstructions();
+    }
+  });
+
+  $('install-modal-close').addEventListener('click', function () {
+    $('install-modal').classList.remove('open');
+  });
+  $('install-modal').addEventListener('click', function (e) {
+    if (e.target === this) this.classList.remove('open');
+  });
+
+  // Safari iOS n'émet pas beforeinstallprompt : on montre quand même le
+  // bouton (instructions pas-à-pas), sauf si l'app est déjà installée.
+  if (!isStandalone() && location.protocol === 'https:') {
+    $('install-banner').classList.add('visible');
   }
 
   renderMeal();
