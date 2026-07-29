@@ -26,6 +26,7 @@ Le site est servi par GitHub Pages depuis la branche `gh-pages`; le workflow `.g
 5. Quand le repas est terminé : **✅ Enregistrer au journal**.
 
 ### 📖 Recettes
+- **⭐ Recettes populaires intégrées** : 14 plats courants (spaghetti sauce à la viande, pâté chinois, tourtière, poutine, macaroni au fromage, chili, sushi…) avec valeurs moyennes par 100 g issues des plats composés USDA/FCÉN — touchez, entrez le poids de la portion, c'est ajouté au repas. Votre version maison peut différer : pour un calcul exact, utilisez la recette par ingrédients.
 - **🧑‍🍳 Recette par ingrédients** : ajoutez chaque ingrédient pesé (depuis la base ou à la main), indiquez le poids final du plat cuit, et l'app calcule elle-même les valeurs par 100 g (en tenant compte de l'évaporation à la cuisson).
 - Créez vos recettes avec **photo** (prise directement avec la caméra, compressée et stockée localement).
 - Chaque carte affiche les **g nets / 100 g** et les **g nets par gramme**.
