@@ -4,7 +4,11 @@
    Open Food Facts (données nutritionnelles toujours fraîches). */
 'use strict';
 
-var CACHE = 'glucides-nets-v2';
+/* Version de l'app : garder ce nom de cache synchronisé avec le numéro
+   affiché dans le pied de page d'index.html (#app-version). L'incrémenter
+   à CHAQUE mise à jour publiée, sinon les utilisateurs installés gardent
+   l'ancienne version en cache. */
+var CACHE = 'glucides-nets-v2.0.0';
 var ASSETS = [
   '.',
   'index.html',

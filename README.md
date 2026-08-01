@@ -44,6 +44,14 @@ Le site est servi par GitHub Pages depuis la branche `gh-pages`; le workflow `.g
 - **↻ Recharge** un repas passé en un geste (pratique pour les repas récurrents).
 - **💾 Export / import** : sauvegarde toutes tes données (recettes, favoris, journal) dans un fichier JSON pour les transférer sur un autre appareil.
 
+## Version de l'app
+
+La version courante est **v2.0.0**, affichée dans le pied de page de l'app (`#app-version` dans `index.html`).
+
+**Règle à chaque mise à jour publiée** : incrémenter le numéro aux **deux** endroits, sinon les utilisateurs installés gardent l'ancienne version en cache :
+1. le pied de page d'`index.html` (`Glucides Nets vX.Y.Z`);
+2. le nom du cache dans `sw.js` (`var CACHE = 'glucides-nets-vX.Y.Z'`) — c'est le changement de ce nom qui force le service worker à télécharger la nouvelle version.
+
 ## Design et onboarding
 
 - **Direction artistique** : style coloré et convivial (inspiré de mySugr), jamais clinique. Vert de marque `#16A34A` pour le décor et les gros éléments; `#15803D` pour les textes colorés et boutons (contraste WCAG AA vérifié); accent chaud ambre pour le bandeau hors ligne. Le compteur principal reste en **encre neutre à fort contraste (AAA)** — la couleur ne porte jamais un avis médical.
