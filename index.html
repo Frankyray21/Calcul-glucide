@@ -3,7 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#16A34A">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#15803D">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0F172A">
 <meta name="description" content="Calcule les glucides nets de tes repas, même sans réseau — pour pompe à insuline, diabète de type 1">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png" type="image/png">
@@ -19,6 +20,7 @@
      blanc et sur #DCFCE7). Le compteur principal reste en encre neutre
      (≥ 7:1, AAA) — la couleur ne porte jamais un avis médical. */
   :root {
+    color-scheme: light dark; /* contrôles natifs (select, scrollbars) au bon thème */
     --bg: #F8FAFC;
     --card: #FFFFFF;
     --text: #0F172A;
@@ -81,14 +83,17 @@
       transition-duration: 0.01ms !important;
     }
   }
+  /* En-tête assombri (#15803D→#14532D) : blanc ≥ 5:1 sur toute la surface,
+     onglets inactifs ≥ 4.5:1 — l'actif se distingue par le soulignement,
+     jamais par la couleur seule */
   header {
-    background: linear-gradient(150deg, #16A34A, #166534);
+    background: linear-gradient(150deg, #15803D, #14532D);
     color: #fff;
     padding: 16px 16px 0;
     text-align: center;
   }
   header h1 { font-size: 1.25rem; font-weight: 800; }
-  header p { font-size: 0.82rem; opacity: 0.95; margin-top: 2px; }
+  header p { font-size: 0.85rem; margin-top: 2px; }
 
   .tabs {
     display: flex;
@@ -101,9 +106,9 @@
     padding: 12px 2px;
     background: none;
     border: none;
-    color: rgba(255,255,255,0.85);
+    color: rgba(255,255,255,0.95);
     font-family: inherit;
-    font-size: 0.82rem;
+    font-size: clamp(0.8rem, 4.2vw, 0.94rem);
     font-weight: 700;
     cursor: pointer;
     border-bottom: 3px solid transparent;
@@ -145,7 +150,19 @@
   }
   .card h2 { font-size: 1rem; margin-bottom: 12px; }
 
-  label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 4px; font-weight: 600; }
+  label { display: block; font-size: 0.88rem; color: var(--muted); margin-bottom: 4px; font-weight: 600; }
+  /* Lecteurs d'écran seulement */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+    border: 0;
+  }
   input[type="text"], input[type="number"], input[type="search"], select {
     width: 100%;
     min-height: 48px;
@@ -188,7 +205,7 @@
   .search-results {
     margin-top: 8px;
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: 14px;
     overflow: hidden;
     display: none;
   }
@@ -219,7 +236,7 @@
     border-radius: 999px;
     padding: 4px 10px;
     font-weight: 700;
-    font-size: 0.82rem;
+    font-size: 0.88rem;
     white-space: nowrap;
     font-variant-numeric: tabular-nums;
   }
@@ -244,7 +261,7 @@
   .food-item:last-child { border-bottom: none; }
   .food-item .info { flex: 1; min-width: 0; }
   .food-item .name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .food-item .detail { font-size: 0.82rem; color: var(--muted); margin-top: 2px; }
+  .food-item .detail { font-size: 0.94rem; color: var(--muted); margin-top: 2px; }
   .food-item .net { font-weight: 700; color: var(--accent-text); white-space: nowrap; font-size: 1.05rem; font-variant-numeric: tabular-nums; }
   .food-item .remove {
     background: none;
@@ -290,19 +307,56 @@
     grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
     gap: 12px;
   }
+  /* Carte recette : un conteneur non interactif + de vrais <button> frères
+     (zone principale « ajouter au repas », puis rangée d'actions 48 px) —
+     jamais d'élément interactif imbriqué dans un bouton */
   .recipe-card {
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     overflow: hidden;
-    cursor: pointer;
     position: relative;
     text-align: left;
     padding: 0;
     color: var(--text);
-    font-family: inherit;
+    display: flex;
+    flex-direction: column;
   }
-  .recipe-card:active { outline: 2px solid var(--accent); }
+  .recipe-card .card-hit {
+    display: block;
+    width: 100%;
+    padding: 0;
+    background: none;
+    border: none;
+    color: inherit;
+    font-family: inherit;
+    text-align: left;
+    cursor: pointer;
+    flex: 1;
+    transition: transform 150ms ease-out;
+  }
+  .recipe-card .card-hit:active { transform: scale(0.99); }
+  .recipe-card .card-actions {
+    display: flex;
+    border-top: 1px solid var(--border);
+  }
+  .recipe-card .card-actions button {
+    flex: 1;
+    min-height: 48px;
+    background: none;
+    border: none;
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    color: var(--accent-text);
+    transition: transform 150ms ease-out;
+  }
+  .recipe-card .card-actions button:active { transform: scale(0.96); }
+  .recipe-card .card-actions .card-del {
+    color: var(--danger);
+    border-left: 1px solid var(--border);
+  }
   .recipe-card .photo {
     width: 100%;
     aspect-ratio: 4/3;
@@ -317,27 +371,13 @@
   .recipe-card .body { padding: 10px; }
   .recipe-card .name {
     font-weight: 700;
-    font-size: 0.92rem;
+    font-size: 1rem;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .recipe-card .stats { font-size: 0.8rem; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+  .recipe-card .stats { font-size: 0.88rem; color: var(--muted); margin-top: 4px; line-height: 1.5; }
   .recipe-card .stats b { color: var(--accent-text); }
-  .recipe-card .del {
-    position: absolute;
-    top: 6px;
-    right: 6px;
-    background: rgba(0,0,0,0.6);
-    color: #fff;
-    border: none;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    font-size: 1rem;
-    cursor: pointer;
-    line-height: 1;
-  }
 
   /* Modal quantité */
   .modal-overlay {
@@ -414,8 +454,8 @@
     justify-content: space-between;
     gap: 12px;
   }
-  .total-bar .label { font-size: 0.8rem; color: var(--muted); font-weight: 700; }
-  .total-bar .sub { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+  .total-bar .label { font-size: 0.85rem; color: var(--muted); font-weight: 700; }
+  .total-bar .sub { font-size: 0.94rem; color: var(--muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
   /* Compteur principal : encre neutre à fort contraste (AAA), très gros
      chiffres tabulaires — lisible en plein soleil, aucune couleur d'avis */
   .total-bar .value {
@@ -431,46 +471,58 @@
   details.help { margin-bottom: 16px; }
   details.help summary {
     cursor: pointer;
-    font-size: 0.88rem;
+    font-size: 0.9rem;
     color: var(--muted);
     font-weight: 600;
     padding: 8px 0;
-    min-height: 44px;
+    min-height: 48px;
     display: flex;
     align-items: center;
   }
-  details.help .card { margin-top: 8px; font-size: 0.88rem; color: var(--muted); }
+  details.help .card { margin-top: 8px; font-size: 0.94rem; color: var(--muted); }
   details.help .card p { margin-bottom: 8px; }
   details.help .card strong { color: var(--text); }
 
   .disclaimer {
-    font-size: 0.8rem;
+    font-size: 0.94rem;
     color: var(--muted);
     text-align: center;
     padding: 8px 16px 16px;
     max-width: 560px;
     margin: 0 auto;
   }
+  .disclaimer #app-version { font-size: 0.8rem; }
 
   .favorites-list { display: flex; flex-wrap: wrap; gap: 8px; }
+  /* Puce favori : conteneur + deux vrais boutons (ajouter / supprimer) */
   .fav-chip {
     display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    min-height: 48px;
+    align-items: stretch;
     background: var(--accent-light);
-    color: var(--accent-text);
-    border: none;
     border-radius: 999px;
-    padding: 8px 14px;
+    overflow: hidden;
+  }
+  .fav-chip button {
+    background: none;
+    border: none;
     font-family: inherit;
-    font-size: 0.88rem;
-    font-weight: 600;
     cursor: pointer;
+    min-height: 48px;
     transition: transform 150ms ease-out;
   }
-  .fav-chip:active { transform: scale(0.98); }
-  .fav-chip .del { color: var(--danger); font-weight: 700; padding: 8px 0 8px 8px; }
+  .fav-chip button:active { transform: scale(0.96); }
+  .fav-chip .fav-add {
+    color: var(--accent-text);
+    font-size: 0.88rem;
+    font-weight: 600;
+    padding: 8px 4px 8px 14px;
+  }
+  .fav-chip .fav-del {
+    color: var(--danger);
+    font-weight: 700;
+    min-width: 48px;
+    padding: 8px 10px 8px 4px;
+  }
 
   .save-fav-row {
     display: flex;
@@ -480,7 +532,7 @@
   .save-fav-row input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--accent); }
   .save-fav-row label { margin: 0; font-size: 0.88rem; }
 
-  .hint { font-size: 0.8rem; color: var(--muted); margin: -6px 0 12px; }
+  .hint { font-size: 0.85rem; color: var(--muted); margin: -6px 0 12px; }
 
   /* Outil interactif glucides ↔ grammes */
   .chart-wrap { position: relative; }
@@ -496,17 +548,17 @@
     font-size: 1.05rem;
     margin: 10px 0 4px;
   }
-  .chart-readout b { color: var(--chart); font-size: 1.35rem; }
+  .chart-readout b { color: var(--accent-text); font-size: 1.35rem; font-variant-numeric: tabular-nums; }
   input[type="range"] {
     width: 100%;
     margin: 10px 0 4px;
     accent-color: var(--chart);
-    height: 28px;
+    height: 48px;
   }
-  .tool-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin-top: 10px; }
+  .tool-table { width: 100%; border-collapse: collapse; font-size: 0.94rem; margin-top: 10px; font-variant-numeric: tabular-nums; }
   .tool-table th, .tool-table td { padding: 7px 8px; text-align: right; border-bottom: 1px solid var(--border); }
   .tool-table th:first-child, .tool-table td:first-child { text-align: left; }
-  .tool-table th { color: var(--muted); font-size: 0.75rem; font-weight: 600; }
+  .tool-table th { color: var(--muted); font-size: 0.82rem; font-weight: 600; }
   .tool-table tr.current td { background: var(--chart-soft); font-weight: 700; }
   .inverse-box {
     display: flex;
@@ -514,18 +566,18 @@
     gap: 10px;
     margin-top: 12px;
     background: var(--accent-light);
-    border-radius: 10px;
+    border-radius: 14px;
     padding: 12px;
   }
   .inverse-box input { flex: 1; }
-  .inverse-box .result { flex: 1.4; font-size: 0.9rem; }
-  .inverse-box .result b { color: var(--chart); font-size: 1.15rem; }
+  .inverse-box .result { flex: 1.4; font-size: 0.94rem; }
+  .inverse-box .result b { color: var(--accent-text); font-size: 1.15rem; }
 
   /* Scanner de code-barres */
   #scan-video {
     width: 100%;
     max-height: 260px;
-    border-radius: 10px;
+    border-radius: 14px;
     background: #000;
     object-fit: cover;
     display: none;
@@ -544,8 +596,8 @@
     border-bottom: 2px solid var(--accent);
     margin-top: 8px;
   }
-  .day-header .date { font-weight: 700; font-size: 0.92rem; text-transform: capitalize; }
-  .day-header .day-total { font-size: 0.85rem; color: var(--accent); font-weight: 700; }
+  .day-header .date { font-weight: 700; font-size: 0.94rem; text-transform: capitalize; }
+  .day-header .day-total { font-size: 0.94rem; color: var(--accent-text); font-weight: 700; font-variant-numeric: tabular-nums; }
   .journal-meal {
     display: flex;
     align-items: center;
@@ -553,11 +605,11 @@
     padding: 10px 0;
     border-bottom: 1px solid var(--border);
   }
-  .journal-meal .time { font-size: 0.8rem; color: var(--muted); font-weight: 700; width: 44px; flex-shrink: 0; }
+  .journal-meal .time { font-size: 0.94rem; color: var(--muted); font-weight: 700; width: 52px; flex-shrink: 0; font-variant-numeric: tabular-nums; }
   .journal-meal .foods {
     flex: 1;
     min-width: 0;
-    font-size: 0.85rem;
+    font-size: 0.94rem;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -568,11 +620,13 @@
     border: none;
     cursor: pointer;
     font-size: 1.1rem;
-    min-width: 44px;
-    min-height: 44px;
+    min-width: 48px;
+    min-height: 48px;
     color: var(--muted);
     border-radius: 12px;
+    transition: transform 150ms ease-out;
   }
+  .journal-meal .icon-btn:active { transform: scale(0.96); }
   .journal-meal .icon-btn.del { color: var(--danger); }
   .week-chart text { fill: var(--muted); font-size: 10px; font-family: inherit; }
   .week-chart .bar { fill: var(--chart); }
@@ -587,28 +641,12 @@
     gap: 8px;
     padding: 8px 0;
     border-bottom: 1px solid var(--border);
-    font-size: 0.88rem;
+    font-size: 0.94rem;
   }
-  .ing-item .detail { color: var(--muted); font-size: 0.8rem; }
-  .ing-item .remove { background: none; border: none; color: var(--danger); font-size: 1.1rem; cursor: pointer; min-width: 44px; min-height: 44px; border-radius: 12px; }
-  .ing-total { font-size: 0.88rem; margin: 10px 0; color: var(--muted); }
+  .ing-item .detail { color: var(--muted); font-size: 0.88rem; }
+  .ing-item .remove { background: none; border: none; color: var(--danger); font-size: 1.1rem; cursor: pointer; min-width: 48px; min-height: 48px; border-radius: 12px; }
+  .ing-total { font-size: 0.94rem; margin: 10px 0; color: var(--muted); }
   .ing-total b { color: var(--accent-text); }
-
-  /* Partage sur carte recette */
-  .recipe-card .share {
-    position: absolute;
-    top: 6px;
-    left: 6px;
-    background: rgba(0,0,0,0.6);
-    color: #fff;
-    border: none;
-    border-radius: 50%;
-    width: 40px;
-    height: 40px;
-    font-size: 0.95rem;
-    cursor: pointer;
-    line-height: 1;
-  }
 
   .btn-row { display: flex; gap: 10px; }
   .btn-row .btn { flex: 1; }
@@ -620,13 +658,13 @@
     margin: 16px auto -4px;
     padding: 0 16px;
   }
-  .install-banner.visible { display: block; }
-  .install-banner button {
+  .install-banner.visible { display: flex; gap: 8px; align-items: stretch; }
+  .install-banner .install-cta {
+    flex: 1;
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 8px;
-    width: 100%;
     min-height: 48px;
     padding: 13px;
     font-family: inherit;
@@ -634,13 +672,26 @@
     font-weight: 700;
     border: none;
     border-radius: 14px;
-    background: linear-gradient(135deg, #16A34A, #15803D);
+    background: linear-gradient(135deg, #15803D, #166534);
     color: #fff;
     cursor: pointer;
-    box-shadow: 0 4px 14px rgba(22, 163, 74, 0.35);
+    box-shadow: 0 4px 14px rgba(21, 128, 61, 0.35);
     transition: transform 150ms ease-out, opacity 150ms ease-out;
   }
-  .install-banner button:active { transform: scale(0.98); opacity: 0.9; }
+  .install-banner .install-cta:active { transform: scale(0.98); opacity: 0.9; }
+  .install-banner .install-close {
+    flex-shrink: 0;
+    min-width: 48px;
+    min-height: 48px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--card);
+    color: var(--muted);
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: transform 150ms ease-out;
+  }
+  .install-banner .install-close:active { transform: scale(0.96); }
   .install-steps { list-style: none; margin: 12px 0; }
   .install-steps li {
     display: flex;
@@ -787,6 +838,9 @@
     pointer-events: none;
   }
   .toast {
+    display: flex;
+    align-items: center;
+    gap: 12px;
     max-width: 420px;
     background: var(--card);
     color: var(--text);
@@ -794,14 +848,35 @@
     border-left: 4px solid var(--accent);
     border-radius: 14px;
     padding: 12px 16px;
-    font-size: 0.92rem;
+    font-size: 0.94rem;
     font-weight: 600;
     box-shadow: 0 6px 20px rgba(15, 23, 42, 0.18);
     animation: toast-in 200ms ease-out;
+    pointer-events: auto;
   }
+  .toast--error { border-left-color: var(--danger); }
+  .toast--warn { border-left-color: var(--warm); }
+  .toast--info { border-left-color: var(--info); }
+  .toast .toast-action {
+    background: none;
+    border: none;
+    font-family: inherit;
+    font-size: 0.94rem;
+    font-weight: 800;
+    color: var(--accent-text);
+    cursor: pointer;
+    min-height: 44px;
+    padding: 0 8px;
+    white-space: nowrap;
+  }
+  .toast.leaving { animation: toast-out 200ms ease-out forwards; }
   @keyframes toast-in {
     from { opacity: 0; transform: translateY(8px); }
     to { opacity: 1; transform: translateY(0); }
+  }
+  @keyframes toast-out {
+    from { opacity: 1; transform: translateY(0); }
+    to { opacity: 0; transform: translateY(8px); }
   }
 
   /* Amorce caméra (permission juste-à-temps) */
@@ -819,7 +894,7 @@
   <section class="ob-step active" id="ob-step-1">
     <div class="ob-body">
       <div class="ob-illus" aria-hidden="true">🥗</div>
-      <h2 id="ob-title-1">Bienvenue dans Glucides Nets!</h2>
+      <h2 id="ob-title-1" tabindex="-1">Bienvenue dans Glucides Nets!</h2>
       <p class="lead">Calcule les glucides de tes repas, même sans réseau. Simple, rapide, et toujours dans ta poche.</p>
     </div>
     <div class="ob-footer">
@@ -832,7 +907,7 @@
   <!-- Écran 2 : comment ça marche -->
   <section class="ob-step" id="ob-step-2" aria-labelledby="ob-title-2">
     <div class="ob-body">
-      <h2 id="ob-title-2">Comment ça marche</h2>
+      <h2 id="ob-title-2" tabindex="-1">Comment ça marche</h2>
       <ul class="ob-benefits">
         <li>
           <span class="ico" aria-hidden="true">🔍</span>
@@ -859,7 +934,7 @@
   <section class="ob-step" id="ob-step-3" aria-labelledby="ob-title-3">
     <div class="ob-body">
       <div class="ob-illus" aria-hidden="true">🩺</div>
-      <h2 id="ob-title-3">Un mot avant de commencer</h2>
+      <h2 id="ob-title-3" tabindex="-1">Un mot avant de commencer</h2>
       <p class="ob-disclaimer-text">
         Cette app est un outil informatif seulement. Elle ne remplace pas l'avis d'un
         professionnel de la santé. Les glucides affichés sont des estimations.
@@ -881,7 +956,7 @@
   <section class="ob-step" id="ob-step-4" aria-labelledby="ob-title-4">
     <div class="ob-body" role="status" aria-live="polite">
       <div class="ob-illus" aria-hidden="true">📦</div>
-      <h2 id="ob-title-4">On prépare ta base d'aliments</h2>
+      <h2 id="ob-title-4" tabindex="-1">On prépare ta base d'aliments</h2>
       <p class="lead">…pour que tout marche sans réseau. Ça prend juste un instant.</p>
       <div class="ob-progress-track" aria-hidden="true"><div class="ob-progress-fill" id="ob-progress"></div></div>
       <p class="ob-progress-label" id="ob-progress-label">0 %</p>
@@ -897,7 +972,7 @@
   <h1>🧮 Glucides Nets</h1>
   <p>Calculateur de repas pour pompe à insuline</p>
   <nav class="tabs">
-    <button class="tab-btn active" data-tab="meal">🍽️ Repas</button>
+    <button class="tab-btn active" data-tab="meal" aria-current="true">🍽️ Repas</button>
     <button class="tab-btn" data-tab="recipes">📖 Recettes</button>
     <button class="tab-btn" data-tab="tool">📈 Outil</button>
     <button class="tab-btn" data-tab="journal">📅 Journal</button>
@@ -905,7 +980,8 @@
 </header>
 
 <div class="install-banner" id="install-banner">
-  <button id="install-btn" type="button">📲 Ajoute l'app à ton écran d'accueil</button>
+  <button id="install-btn" class="install-cta" type="button">📲 Ajoute l'app à ton écran d'accueil</button>
+  <button id="install-close" class="install-close" type="button" aria-label="Masquer la proposition d'installation">✕</button>
 </div>
 
 <main>
@@ -914,6 +990,8 @@
     <span aria-hidden="true">📡</span>
     <span>Hors ligne. La recherche et tes repas fonctionnent. Le scanner de produits revient avec le réseau.</span>
   </div>
+
+  <div class="sr-only" id="search-live" role="status" aria-live="polite"></div>
 
   <!-- ═══════════ ONGLET REPAS ═══════════ -->
   <section class="tab-panel active" id="panel-meal">
@@ -1036,7 +1114,7 @@
       <button class="btn btn-secondary" id="ing-add-btn" type="button">+ Ajouter l'ingrédient</button>
       <div id="ing-list"></div>
       <div id="ing-summary" style="display:none;">
-        <p class="ing-total" id="ing-totals"></p>
+        <p class="ing-total" id="ing-totals" role="status" aria-live="polite"></p>
         <div class="row">
           <div>
             <label for="ing-cooked-weight">Poids final du plat cuit (g)</label>
@@ -1090,7 +1168,11 @@
       <h2>📖 Mes recettes</h2>
       <p class="hint" style="margin:0 0 12px;">Touche une recette pour l'ajouter au repas — il suffit d'indiquer le poids de ta portion.</p>
       <div class="recipe-grid" id="recipe-grid"></div>
-      <p class="empty" id="recipes-empty"><span class="illus" aria-hidden="true">📖</span>Tu n'as pas encore de recette. Crée ta première juste au-dessus!</p>
+      <div class="empty" id="recipes-empty">
+        <span class="illus" aria-hidden="true">📖</span>
+        <p>Tu n'as pas encore de recette. Crée ta première juste au-dessus!</p>
+        <button class="btn btn-secondary" id="recipes-empty-btn" type="button" style="margin-top:10px;">🧑‍🍳 Créer ma première recette</button>
+      </div>
     </div>
 
     <div class="card">
@@ -1143,7 +1225,7 @@
           <label for="inverse-target">🎯 Cible (g nets)</label>
           <input type="number" id="inverse-target" inputmode="decimal" min="0" step="1" placeholder="ex. : 30">
         </div>
-        <div class="result" id="inverse-result">Entre une cible pour connaître le poids à servir.</div>
+        <div class="result" id="inverse-result" role="status" aria-live="polite">Entre une cible pour connaître le poids à servir.</div>
       </div>
       <p class="hint" style="margin-top:10px;">Pratique pour peser une portion qui correspond exactement au bolus voulu.</p>
     </div>
@@ -1174,7 +1256,7 @@
         <button class="btn btn-secondary" id="import-btn" type="button">⬆️ Importer</button>
       </div>
       <input type="file" id="import-input" accept="application/json,.json" style="display:none;">
-      <p class="hint" id="backup-status" style="margin-top:10px;"></p>
+      <p class="hint" id="backup-status" role="status" aria-live="polite" style="margin-top:10px;"></p>
     </div>
 
   </section>
@@ -1184,13 +1266,13 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.0.0</span>
+  <br><span id="app-version">Glucides Nets v2.0.1</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
-<div class="modal-overlay" id="install-modal">
+<div class="modal-overlay" id="install-modal" role="dialog" aria-modal="true" aria-labelledby="install-title">
   <div class="modal">
-    <h3>📲 Installer Glucides Nets</h3>
+    <h3 id="install-title">📲 Installer Glucides Nets</h3>
     <p class="stats-line">L'app s'installe directement depuis le navigateur — rien à télécharger sur un magasin d'applications.</p>
     <ul class="install-steps" id="install-steps-ios" style="display:none;">
       <li><span class="num">1</span><span>Touche le bouton <strong>Partager</strong> <span aria-hidden="true">(carré avec flèche ↑)</span> dans la barre de Safari.</span></li>
@@ -1208,9 +1290,9 @@
 </div>
 
 <!-- Modal : scanner de code-barres -->
-<div class="modal-overlay" id="scan-modal">
+<div class="modal-overlay" id="scan-modal" role="dialog" aria-modal="true" aria-labelledby="scan-title">
   <div class="modal">
-    <h3>📷 Scanner un code-barres</h3>
+    <h3 id="scan-title">📷 Scanner un code-barres</h3>
     <!-- Amorce : on explique le bénéfice AVANT la demande système de caméra -->
     <div class="cam-primer" id="cam-primer" style="display:none;">
       <div class="ico" aria-hidden="true">📷</div>
@@ -1229,7 +1311,7 @@
 </div>
 
 <!-- Modal : quantité consommée -->
-<div class="modal-overlay" id="qty-modal">
+<div class="modal-overlay" id="qty-modal" role="dialog" aria-modal="true" aria-labelledby="qty-title">
   <div class="modal">
     <h3 id="qty-title">Recette</h3>
     <p class="stats-line" id="qty-stats"></p>
@@ -1341,34 +1423,112 @@
   var pendingPhoto = null;
   var modalRecipe = null;
 
-  try {
-    meal = JSON.parse(localStorage.getItem('gn_meal') || '[]');
-    favorites = JSON.parse(localStorage.getItem('gn_favorites') || '[]');
-    recipes = JSON.parse(localStorage.getItem('gn_recipes') || '[]');
-    history = JSON.parse(localStorage.getItem('gn_history') || '[]');
-  } catch (e) { meal = []; favorites = []; recipes = []; history = []; }
+  /* ── Accès localStorage sûrs ──
+     getItem/setItem peuvent lever (navigation privée, cookies bloqués,
+     quota plein). Aucune fonctionnalité ne doit coincer l'utilisateur
+     à cause du stockage — surtout pas l'onboarding bloquant. */
+  function lsGet(k) {
+    try { return localStorage.getItem(k); } catch (e) { return null; }
+  }
+  function lsSet(k, v) {
+    try { localStorage.setItem(k, v); return true; } catch (e) { return false; }
+  }
+
+  /* ── Assainissement des données stockées/importées ──
+     Une valeur mal formée (autre version, fichier édité, écriture
+     interrompue) ne doit jamais planter l'init ni afficher « NaN g »
+     dans le total à entrer dans la pompe. */
+  function num(v) {
+    v = Number(v);
+    return isFinite(v) ? v : 0;
+  }
+  function sanitizeItem(it) {
+    if (!it || typeof it !== 'object') return null;
+    var s = {
+      name: String(it.name || 'Aliment'),
+      carbs: num(it.carbs),
+      fiber: num(it.fiber),
+      polyols: num(it.polyols),
+      polyolType: it.polyolType === 'full' ? 'full' : 'half',
+      ratio: num(it.ratio) || 1
+    };
+    if (it.grams) s.grams = num(it.grams);
+    return s;
+  }
+  function sanitizeRecipe(r) {
+    if (!r || typeof r !== 'object') return null;
+    return {
+      name: String(r.name || 'Recette'),
+      carbs: num(r.carbs),
+      fiber: num(r.fiber),
+      polyols: num(r.polyols),
+      polyolType: r.polyolType === 'full' ? 'full' : 'half',
+      photo: typeof r.photo === 'string' ? r.photo : null
+    };
+  }
+  function sanitizeEntry(e) {
+    if (!e || typeof e !== 'object') return null;
+    return {
+      ts: num(e.ts) || 0,
+      items: (Array.isArray(e.items) ? e.items : []).map(sanitizeItem).filter(Boolean),
+      net: num(e.net), carbs: num(e.carbs), fiber: num(e.fiber), polyols: num(e.polyols)
+    };
+  }
+  function loadList(key, sanitize) {
+    var raw;
+    try { raw = JSON.parse(lsGet(key) || '[]'); } catch (e) { raw = []; }
+    return (Array.isArray(raw) ? raw : []).map(sanitize).filter(Boolean);
+  }
+
+  meal = loadList('gn_meal', sanitizeItem);
+  favorites = loadList('gn_favorites', sanitizeItem);
+  recipes = loadList('gn_recipes', sanitizeRecipe);
+  history = loadList('gn_history', sanitizeEntry);
 
   var $ = function (id) { return document.getElementById(id); };
 
   /* ── Toasts de confirmation ──
-     Ton neutre et court, 5 s pour laisser le temps de lire,
-     max 3 à l'écran, aria-live="polite" sur la zone. */
-  function toast(msg) {
+     Ton neutre et court, 5 s pour laisser le temps de lire, max 3 à
+     l'écran, aria-live="polite" sur la zone. Variantes : error / warn /
+     info; action optionnelle (ex. « Annuler »). */
+  function toast(msg, opts) {
+    opts = opts || {};
     var zone = $('toast-zone');
     while (zone.children.length >= 3) zone.removeChild(zone.firstChild);
     var t = document.createElement('div');
-    t.className = 'toast';
-    t.textContent = msg;
+    t.className = 'toast' + (opts.type ? ' toast--' + opts.type : '');
+    var text = document.createElement('span');
+    text.textContent = msg;
+    t.appendChild(text);
+    var timer = setTimeout(dismiss, opts.duration || 5000);
+    function dismiss() {
+      clearTimeout(timer);
+      if (!t.parentNode) return;
+      t.classList.add('leaving');
+      setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 200);
+    }
+    if (opts.action) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'toast-action';
+      b.textContent = opts.action.label;
+      b.addEventListener('click', function () { opts.action.fn(); dismiss(); });
+      t.appendChild(b);
+    }
     zone.appendChild(t);
-    setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 5000);
+  }
+
+  /* Défilement animé seulement si l'utilisateur n'a pas demandé une
+     réduction du mouvement */
+  function scrollToEl(el) {
+    var reduce = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'center' });
   }
 
   /* Engagement : la bannière d'installation n'apparaît qu'après le
      premier aliment ajouté — jamais au premier écran. */
   function markEngagement() {
-    if (!localStorage.getItem('gn_engaged')) {
-      localStorage.setItem('gn_engaged', '1');
-    }
+    lsSet('gn_engaged', '1');
     maybeShowInstallBanner();
   }
 
@@ -1385,23 +1545,30 @@
     return Math.max(0, item.carbs - item.fiber - ded) * item.ratio;
   }
 
+  /* Sauvegarde : chaque clé est protégée — un quota plein ne doit jamais
+     faire remonter d'exception (sinon le rendu qui suit ne s'exécute pas
+     et le total pompe se désynchronise du repas en mémoire). */
   function save() {
-    localStorage.setItem('gn_meal', JSON.stringify(meal));
-    localStorage.setItem('gn_favorites', JSON.stringify(favorites));
-    localStorage.setItem('gn_history', JSON.stringify(history));
-    try {
-      localStorage.setItem('gn_recipes', JSON.stringify(recipes));
-    } catch (e) {
-      alert('Espace de stockage plein — la photo n’a pas pu être enregistrée. Supprime d’anciennes recettes avec photo.');
+    var failed = false;
+    [['gn_meal', meal], ['gn_favorites', favorites], ['gn_history', history], ['gn_recipes', recipes]]
+      .forEach(function (pair) {
+        if (!lsSet(pair[0], JSON.stringify(pair[1]))) failed = true;
+      });
+    if (failed) {
+      toast('⚠️ Stockage plein — la dernière modification n’est pas sauvegardée. Supprime d’anciennes recettes avec photo.', { type: 'error', duration: 6000 });
     }
   }
 
   /* ── Onglets ── */
   document.querySelectorAll('.tab-btn').forEach(function (btn) {
     btn.addEventListener('click', function () {
-      document.querySelectorAll('.tab-btn').forEach(function (b) { b.classList.remove('active'); });
+      document.querySelectorAll('.tab-btn').forEach(function (b) {
+        b.classList.remove('active');
+        b.removeAttribute('aria-current');
+      });
       document.querySelectorAll('.tab-panel').forEach(function (p) { p.classList.remove('active'); });
       btn.classList.add('active');
+      btn.setAttribute('aria-current', 'true');
       $('panel-' + btn.dataset.tab).classList.add('active');
     });
   });
@@ -1414,7 +1581,9 @@
      partir de 2 caractères, max 8 résultats. Sans résultat : état
      accueillant avec une porte de sortie « Créer cet aliment ». */
   function normalize(s) {
-    return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
+    // Replie accents ET apostrophes typographiques (« d’eau » trouvable
+    // en tapant « d'eau » au clavier)
+    return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[’‘]/g, "'");
   }
   function bindDbSearch(inputId, resultsId, onPick, onCreate) {
     var timer = null;
@@ -1423,14 +1592,30 @@
       if (timer) clearTimeout(timer);
       timer = setTimeout(function () { runSearch(input); }, 250);
     });
+    function announce(msg) {
+      $('search-live').textContent = msg;
+    }
     function runSearch(input) {
       var raw = input.value.trim();
       var q = normalize(raw);
       var box = $(resultsId);
-      box.innerHTML = '';
-      if (q.length < 2) { box.classList.remove('open'); return; }
+      if (q.length < 2) {
+        box.innerHTML = '';
+        box.dataset.sig = '';
+        box.classList.remove('open');
+        announce('');
+        return;
+      }
       var matches = FOOD_DB.filter(function (f) { return normalize(f.n).indexOf(q) !== -1; }).slice(0, 8);
+      // Si la liste raffinée est identique, on ne reconstruit pas le DOM :
+      // évite qu'un tap en cours atterrisse sur un bouton recréé (et
+      // potentiellement un autre aliment) 250 ms après la dernière frappe.
+      var sig = matches.length ? matches.map(function (f) { return f.n; }).join('|') : 'empty:' + raw;
+      if (box.dataset.sig === sig && box.classList.contains('open')) return;
+      box.dataset.sig = sig;
+      box.innerHTML = '';
       if (matches.length === 0) {
+        announce('Aucun résultat pour ' + raw);
         if (onCreate) {
           var wrap = document.createElement('div');
           wrap.className = 'search-empty';
@@ -1442,6 +1627,7 @@
           create.textContent = '➕ Créer cet aliment';
           create.addEventListener('click', function () {
             box.classList.remove('open');
+            box.dataset.sig = '';
             input.value = '';
             onCreate(raw);
           });
@@ -1454,6 +1640,7 @@
         }
         return;
       }
+      announce(matches.length + (matches.length > 1 ? ' résultats' : ' résultat'));
       matches.forEach(function (f) {
         var b = document.createElement('button');
         b.type = 'button';
@@ -1466,6 +1653,7 @@
         b.appendChild(val);
         b.addEventListener('click', function () {
           box.classList.remove('open');
+          box.dataset.sig = '';
           input.value = '';
           onPick(f);
         });
@@ -1486,7 +1674,7 @@
   }, function (query) {
     $('food-name').value = query;
     $('carbs').focus();
-    $('food-name').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    scrollToEl($('food-name'));
   });
 
   /* ── Formulaire aliment ── */
@@ -1515,7 +1703,21 @@
     var list = $('meal-list');
     var actions = $('meal-actions');
     if (meal.length === 0) {
-      list.innerHTML = '<p class="empty"><span class="illus" aria-hidden="true">🍽️</span>Ton repas est vide. Ajoute ton premier aliment ci-dessus!</p>';
+      list.innerHTML = '';
+      var emptyMeal = document.createElement('div');
+      emptyMeal.className = 'empty';
+      emptyMeal.innerHTML = '<span class="illus" aria-hidden="true">🍽️</span><p>Ton repas est vide. Ajoute ton premier aliment!</p>';
+      var goSearch = document.createElement('button');
+      goSearch.className = 'btn btn-secondary';
+      goSearch.type = 'button';
+      goSearch.textContent = '🔍 Chercher un aliment';
+      goSearch.style.marginTop = '10px';
+      goSearch.addEventListener('click', function () {
+        scrollToEl($('db-search'));
+        $('db-search').focus();
+      });
+      emptyMeal.appendChild(goSearch);
+      list.appendChild(emptyMeal);
       actions.style.display = 'none';
     } else {
       list.innerHTML = '';
@@ -1586,27 +1788,17 @@
     card.style.display = 'block';
     list.innerHTML = '';
     favorites.forEach(function (fav, i) {
-      var chip = document.createElement('button');
+      // Deux vrais <button> frères dans un conteneur : ajout et
+      // suppression restent accessibles au clavier et au lecteur d'écran
+      var chip = document.createElement('div');
       chip.className = 'fav-chip';
 
-      var label = document.createElement('span');
-      label.textContent = fav.name + ' (' + round1(net100(fav)) + ' g)';
-
-      var del = document.createElement('span');
-      del.className = 'del';
-      del.textContent = '✕';
-      del.setAttribute('role', 'button');
-      del.setAttribute('aria-label', 'Supprimer le favori ' + fav.name);
-      del.addEventListener('click', function (e) {
-        e.stopPropagation();
-        favorites.splice(i, 1);
-        save();
-        renderFavorites();
-      });
-
-      chip.appendChild(label);
-      chip.appendChild(del);
-      chip.addEventListener('click', function () {
+      var add = document.createElement('button');
+      add.type = 'button';
+      add.className = 'fav-add';
+      add.textContent = fav.name + ' (' + round1(net100(fav)) + ' g)';
+      add.setAttribute('aria-label', 'Ajouter ' + fav.name + ' au repas');
+      add.addEventListener('click', function () {
         meal.push({
           name: fav.name, carbs: fav.carbs, fiber: fav.fiber,
           polyols: fav.polyols, polyolType: fav.polyolType, ratio: 1
@@ -1616,6 +1808,20 @@
         toast('✓ ' + fav.name + ' ajouté au repas');
         markEngagement();
       });
+
+      var del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'fav-del';
+      del.textContent = '✕';
+      del.setAttribute('aria-label', 'Supprimer le favori ' + fav.name);
+      del.addEventListener('click', function () {
+        favorites.splice(i, 1);
+        save();
+        renderFavorites();
+      });
+
+      chip.appendChild(add);
+      chip.appendChild(del);
       list.appendChild(chip);
     });
   }
@@ -1642,10 +1848,25 @@
     markEngagement();
   });
 
+  /* « Vider » est l'action la plus destructrice de l'écran principal :
+     annulable pendant 6 s via le toast plutôt que perdue d'un tap. */
   $('clear-btn').addEventListener('click', function () {
+    if (meal.length === 0) return;
+    var backup = meal.slice();
     meal = [];
     save();
     renderMeal();
+    toast('Repas vidé', {
+      duration: 6000,
+      action: {
+        label: 'Annuler',
+        fn: function () {
+          meal = backup.concat(meal);
+          save();
+          renderMeal();
+        }
+      }
+    });
   });
 
   /* ── Photos de recettes ── */
@@ -1708,22 +1929,33 @@
     toast('✓ Recette enregistrée');
   });
 
+  $('recipes-empty-btn').addEventListener('click', function () {
+    scrollToEl($('recipe-name'));
+    $('recipe-name').focus();
+  });
+
   function renderRecipes() {
     var grid = $('recipe-grid');
     var empty = $('recipes-empty');
     grid.innerHTML = '';
     empty.style.display = recipes.length === 0 ? 'block' : 'none';
     recipes.forEach(function (r, i) {
-      var card = document.createElement('button');
+      // Conteneur non interactif + vrais <button> frères : zone
+      // principale « ajouter », puis rangée partager / supprimer (48 px)
+      var card = document.createElement('div');
       card.className = 'recipe-card';
-      card.type = 'button';
+
+      var hit = document.createElement('button');
+      hit.type = 'button';
+      hit.className = 'card-hit';
+      hit.setAttribute('aria-label', 'Ajouter la recette ' + r.name + ' au repas');
 
       var photo = document.createElement('div');
       photo.className = 'photo';
       if (r.photo) {
         var img = document.createElement('img');
         img.src = r.photo;
-        img.alt = r.name;
+        img.alt = '';
         photo.appendChild(img);
       } else {
         photo.textContent = '🍲';
@@ -1743,13 +1975,28 @@
       body.appendChild(nameEl);
       body.appendChild(stats);
 
-      var del = document.createElement('span');
-      del.className = 'del';
+      hit.appendChild(photo);
+      hit.appendChild(body);
+      hit.addEventListener('click', function () { openQtyModal(r); });
+
+      var actionsRow = document.createElement('div');
+      actionsRow.className = 'card-actions';
+
+      var shareBtn = document.createElement('button');
+      shareBtn.type = 'button';
+      shareBtn.className = 'card-share';
+      shareBtn.textContent = '📤';
+      shareBtn.title = 'Partager';
+      shareBtn.setAttribute('aria-label', 'Partager la recette ' + r.name);
+      shareBtn.addEventListener('click', function () { shareRecipe(r); });
+
+      var del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'card-del';
       del.textContent = '✕';
-      del.setAttribute('role', 'button');
+      del.title = 'Supprimer';
       del.setAttribute('aria-label', 'Supprimer la recette ' + r.name);
-      del.addEventListener('click', function (e) {
-        e.stopPropagation();
+      del.addEventListener('click', function () {
         if (confirm('Supprimer la recette « ' + r.name + ' »?')) {
           recipes.splice(i, 1);
           save();
@@ -1759,21 +2006,11 @@
         }
       });
 
-      var shareBtn = document.createElement('span');
-      shareBtn.className = 'share';
-      shareBtn.textContent = '📤';
-      shareBtn.setAttribute('role', 'button');
-      shareBtn.setAttribute('aria-label', 'Partager la recette ' + r.name);
-      shareBtn.addEventListener('click', function (e) {
-        e.stopPropagation();
-        shareRecipe(r);
-      });
+      actionsRow.appendChild(shareBtn);
+      actionsRow.appendChild(del);
 
-      card.appendChild(photo);
-      card.appendChild(body);
-      card.appendChild(del);
-      card.appendChild(shareBtn);
-      card.addEventListener('click', function () { openQtyModal(r); });
+      card.appendChild(hit);
+      card.appendChild(actionsRow);
       grid.appendChild(card);
     });
   }
@@ -1783,9 +2020,13 @@
     grid.innerHTML = '';
     BUILTIN_RECIPES.forEach(function (b) {
       var r = { name: b.n, carbs: b.c, fiber: b.f, polyols: 0, polyolType: 'half' };
-      var card = document.createElement('button');
+      var card = document.createElement('div');
       card.className = 'recipe-card';
-      card.type = 'button';
+
+      var hit = document.createElement('button');
+      hit.type = 'button';
+      hit.className = 'card-hit';
+      hit.setAttribute('aria-label', 'Ajouter ' + b.n + ' au repas');
 
       var photo = document.createElement('div');
       photo.className = 'photo';
@@ -1805,10 +2046,53 @@
       body.appendChild(nameEl);
       body.appendChild(stats);
 
-      card.appendChild(photo);
-      card.appendChild(body);
-      card.addEventListener('click', function () { openQtyModal(r); });
+      hit.appendChild(photo);
+      hit.appendChild(body);
+      hit.addEventListener('click', function () { openQtyModal(r); });
+      card.appendChild(hit);
       grid.appendChild(card);
+    });
+  }
+
+  /* ── Gestion générique des modales ──
+     role=dialog + aria-modal côté HTML; ici : déplacement du focus à
+     l'ouverture, restitution à la fermeture, fermeture par Échap et
+     piège Tab/Maj+Tab à l'intérieur de la modale. */
+  var modalLastFocus = null;
+  function openModal(id, focusSel) {
+    var ov = $(id);
+    modalLastFocus = document.activeElement;
+    ov.classList.add('open');
+    // Focus sur le premier élément VISIBLE du modal (jamais un élément
+    // masqué, sinon le focus reste derrière et Échap ne fonctionne pas)
+    var target = focusSel ? ov.querySelector(focusSel) : null;
+    if (!target || target.offsetParent === null) {
+      target = null;
+      var cands = ov.querySelectorAll('button, input, select, textarea');
+      for (var i = 0; i < cands.length; i++) {
+        if (!cands[i].disabled && cands[i].offsetParent !== null) { target = cands[i]; break; }
+      }
+    }
+    if (target) setTimeout(function () { target.focus(); }, 80);
+  }
+  function closeModal(id) {
+    $(id).classList.remove('open');
+    if (modalLastFocus && modalLastFocus.focus) modalLastFocus.focus();
+    modalLastFocus = null;
+  }
+  function trapModal(id, onClose) {
+    var ov = $(id);
+    ov.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { e.preventDefault(); onClose(); return; }
+      if (e.key !== 'Tab') return;
+      var focusables = Array.prototype.filter.call(
+        ov.querySelectorAll('button, input, select, textarea, [tabindex]:not([tabindex="-1"])'),
+        function (el) { return !el.disabled && el.offsetParent !== null; }
+      );
+      if (!focusables.length) return;
+      var first = focusables[0], last = focusables[focusables.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+      else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
     });
   }
 
@@ -1820,9 +2104,13 @@
       round2(net100(recipe) / 100) + ' g net par gramme';
     $('qty-grams').value = '';
     updateQtyNet();
-    $('qty-modal').classList.add('open');
-    setTimeout(function () { $('qty-grams').focus(); }, 100);
+    openModal('qty-modal', '#qty-grams');
   }
+  function closeQtyModal() {
+    closeModal('qty-modal');
+    modalRecipe = null;
+  }
+  trapModal('qty-modal', closeQtyModal);
 
   function updateQtyNet() {
     var g = parseFloat($('qty-grams').value) || 0;
@@ -1831,17 +2119,15 @@
   }
 
   $('qty-grams').addEventListener('input', updateQtyNet);
-  $('qty-cancel').addEventListener('click', function () {
-    $('qty-modal').classList.remove('open');
-    modalRecipe = null;
-  });
+  $('qty-cancel').addEventListener('click', closeQtyModal);
   $('qty-modal').addEventListener('click', function (e) {
-    if (e.target === this) { this.classList.remove('open'); modalRecipe = null; }
+    if (e.target === this) closeQtyModal();
   });
 
   $('qty-add').addEventListener('click', function () {
     var g = parseFloat($('qty-grams').value) || 0;
     if (g <= 0 || !modalRecipe) { $('qty-grams').focus(); return; }
+    var added = modalRecipe.name;
     meal.push({
       name: modalRecipe.name,
       carbs: modalRecipe.carbs,
@@ -1853,9 +2139,8 @@
     });
     save();
     renderMeal();
-    $('qty-modal').classList.remove('open');
-    toast('✓ ' + modalRecipe.name + ' ajouté au repas');
-    modalRecipe = null;
+    closeQtyModal();
+    toast('✓ ' + added + ' ajouté au repas');
     switchTab('meal');
     markEngagement();
   });
@@ -2087,10 +2372,15 @@
   /* ══════════ Scanner de code-barres (Open Food Facts) ══════════ */
   var scanStream = null;
   var scanTimer = null;
+  // Jeton de session : si le modal est fermé pendant que getUserMedia est
+  // en attente (prompt système, démarrage caméra), la promesse résolue
+  // arrête le flux au lieu de laisser la caméra allumée en arrière-plan.
+  var scanSession = 0;
 
   function scanStatus(msg) { $('scan-status').textContent = msg; }
 
   function stopScanner() {
+    scanSession++;
     if (scanTimer) { clearInterval(scanTimer); scanTimer = null; }
     if (scanStream) {
       scanStream.getTracks().forEach(function (t) { t.stop(); });
@@ -2101,14 +2391,15 @@
 
   function closeScanModal() {
     stopScanner();
-    $('scan-modal').classList.remove('open');
+    closeModal('scan-modal');
   }
+  trapModal('scan-modal', closeScanModal);
 
   /* Permission caméra juste-à-temps : jamais au démarrage de l'app.
      Au premier scan, un écran d'amorce explique le bénéfice AVANT la
      demande système; ensuite, la caméra démarre directement. */
   function startScanner() {
-    $('scan-modal').classList.add('open');
+    openModal('scan-modal');
     $('barcode-manual').value = '';
     $('cam-primer').style.display = 'none';
     if (!('BarcodeDetector' in window)) {
@@ -2119,7 +2410,7 @@
       scanStatus('Caméra inaccessible — entre le code manuellement.');
       return;
     }
-    if (!localStorage.getItem('gn_cam_ok')) {
+    if (!lsGet('gn_cam_ok')) {
       $('cam-primer').style.display = 'block';
       scanStatus('Ou entre le code toi-même, juste en dessous.');
       return;
@@ -2130,9 +2421,16 @@
   function openCamera() {
     $('cam-primer').style.display = 'none';
     scanStatus('Pointe la caméra vers le code-barres du produit.');
+    var session = ++scanSession;
     navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
       .then(function (stream) {
-        localStorage.setItem('gn_cam_ok', '1');
+        // Modal fermé (ou scanner relancé) pendant l'attente : on coupe
+        // immédiatement le flux, on ne démarre rien.
+        if (session !== scanSession || !$('scan-modal').classList.contains('open')) {
+          stream.getTracks().forEach(function (t) { t.stop(); });
+          return;
+        }
+        lsSet('gn_cam_ok', '1');
         scanStream = stream;
         var video = $('scan-video');
         video.srcObject = stream;
@@ -2150,6 +2448,7 @@
         }, 350);
       })
       .catch(function () {
+        if (session !== scanSession) return;
         scanStatus('Caméra inaccessible (permission refusée ou non disponible) — entre le code manuellement, ça marche aussi bien.');
       });
   }
@@ -2275,7 +2574,7 @@
     $('recipe-carbs').value = round1(totC / cooked * 100);
     $('recipe-fiber').value = round1(totF / cooked * 100);
     if (!$('recipe-name').value) $('recipe-name').focus();
-    $('recipe-name').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    scrollToEl($('recipe-name'));
   });
 
   /* ══════════ Journal des repas ══════════ */
@@ -2315,7 +2614,17 @@
     var list = $('journal-list');
     list.innerHTML = '';
     if (history.length === 0) {
-      list.innerHTML = '<p class="empty"><span class="illus" aria-hidden="true">📅</span>Ton journal est vide. Enregistre ton premier repas pour le retrouver ici!</p>';
+      var emptyJournal = document.createElement('div');
+      emptyJournal.className = 'empty';
+      emptyJournal.innerHTML = '<span class="illus" aria-hidden="true">📅</span><p>Ton journal est vide. Enregistre ton premier repas pour le retrouver ici!</p>';
+      var goMeal = document.createElement('button');
+      goMeal.className = 'btn btn-secondary';
+      goMeal.type = 'button';
+      goMeal.textContent = '🍽️ Composer un repas';
+      goMeal.style.marginTop = '10px';
+      goMeal.addEventListener('click', function () { switchTab('meal'); });
+      emptyJournal.appendChild(goMeal);
+      list.appendChild(emptyJournal);
       renderWeekChart();
       return;
     }
@@ -2475,10 +2784,15 @@
         backupStatus('❌ Ce fichier n’est pas une sauvegarde Glucides Nets.');
         return;
       }
+      if (data.version && num(data.version) > 1) {
+        backupStatus('⚠️ Cette sauvegarde vient d’une version plus récente de l’app — l’import est tenté, mais vérifie tes données.');
+      }
       if (!confirm('Remplacer tes recettes, favoris et journal actuels par ceux du fichier?')) return;
-      recipes = Array.isArray(data.recipes) ? data.recipes : [];
-      favorites = Array.isArray(data.favorites) ? data.favorites : [];
-      history = Array.isArray(data.history) ? data.history : [];
+      // Chaque entrée est assainie : un fichier tronqué ou édité ne doit
+      // jamais planter le rendu ni afficher des totaux « NaN »
+      recipes = (Array.isArray(data.recipes) ? data.recipes : []).map(sanitizeRecipe).filter(Boolean);
+      favorites = (Array.isArray(data.favorites) ? data.favorites : []).map(sanitizeItem).filter(Boolean);
+      history = (Array.isArray(data.history) ? data.history : []).map(sanitizeEntry).filter(Boolean);
       save();
       renderRecipes();
       renderFavorites();
@@ -2527,17 +2841,21 @@
   }
 
   function maybeShowInstallBanner() {
-    if (isStandalone() || location.protocol !== 'https:') return;
-    if (!localStorage.getItem('gn_onboarded')) return;
-    if (!localStorage.getItem('gn_engaged')) return;
+    if (isStandalone()) return;
+    // Même condition que le service worker : https OU localhost (dev)
+    if (location.protocol !== 'https:' && location.hostname !== 'localhost') return;
+    if (lsGet('gn_install_dismissed')) return;
+    if (!lsGet('gn_onboarded')) return;
+    if (!lsGet('gn_engaged')) return;
     $('install-banner').classList.add('visible');
   }
 
   function showInstallInstructions() {
     $('install-steps-ios').style.display = isIOS() ? 'block' : 'none';
     $('install-steps-generic').style.display = isIOS() ? 'none' : 'block';
-    $('install-modal').classList.add('open');
+    openModal('install-modal');
   }
+  trapModal('install-modal', function () { closeModal('install-modal'); });
 
   // Chrome/Edge/Android : on capture l'événement, on empêche l'invite
   // par défaut et on la garde pour le bon moment.
@@ -2555,10 +2873,11 @@
   $('install-btn').addEventListener('click', function () {
     if (deferredInstallPrompt) {
       deferredInstallPrompt.prompt();
-      deferredInstallPrompt.userChoice.then(function (choice) {
-        if (choice && choice.outcome === 'accepted') {
-          $('install-banner').classList.remove('visible');
-        }
+      deferredInstallPrompt.userChoice.then(function () {
+        // Accepté ou refusé : le prompt natif ne peut pas être re-montré
+        // avant le prochain chargement — on retire la bannière dans les
+        // deux cas pour éviter un second clic incohérent.
+        $('install-banner').classList.remove('visible');
         deferredInstallPrompt = null;
       });
     } else {
@@ -2567,11 +2886,16 @@
     }
   });
 
+  $('install-close').addEventListener('click', function () {
+    lsSet('gn_install_dismissed', '1');
+    $('install-banner').classList.remove('visible');
+  });
+
   $('install-modal-close').addEventListener('click', function () {
-    $('install-modal').classList.remove('open');
+    closeModal('install-modal');
   });
   $('install-modal').addEventListener('click', function (e) {
-    if (e.target === this) this.classList.remove('open');
+    if (e.target === this) closeModal('install-modal');
   });
 
   maybeShowInstallBanner();
@@ -2589,16 +2913,40 @@
      l'avertissement médical est obligatoire et bloquant. Le consentement
      est stocké localement et l'onboarding ne réapparaît plus. */
   (function () {
-    if (localStorage.getItem('gn_onboarded')) return;
+    if (lsGet('gn_onboarded')) return;
 
     var ob = $('onboarding');
     ob.classList.add('open');
     document.body.style.overflow = 'hidden';
 
+    // L'avertissement est réellement bloquant, clavier et lecteur d'écran
+    // compris : le reste de l'app est retiré de l'ordre de tabulation
+    // (inert, avec repli aria-hidden) tant que l'onboarding est ouvert.
+    var appRegions = [];
+    ['header', 'main', '.total-bar', '.disclaimer'].forEach(function (sel) {
+      var el = document.querySelector(sel);
+      if (el) appRegions.push(el);
+    });
+    appRegions.push($('install-banner'));
+    appRegions.forEach(function (el) {
+      if ('inert' in el) el.inert = true;
+      el.setAttribute('aria-hidden', 'true');
+    });
+    function releaseApp() {
+      appRegions.forEach(function (el) {
+        if ('inert' in el) el.inert = false;
+        el.removeAttribute('aria-hidden');
+      });
+    }
+
     function showStep(n) {
       [1, 2, 3, 4].forEach(function (i) {
         $('ob-step-' + i).classList.toggle('active', i === n);
       });
+      // Le nom accessible du dialog et le focus suivent l'écran courant
+      ob.setAttribute('aria-labelledby', 'ob-title-' + n);
+      var h = $('ob-title-' + n);
+      if (h) h.focus();
       ob.scrollTop = 0;
     }
 
@@ -2614,51 +2962,78 @@
 
     $('ob-accept').addEventListener('click', function () {
       if (!$('ob-consent-check').checked) return;
-      localStorage.setItem('gn_disclaimer_ok', String(Date.now()));
+      // Consentement posé immédiatement : même si l'onglet est fermé
+      // pendant l'écran de préparation, l'avertissement accepté ne sera
+      // pas réaffiché (lsSet ne lève jamais).
+      lsSet('gn_disclaimer_ok', '1');
       showStep(4);
       prepareOffline();
     });
 
-    /* Écran 4 : indicateur déterminé (pas un simple spinner), relié aux
-       vraies étapes de mise en cache du service worker. */
+    /* Écran 4 : indicateur déterminé relié aux vraies étapes de mise en
+       cache du service worker (messages « precache » émis par sw.js). */
     function setProgress(pct) {
       pct = Math.max(0, Math.min(100, Math.round(pct)));
       $('ob-progress').style.width = pct + '%';
       $('ob-progress-label').textContent = pct + ' %';
     }
 
-    function finishOnboarding() {
-      localStorage.setItem('gn_onboarded', '1');
-      setProgress(100);
+    function finishOnboarding(honest) {
+      lsSet('gn_onboarded', '1');
+      if (honest === false) {
+        // Le cache n'a pas (encore) confirmé : ne pas prétendre 100 %.
+        $('ob-progress-label').textContent = 'La préparation continue en arrière-plan — tu peux commencer.';
+      } else {
+        setProgress(100);
+      }
       setTimeout(function () {
         ob.classList.remove('open');
         document.body.style.overflow = '';
+        releaseApp();
         maybeShowInstallBanner();
-      }, 400);
+      }, honest === false ? 900 : 400);
     }
 
     function prepareOffline() {
-      setProgress(15);
+      setProgress(10);
       var done = false;
-      function complete() {
+      function complete(honest) {
         if (done) return;
         done = true;
-        finishOnboarding();
+        finishOnboarding(honest);
       }
       if ('serviceWorker' in navigator &&
           (location.protocol === 'https:' || location.hostname === 'localhost')) {
-        setProgress(40);
+        // Progression réelle : sw.js poste {type:'precache', done, total}
+        // à chaque ressource mise en cache.
+        navigator.serviceWorker.addEventListener('message', function (e) {
+          var d = e.data;
+          if (d && d.type === 'precache' && d.total > 0 && !done) {
+            setProgress(15 + 75 * d.done / d.total);
+          }
+        });
+        setProgress(20);
         navigator.serviceWorker.ready.then(function () {
-          setProgress(90);
-          setTimeout(complete, 300);
-        }).catch(complete);
-        // Filet de sécurité : on ne bloque jamais plus de 6 s.
-        setTimeout(complete, 6000);
+          setProgress(95);
+          setTimeout(function () { complete(true); }, 300);
+        }).catch(function () { complete(false); });
+        // Filet de sécurité : on ne bloque jamais plus de 6 s, mais sans
+        // afficher un faux 100 %.
+        setTimeout(function () { complete(false); }, 6000);
       } else {
         // Pas de service worker possible : la base est déjà intégrée à la page.
         setProgress(80);
-        setTimeout(complete, 500);
+        setTimeout(function () { complete(true); }, 500);
       }
+    }
+
+    // Consentement déjà donné lors d'un lancement interrompu : ne pas
+    // réafficher l'avertissement accepté, terminer la préparation.
+    if (lsGet('gn_disclaimer_ok')) {
+      showStep(4);
+      prepareOffline();
+    } else {
+      showStep(1);
     }
   })();
 

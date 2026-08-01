@@ -8,7 +8,7 @@
    affiché dans le pied de page d'index.html (#app-version). L'incrémenter
    à CHAQUE mise à jour publiée, sinon les utilisateurs installés gardent
    l'ancienne version en cache. */
-var CACHE = 'glucides-nets-v2.0.0';
+var CACHE = 'glucides-nets-v2.0.1';
 var ASSETS = [
   '.',
   'index.html',
@@ -21,7 +21,23 @@ var ASSETS = [
 self.addEventListener('install', function (event) {
   event.waitUntil(
     caches.open(CACHE).then(function (cache) {
-      return cache.addAll(ASSETS);
+      // Mise en cache une ressource à la fois, avec un message de
+      // progression vers les pages ouvertes — alimente la barre
+      // déterminée de l'écran de préparation de l'onboarding.
+      var done = 0;
+      function notify() {
+        self.clients.matchAll({ includeUncontrolled: true }).then(function (clients) {
+          clients.forEach(function (c) {
+            c.postMessage({ type: 'precache', done: done, total: ASSETS.length });
+          });
+        });
+      }
+      return Promise.all(ASSETS.map(function (asset) {
+        return cache.add(asset).then(function () {
+          done++;
+          notify();
+        });
+      }));
     }).then(function () { return self.skipWaiting(); })
   );
 });
