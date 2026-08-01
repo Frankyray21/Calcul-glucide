@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#1a6b54">
-<meta name="description" content="Calculateur de glucides nets pour pompe à insuline — diabète de type 1">
+<meta name="theme-color" content="#16A34A">
+<meta name="description" content="Calcule les glucides nets de tes repas, même sans réseau — pour pompe à insuline, diabète de type 1">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png" type="image/png">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
@@ -12,48 +12,83 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <title>Glucides Nets — Calculateur pour pompe à insuline</title>
 <style>
+  /* ── Tokens de design ──
+     Palette conviviale inspirée de mySugr (chaleureuse, jamais clinique).
+     Contraste vérifié : le vert #16A34A sert au décor et aux gros éléments;
+     les textes colorés et fonds d'action utilisent #15803D (≥ 4.5:1 sur
+     blanc et sur #DCFCE7). Le compteur principal reste en encre neutre
+     (≥ 7:1, AAA) — la couleur ne porte jamais un avis médical. */
   :root {
-    --bg: #f4f7f6;
-    --card: #ffffff;
-    --text: #1c2b27;
-    --muted: #5f7370;
-    --accent: #1a6b54;
-    --accent-light: #e3f1ec;
-    --danger: #b3402e;
-    --border: #dde6e3;
-    --radius: 14px;
-    --chart: #00875a;
-    --chart-soft: rgba(0, 135, 90, 0.12);
+    --bg: #F8FAFC;
+    --card: #FFFFFF;
+    --text: #0F172A;
+    --muted: #475569;
+    --accent: #16A34A;         /* vert de marque : décor, bordures, gros chiffres */
+    --accent-text: #15803D;    /* vert lisible : petits textes colorés */
+    --accent-deep: #166534;
+    --accent-light: #DCFCE7;
+    --btn-bg: #15803D;
+    --btn-text: #FFFFFF;
+    --warm: #F59E0B;           /* accent convivial (ambre) */
+    --warm-soft: #FEF3C7;
+    --warm-text: #92400E;
+    --danger: #DC2626;
+    --info: #2563EB;
+    --border: #E2E8F0;
+    --radius: 20px;
+    --chart: #16A34A;
+    --chart-soft: rgba(22, 163, 74, 0.14);
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #101715;
-      --card: #1a2320;
-      --text: #e8efec;
-      --muted: #93a5a0;
-      --accent: #4dbd97;
-      --accent-light: #1f342d;
-      --border: #2c3a35;
-      --chart: #35a67d;
-      --chart-soft: rgba(53, 166, 125, 0.16);
+      --bg: #0F172A;
+      --card: #1E293B;
+      --text: #F1F5F9;
+      --muted: #94A3B8;
+      --accent: #22C55E;
+      --accent-text: #4ADE80;
+      --accent-deep: #166534;
+      --accent-light: rgba(74, 222, 128, 0.14);
+      --btn-bg: #22C55E;
+      --btn-text: #052E16;
+      --warm-soft: rgba(245, 158, 11, 0.16);
+      --warm-text: #FCD34D;
+      --danger: #F87171;
+      --info: #60A5FA;
+      --border: #334155;
+      --chart: #4ADE80;
+      --chart-soft: rgba(74, 222, 128, 0.16);
     }
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { font-size: 17px; } /* corps de texte : jamais sous 16px */
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: 'Inter', 'Nunito Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, system-ui, sans-serif;
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
-    padding-bottom: 150px;
+    padding-bottom: 160px;
+    line-height: 1.5;
+  }
+  :focus-visible {
+    outline: 3px solid var(--accent);
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+    }
   }
   header {
-    background: var(--accent);
+    background: linear-gradient(150deg, #16A34A, #166534);
     color: #fff;
     padding: 16px 16px 0;
     text-align: center;
   }
-  header h1 { font-size: 1.2rem; font-weight: 700; }
-  header p { font-size: 0.78rem; opacity: 0.9; margin-top: 2px; }
+  header h1 { font-size: 1.25rem; font-weight: 800; }
+  header p { font-size: 0.82rem; opacity: 0.95; margin-top: 2px; }
 
   .tabs {
     display: flex;
@@ -62,20 +97,40 @@
   }
   .tab-btn {
     flex: 1;
+    min-height: 48px;
     padding: 12px 2px;
     background: none;
     border: none;
-    color: rgba(255,255,255,0.75);
+    color: rgba(255,255,255,0.85);
+    font-family: inherit;
     font-size: 0.82rem;
     font-weight: 700;
     cursor: pointer;
     border-bottom: 3px solid transparent;
     white-space: nowrap;
+    transition: color 150ms ease-out;
   }
   .tab-btn.active {
     color: #fff;
     border-bottom-color: #fff;
   }
+
+  /* Bandeau hors ligne : couleur + icône + libellé (jamais la couleur seule) */
+  .offline-badge {
+    display: none;
+    align-items: flex-start;
+    gap: 8px;
+    max-width: 560px;
+    margin: 12px auto 0;
+    padding: 10px 14px;
+    background: var(--warm-soft);
+    color: var(--warm-text);
+    border-radius: 14px;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+  .offline-badge.visible { display: flex; }
+  main .offline-badge { margin-bottom: 4px; }
 
   main { max-width: 560px; margin: 0 auto; padding: 16px; }
   .tab-panel { display: none; }
@@ -90,17 +145,20 @@
   }
   .card h2 { font-size: 1rem; margin-bottom: 12px; }
 
-  label { display: block; font-size: 0.82rem; color: var(--muted); margin-bottom: 4px; font-weight: 600; }
+  label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 4px; font-weight: 600; }
   input[type="text"], input[type="number"], input[type="search"], select {
     width: 100%;
+    min-height: 48px;
     padding: 12px;
-    font-size: 1.05rem;
+    font-size: 1rem;
+    font-family: inherit;
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: 12px;
     background: var(--bg);
     color: var(--text);
     -moz-appearance: textfield;
   }
+  input[type="number"] { font-variant-numeric: tabular-nums; }
   input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; }
   input:focus, select:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
 
@@ -110,17 +168,21 @@
   .btn {
     display: block;
     width: 100%;
-    padding: 14px;
-    font-size: 1.05rem;
+    min-height: 48px;
+    padding: 13px;
+    font-size: 1rem;
+    font-family: inherit;
     font-weight: 700;
     border: none;
-    border-radius: 10px;
-    background: var(--accent);
-    color: #fff;
+    border-radius: 14px;
+    background: var(--btn-bg);
+    color: var(--btn-text);
     cursor: pointer;
+    transition: transform 150ms ease-out, opacity 150ms ease-out;
   }
-  .btn:active { opacity: 0.85; }
-  .btn-secondary { background: var(--accent-light); color: var(--accent); }
+  .btn:active { transform: scale(0.98); opacity: 0.9; }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .btn-secondary { background: var(--accent-light); color: var(--accent-text); }
 
   /* Recherche base d'aliments */
   .search-results {
@@ -137,18 +199,38 @@
     align-items: center;
     gap: 8px;
     width: 100%;
-    padding: 11px 12px;
+    min-height: 52px;
+    padding: 12px;
     background: var(--card);
     border: none;
     border-bottom: 1px solid var(--border);
     color: var(--text);
+    font-family: inherit;
     font-size: 0.95rem;
     cursor: pointer;
     text-align: left;
+    transition: background 150ms ease-out;
   }
   .search-results button:last-child { border-bottom: none; }
   .search-results button:active { background: var(--accent-light); }
-  .search-results .val { color: var(--accent); font-weight: 700; font-size: 0.85rem; white-space: nowrap; }
+  .search-results .val {
+    background: var(--accent-light);
+    color: var(--accent-text);
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-weight: 700;
+    font-size: 0.82rem;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+  /* État sans résultat : accueillant, avec une porte de sortie */
+  .search-empty {
+    padding: 14px 12px;
+    background: var(--card);
+    font-size: 0.9rem;
+    color: var(--muted);
+  }
+  .search-empty .btn { margin-top: 10px; }
 
   /* Liste des aliments du repas */
   .food-item {
@@ -162,18 +244,23 @@
   .food-item:last-child { border-bottom: none; }
   .food-item .info { flex: 1; min-width: 0; }
   .food-item .name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .food-item .detail { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
-  .food-item .net { font-weight: 700; color: var(--accent); white-space: nowrap; font-size: 1.05rem; }
+  .food-item .detail { font-size: 0.82rem; color: var(--muted); margin-top: 2px; }
+  .food-item .net { font-weight: 700; color: var(--accent-text); white-space: nowrap; font-size: 1.05rem; font-variant-numeric: tabular-nums; }
   .food-item .remove {
     background: none;
     border: none;
     color: var(--danger);
     font-size: 1.3rem;
     cursor: pointer;
-    padding: 4px 8px;
+    min-width: 48px;
+    min-height: 48px;
     line-height: 1;
+    border-radius: 12px;
+    transition: transform 150ms ease-out;
   }
-  .empty { color: var(--muted); font-size: 0.9rem; text-align: center; padding: 12px 0; }
+  .food-item .remove:active { transform: scale(0.98); }
+  .empty { color: var(--muted); font-size: 0.9rem; text-align: center; padding: 16px 0; }
+  .empty .illus { display: block; font-size: 2.2rem; margin-bottom: 6px; }
 
   /* Recettes */
   .photo-picker {
@@ -235,19 +322,19 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .recipe-card .stats { font-size: 0.75rem; color: var(--muted); margin-top: 4px; line-height: 1.5; }
-  .recipe-card .stats b { color: var(--accent); }
+  .recipe-card .stats { font-size: 0.8rem; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+  .recipe-card .stats b { color: var(--accent-text); }
   .recipe-card .del {
     position: absolute;
     top: 6px;
     right: 6px;
-    background: rgba(0,0,0,0.55);
+    background: rgba(0,0,0,0.6);
     color: #fff;
     border: none;
     border-radius: 50%;
-    width: 28px;
-    height: 28px;
-    font-size: 0.9rem;
+    width: 40px;
+    height: 40px;
+    font-size: 1rem;
     cursor: pointer;
     line-height: 1;
   }
@@ -271,16 +358,41 @@
     max-width: 560px;
   }
   .modal h3 { font-size: 1.05rem; margin-bottom: 4px; }
-  .modal .stats-line { font-size: 0.8rem; color: var(--muted); margin-bottom: 14px; }
+  .modal .stats-line { font-size: 0.85rem; color: var(--muted); margin-bottom: 14px; }
   .modal .live-net {
     text-align: center;
+    font-size: 1.8rem;
+    font-weight: 800;
+    color: var(--text);
+    margin: 12px 0 16px;
+    font-variant-numeric: tabular-nums;
+  }
+  .modal .live-net small { font-size: 0.9rem; font-weight: 600; color: var(--muted); }
+  .modal .actions { display: flex; gap: 10px; }
+
+  /* Sélecteur de portion : gros boutons − / +, utilisables avec des gants */
+  .stepper {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-top: 6px;
+  }
+  .stepper input { flex: 1; text-align: center; font-size: 1.2rem; font-weight: 700; }
+  .stepper .step-btn {
+    flex-shrink: 0;
+    width: 56px;
+    height: 56px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--accent-light);
+    color: var(--accent-text);
     font-size: 1.6rem;
     font-weight: 800;
-    color: var(--accent);
-    margin: 12px 0 16px;
+    cursor: pointer;
+    line-height: 1;
+    transition: transform 150ms ease-out;
   }
-  .modal .live-net small { font-size: 0.9rem; font-weight: 600; }
-  .modal .actions { display: flex; gap: 10px; }
+  .stepper .step-btn:active { transform: scale(0.98); }
 
   /* Barre de total fixe en bas */
   .total-bar {
@@ -302,31 +414,37 @@
     justify-content: space-between;
     gap: 12px;
   }
-  .total-bar .label { font-size: 0.8rem; color: var(--muted); font-weight: 600; }
-  .total-bar .sub { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
+  .total-bar .label { font-size: 0.8rem; color: var(--muted); font-weight: 700; }
+  .total-bar .sub { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
+  /* Compteur principal : encre neutre à fort contraste (AAA), très gros
+     chiffres tabulaires — lisible en plein soleil, aucune couleur d'avis */
   .total-bar .value {
-    font-size: 2.2rem;
+    font-size: 2.9rem;
     font-weight: 800;
-    color: var(--accent);
+    color: var(--text);
     line-height: 1;
     white-space: nowrap;
+    font-variant-numeric: tabular-nums;
   }
-  .total-bar .value small { font-size: 1rem; font-weight: 600; }
+  .total-bar .value small { font-size: 1.1rem; font-weight: 600; color: var(--muted); }
 
   details.help { margin-bottom: 16px; }
   details.help summary {
     cursor: pointer;
-    font-size: 0.85rem;
+    font-size: 0.88rem;
     color: var(--muted);
     font-weight: 600;
-    padding: 4px 0;
+    padding: 8px 0;
+    min-height: 44px;
+    display: flex;
+    align-items: center;
   }
-  details.help .card { margin-top: 8px; font-size: 0.85rem; color: var(--muted); }
+  details.help .card { margin-top: 8px; font-size: 0.88rem; color: var(--muted); }
   details.help .card p { margin-bottom: 8px; }
   details.help .card strong { color: var(--text); }
 
   .disclaimer {
-    font-size: 0.72rem;
+    font-size: 0.8rem;
     color: var(--muted);
     text-align: center;
     padding: 8px 16px 16px;
@@ -339,26 +457,30 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
+    min-height: 48px;
     background: var(--accent-light);
-    color: var(--accent);
+    color: var(--accent-text);
     border: none;
-    border-radius: 20px;
+    border-radius: 999px;
     padding: 8px 14px;
-    font-size: 0.85rem;
+    font-family: inherit;
+    font-size: 0.88rem;
     font-weight: 600;
     cursor: pointer;
+    transition: transform 150ms ease-out;
   }
-  .fav-chip .del { color: var(--danger); font-weight: 700; padding-left: 4px; }
+  .fav-chip:active { transform: scale(0.98); }
+  .fav-chip .del { color: var(--danger); font-weight: 700; padding: 8px 0 8px 8px; }
 
   .save-fav-row {
     display: flex;
     align-items: center;
     gap: 8px;
   }
-  .save-fav-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
-  .save-fav-row label { margin: 0; font-size: 0.85rem; }
+  .save-fav-row input[type="checkbox"] { width: 22px; height: 22px; accent-color: var(--accent); }
+  .save-fav-row label { margin: 0; font-size: 0.88rem; }
 
-  .hint { font-size: 0.72rem; color: var(--muted); margin: -6px 0 12px; }
+  .hint { font-size: 0.8rem; color: var(--muted); margin: -6px 0 12px; }
 
   /* Outil interactif glucides ↔ grammes */
   .chart-wrap { position: relative; }
@@ -440,14 +562,16 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .journal-meal .net { font-weight: 700; color: var(--accent); white-space: nowrap; }
+  .journal-meal .net { font-weight: 700; color: var(--accent-text); white-space: nowrap; font-variant-numeric: tabular-nums; }
   .journal-meal .icon-btn {
     background: none;
     border: none;
     cursor: pointer;
-    font-size: 1.05rem;
-    padding: 4px 6px;
+    font-size: 1.1rem;
+    min-width: 44px;
+    min-height: 44px;
     color: var(--muted);
+    border-radius: 12px;
   }
   .journal-meal .icon-btn.del { color: var(--danger); }
   .week-chart text { fill: var(--muted); font-size: 10px; font-family: inherit; }
@@ -465,23 +589,23 @@
     border-bottom: 1px solid var(--border);
     font-size: 0.88rem;
   }
-  .ing-item .detail { color: var(--muted); font-size: 0.76rem; }
-  .ing-item .remove { background: none; border: none; color: var(--danger); font-size: 1.1rem; cursor: pointer; padding: 2px 6px; }
+  .ing-item .detail { color: var(--muted); font-size: 0.8rem; }
+  .ing-item .remove { background: none; border: none; color: var(--danger); font-size: 1.1rem; cursor: pointer; min-width: 44px; min-height: 44px; border-radius: 12px; }
   .ing-total { font-size: 0.88rem; margin: 10px 0; color: var(--muted); }
-  .ing-total b { color: var(--accent); }
+  .ing-total b { color: var(--accent-text); }
 
   /* Partage sur carte recette */
   .recipe-card .share {
     position: absolute;
     top: 6px;
     left: 6px;
-    background: rgba(0,0,0,0.55);
+    background: rgba(0,0,0,0.6);
     color: #fff;
     border: none;
     border-radius: 50%;
-    width: 28px;
-    height: 28px;
-    font-size: 0.85rem;
+    width: 40px;
+    height: 40px;
+    font-size: 0.95rem;
     cursor: pointer;
     line-height: 1;
   }
@@ -503,17 +627,20 @@
     justify-content: center;
     gap: 8px;
     width: 100%;
+    min-height: 48px;
     padding: 13px;
+    font-family: inherit;
     font-size: 1rem;
     font-weight: 700;
     border: none;
-    border-radius: 12px;
-    background: linear-gradient(135deg, var(--accent), #0e8a63);
+    border-radius: 14px;
+    background: linear-gradient(135deg, #16A34A, #15803D);
     color: #fff;
     cursor: pointer;
-    box-shadow: 0 4px 14px rgba(26, 107, 84, 0.35);
+    box-shadow: 0 4px 14px rgba(22, 163, 74, 0.35);
+    transition: transform 150ms ease-out, opacity 150ms ease-out;
   }
-  .install-banner button:active { opacity: 0.85; }
+  .install-banner button:active { transform: scale(0.98); opacity: 0.9; }
   .install-steps { list-style: none; margin: 12px 0; }
   .install-steps li {
     display: flex;
@@ -523,8 +650,8 @@
     font-size: 0.92rem;
   }
   .install-steps .num {
-    background: var(--accent);
-    color: #fff;
+    background: var(--btn-bg);
+    color: var(--btn-text);
     border-radius: 50%;
     width: 24px;
     height: 24px;
@@ -535,9 +662,236 @@
     font-weight: 700;
     flex-shrink: 0;
   }
+
+  /* ══════════ Onboarding (premier lancement) ══════════ */
+  .onboarding {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: var(--bg);
+    display: none;
+    overflow-y: auto;
+  }
+  .onboarding.open { display: block; }
+  .ob-step {
+    display: none;
+    min-height: 100dvh;
+    flex-direction: column;
+    justify-content: space-between;
+    max-width: 560px;
+    margin: 0 auto;
+    padding: 32px 24px calc(24px + env(safe-area-inset-bottom));
+  }
+  .ob-step.active { display: flex; }
+  .ob-body { margin: auto 0; text-align: center; }
+  .ob-illus { font-size: 4rem; line-height: 1; margin-bottom: 20px; }
+  .ob-step h2 { font-size: 1.6rem; font-weight: 800; margin-bottom: 12px; }
+  .ob-step .lead { font-size: 1.05rem; color: var(--muted); line-height: 1.6; }
+  .ob-benefits { list-style: none; text-align: left; margin-top: 8px; }
+  .ob-benefits li {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px;
+    margin-bottom: 10px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 1rem;
+    font-weight: 600;
+  }
+  .ob-benefits .ico {
+    font-size: 1.6rem;
+    width: 52px;
+    height: 52px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--accent-light);
+    border-radius: 16px;
+  }
+  .ob-benefits small { display: block; font-weight: 400; font-size: 0.85rem; color: var(--muted); }
+  .ob-footer { margin-top: 24px; }
+  .ob-skip {
+    display: block;
+    width: 100%;
+    min-height: 48px;
+    margin-top: 8px;
+    background: none;
+    border: none;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: underline;
+  }
+  .ob-dots { display: flex; justify-content: center; gap: 8px; margin-bottom: 20px; }
+  .ob-dots span {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--border);
+    transition: background 150ms ease-out;
+  }
+  .ob-dots span.on { background: var(--accent); }
+  .ob-consent {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-top: 20px;
+    padding: 16px;
+    background: var(--accent-light);
+    border-radius: var(--radius);
+    text-align: left;
+    cursor: pointer;
+    font-size: 0.95rem;
+  }
+  .ob-consent input[type="checkbox"] {
+    width: 24px;
+    height: 24px;
+    margin-top: 1px;
+    flex-shrink: 0;
+    accent-color: var(--accent);
+  }
+  .ob-disclaimer-text { text-align: left; font-size: 1rem; line-height: 1.65; }
+  .ob-progress-track {
+    width: 100%;
+    height: 12px;
+    background: var(--border);
+    border-radius: 999px;
+    overflow: hidden;
+    margin-top: 24px;
+  }
+  .ob-progress-fill {
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, #16A34A, #22C55E);
+    border-radius: 999px;
+    transition: width 300ms ease-out;
+  }
+  .ob-progress-label { margin-top: 10px; font-size: 0.9rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  /* ══════════ Toasts de confirmation ══════════ */
+  .toast-zone {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    bottom: calc(108px + env(safe-area-inset-bottom));
+    z-index: 60;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    pointer-events: none;
+  }
+  .toast {
+    max-width: 420px;
+    background: var(--card);
+    color: var(--text);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--accent);
+    border-radius: 14px;
+    padding: 12px 16px;
+    font-size: 0.92rem;
+    font-weight: 600;
+    box-shadow: 0 6px 20px rgba(15, 23, 42, 0.18);
+    animation: toast-in 200ms ease-out;
+  }
+  @keyframes toast-in {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Amorce caméra (permission juste-à-temps) */
+  .cam-primer { text-align: center; padding: 8px 0 4px; }
+  .cam-primer .ico { font-size: 2.6rem; margin-bottom: 8px; }
+  .cam-primer p { font-size: 0.95rem; color: var(--muted); margin-bottom: 14px; }
 </style>
 </head>
 <body>
+
+<!-- ══════════ Onboarding : premier lancement seulement ══════════ -->
+<div class="onboarding" id="onboarding" role="dialog" aria-modal="true" aria-labelledby="ob-title-1">
+
+  <!-- Écran 1 : bienvenue -->
+  <section class="ob-step active" id="ob-step-1">
+    <div class="ob-body">
+      <div class="ob-illus" aria-hidden="true">🥗</div>
+      <h2 id="ob-title-1">Bienvenue dans Glucides Nets!</h2>
+      <p class="lead">Calcule les glucides de tes repas, même sans réseau. Simple, rapide, et toujours dans ta poche.</p>
+    </div>
+    <div class="ob-footer">
+      <div class="ob-dots" aria-hidden="true"><span class="on"></span><span></span><span></span><span></span></div>
+      <button class="btn" type="button" id="ob-start">Commencer</button>
+      <button class="ob-skip" type="button" id="ob-skip-1">Passer</button>
+    </div>
+  </section>
+
+  <!-- Écran 2 : comment ça marche -->
+  <section class="ob-step" id="ob-step-2" aria-labelledby="ob-title-2">
+    <div class="ob-body">
+      <h2 id="ob-title-2">Comment ça marche</h2>
+      <ul class="ob-benefits">
+        <li>
+          <span class="ico" aria-hidden="true">🔍</span>
+          <span>Trouve ton aliment<small>Cherche dans la base ou scanne un code-barres.</small></span>
+        </li>
+        <li>
+          <span class="ico" aria-hidden="true">🍽️</span>
+          <span>Compose ton repas<small>Ajoute tes aliments, ajuste les portions.</small></span>
+        </li>
+        <li>
+          <span class="ico" aria-hidden="true">🧮</span>
+          <span>Vois ton total<small>Les glucides nets s'affichent en continu, en bas de l'écran.</small></span>
+        </li>
+      </ul>
+    </div>
+    <div class="ob-footer">
+      <div class="ob-dots" aria-hidden="true"><span></span><span class="on"></span><span></span><span></span></div>
+      <button class="btn" type="button" id="ob-next-2">Continuer</button>
+      <button class="ob-skip" type="button" id="ob-skip-2">Passer</button>
+    </div>
+  </section>
+
+  <!-- Écran 3 : avertissement médical — obligatoire et bloquant -->
+  <section class="ob-step" id="ob-step-3" aria-labelledby="ob-title-3">
+    <div class="ob-body">
+      <div class="ob-illus" aria-hidden="true">🩺</div>
+      <h2 id="ob-title-3">Un mot avant de commencer</h2>
+      <p class="ob-disclaimer-text">
+        Cette app est un outil informatif seulement. Elle ne remplace pas l'avis d'un
+        professionnel de la santé. Les glucides affichés sont des estimations.
+        Vérifie toujours les valeurs entrées dans ta pompe et valide tes décisions
+        avec ton équipe de soins.
+      </p>
+      <label class="ob-consent">
+        <input type="checkbox" id="ob-consent-check">
+        <span>J'ai lu et je comprends.</span>
+      </label>
+    </div>
+    <div class="ob-footer">
+      <div class="ob-dots" aria-hidden="true"><span></span><span></span><span class="on"></span><span></span></div>
+      <button class="btn" type="button" id="ob-accept" disabled>J'ai compris</button>
+    </div>
+  </section>
+
+  <!-- Écran 4 : préparation hors ligne (progression déterminée) -->
+  <section class="ob-step" id="ob-step-4" aria-labelledby="ob-title-4">
+    <div class="ob-body" role="status" aria-live="polite">
+      <div class="ob-illus" aria-hidden="true">📦</div>
+      <h2 id="ob-title-4">On prépare ta base d'aliments</h2>
+      <p class="lead">…pour que tout marche sans réseau. Ça prend juste un instant.</p>
+      <div class="ob-progress-track" aria-hidden="true"><div class="ob-progress-fill" id="ob-progress"></div></div>
+      <p class="ob-progress-label" id="ob-progress-label">0 %</p>
+    </div>
+    <div class="ob-footer">
+      <div class="ob-dots" aria-hidden="true"><span></span><span></span><span></span><span class="on"></span></div>
+    </div>
+  </section>
+
+</div>
 
 <header>
   <h1>🧮 Glucides Nets</h1>
@@ -551,10 +905,15 @@
 </header>
 
 <div class="install-banner" id="install-banner">
-  <button id="install-btn" type="button">📲 Télécharger l'app sur votre appareil</button>
+  <button id="install-btn" type="button">📲 Ajoute l'app à ton écran d'accueil</button>
 </div>
 
 <main>
+
+  <div class="offline-badge" id="offline-badge" role="status" aria-live="polite">
+    <span aria-hidden="true">📡</span>
+    <span>Hors ligne. La recherche et tes repas fonctionnent. Le scanner de produits revient avec le réseau.</span>
+  </div>
 
   <!-- ═══════════ ONGLET REPAS ═══════════ -->
   <section class="tab-panel active" id="panel-meal">
@@ -565,14 +924,14 @@
         <p><strong>Glucides nets = Glucides totaux − Fibres − (Polyols ÷ 2)</strong></p>
         <p>Au Canada et aux États-Unis, les fibres sont incluses dans les glucides totaux sur l'étiquette nutritionnelle. Comme les fibres ne font pas monter la glycémie, on les soustrait.</p>
         <p>Les polyols (sucres-alcools : maltitol, sorbitol, xylitol…) sont absorbés à environ 50 %, on soustrait donc la moitié. Exception : l'érythritol n'est pas absorbé du tout — choisissez « Érythritol » pour le soustraire à 100 %. Ces règles correspondent aux recommandations usuelles de Diabète Canada et de l'American Diabetes Association pour le calcul des glucides à la pompe.</p>
-        <p>Certaines équipes de soins recommandent de ne soustraire les fibres que lorsqu'elles dépassent 5 g par portion — suivez la méthode enseignée par la vôtre.</p>
-        <p>Entrez le total affiché en bas dans votre pompe pour le calcul du bolus.</p>
+        <p>Certaines équipes de soins recommandent de ne soustraire les fibres que lorsqu'elles dépassent 5 g par portion — suis la méthode enseignée par la tienne.</p>
+        <p>Entre le total affiché en bas dans ta pompe pour le calcul du bolus.</p>
       </div>
     </details>
 
     <div class="card">
       <h2>📷 Scanner un produit</h2>
-      <p class="hint" style="margin:0 0 10px;">Scannez le code-barres d'un produit emballé — ses valeurs nutritionnelles sont récupérées automatiquement depuis Open Food Facts (connexion Internet requise).</p>
+      <p class="hint" style="margin:0 0 10px;">Scanne le code-barres d'un produit emballé — ses valeurs nutritionnelles arrivent automatiquement d'Open Food Facts (connexion Internet requise).</p>
       <button class="btn btn-secondary" id="scan-open-btn" type="button">📷 Scanner un code-barres</button>
     </div>
 
@@ -580,7 +939,7 @@
       <h2>🔍 Base d'aliments courants</h2>
       <input type="search" id="db-search" placeholder="Chercher… (ex. : riz, pomme, pain)" autocomplete="off">
       <div class="search-results" id="db-results"></div>
-      <p class="hint" style="margin-top:8px;">Valeurs par 100 g — source : USDA FoodData Central (cohérent avec le Fichier canadien sur les éléments nutritifs). Pour un produit emballé, fiez-vous d'abord à son étiquette. Choisissez un aliment, puis indiquez le poids consommé.</p>
+      <p class="hint" style="margin-top:8px;">Valeurs par 100 g — source : USDA FoodData Central (cohérent avec le Fichier canadien sur les éléments nutritifs). Pour un produit emballé, fie-toi d'abord à son étiquette. Choisis un aliment, puis indique le poids consommé.</p>
     </div>
 
     <div class="card">
@@ -622,7 +981,7 @@
           <input type="number" id="portion-eaten" inputmode="decimal" min="0" step="0.1" placeholder="ex. : 150">
         </div>
       </div>
-      <p class="hint">Portions optionnelles (même unité : g, ml, tranches…). Si vides, les valeurs sont utilisées telles quelles.</p>
+      <p class="hint">Portions optionnelles (même unité : g, ml, tranches…). Si tu les laisses vides, les valeurs sont utilisées telles quelles.</p>
       <div class="save-fav-row" style="margin-bottom:12px;">
         <input type="checkbox" id="save-fav">
         <label for="save-fav">Enregistrer dans mes favoris</label>
@@ -637,7 +996,7 @@
 
     <div class="card">
       <h2>🍽️ Repas en cours</h2>
-      <div id="meal-list"><p class="empty">Aucun aliment ajouté pour l'instant.</p></div>
+      <div id="meal-list"><p class="empty"><span class="illus" aria-hidden="true">🍽️</span>Ton repas est vide. Ajoute ton premier aliment ci-dessus!</p></div>
       <div class="btn-row" style="margin-top:12px; display:none;" id="meal-actions">
         <button class="btn btn-secondary" id="clear-btn">Vider</button>
         <button class="btn" id="finish-btn">✅ Enregistrer au journal</button>
@@ -651,7 +1010,7 @@
 
     <div class="card">
       <h2>🧑‍🍳 Calculer à partir des ingrédients</h2>
-      <p class="hint" style="margin:0 0 10px;">Ajoutez chaque ingrédient pesé — l'app calcule automatiquement les valeurs par 100 g du plat final.</p>
+      <p class="hint" style="margin:0 0 10px;">Ajoute chaque ingrédient pesé — l'app calcule automatiquement les valeurs par 100 g du plat final.</p>
       <input type="search" id="ing-search" placeholder="Chercher dans la base… (ex. : riz)" autocomplete="off">
       <div class="search-results" id="ing-results"></div>
       <div class="row" style="margin-top:10px;">
@@ -684,7 +1043,7 @@
             <input type="number" id="ing-cooked-weight" inputmode="decimal" min="0" step="1" placeholder="pesez le plat fini">
           </div>
         </div>
-        <p class="hint">Le plat cuit pèse souvent moins que la somme des ingrédients (évaporation) — pesez-le pour un résultat exact.</p>
+        <p class="hint">Le plat cuit pèse souvent moins que la somme des ingrédients (évaporation) — pèse-le pour un résultat exact.</p>
         <button class="btn" id="ing-use-btn" type="button">→ Reporter dans la nouvelle recette</button>
       </div>
     </div>
@@ -723,20 +1082,20 @@
           </select>
         </div>
       </div>
-      <p class="hint">💡 Astuce : pour une recette complète, additionnez les glucides et fibres de tous les ingrédients, pesez le plat final, puis calculez les valeurs par 100 g (total ÷ poids × 100).</p>
+      <p class="hint">💡 Astuce : pour une recette complète, additionne les glucides et fibres de tous les ingrédients, pèse le plat final, puis calcule les valeurs par 100 g (total ÷ poids × 100).</p>
       <button class="btn" id="save-recipe-btn">Enregistrer la recette</button>
     </div>
 
     <div class="card">
       <h2>📖 Mes recettes</h2>
-      <p class="hint" style="margin:0 0 12px;">Touchez une recette pour l'ajouter au repas — il suffit d'indiquer le poids de votre portion.</p>
+      <p class="hint" style="margin:0 0 12px;">Touche une recette pour l'ajouter au repas — il suffit d'indiquer le poids de ta portion.</p>
       <div class="recipe-grid" id="recipe-grid"></div>
-      <p class="empty" id="recipes-empty">Aucune recette pour l'instant. Créez-en une ci-dessus!</p>
+      <p class="empty" id="recipes-empty"><span class="illus" aria-hidden="true">📖</span>Tu n'as pas encore de recette. Crée ta première juste au-dessus!</p>
     </div>
 
     <div class="card">
       <h2>⭐ Recettes populaires</h2>
-      <p class="hint" style="margin:0 0 12px;">Plats courants avec valeurs moyennes par 100 g (USDA / FCÉN, recettes types). Votre version maison peut différer — pour un calcul exact, utilisez « Calculer à partir des ingrédients ».</p>
+      <p class="hint" style="margin:0 0 12px;">Plats courants avec valeurs moyennes par 100 g (USDA / FCÉN, recettes types). Ta version maison peut différer — pour un calcul exact, utilise « Calculer à partir des ingrédients ».</p>
       <div class="recipe-grid" id="builtin-grid"></div>
     </div>
 
@@ -747,7 +1106,7 @@
 
     <div class="card">
       <h2>📈 Relation glucides ↔ grammes</h2>
-      <p class="hint" style="margin:0 0 12px;">Choisissez un aliment, puis glissez le curseur (ou touchez le graphique) pour voir les glucides nets selon le poids.</p>
+      <p class="hint" style="margin:0 0 12px;">Choisis un aliment, puis glisse le curseur (ou touche le graphique) pour voir les glucides nets selon le poids.</p>
 
       <label for="tool-select">Aliment ou recette</label>
       <select id="tool-select"></select>
@@ -784,7 +1143,7 @@
           <label for="inverse-target">🎯 Cible (g nets)</label>
           <input type="number" id="inverse-target" inputmode="decimal" min="0" step="1" placeholder="ex. : 30">
         </div>
-        <div class="result" id="inverse-result">Entrez une cible pour connaître le poids à servir.</div>
+        <div class="result" id="inverse-result">Entre une cible pour connaître le poids à servir.</div>
       </div>
       <p class="hint" style="margin-top:10px;">Pratique pour peser une portion qui correspond exactement au bolus voulu.</p>
     </div>
@@ -796,20 +1155,20 @@
 
     <div class="card">
       <h2>📊 7 derniers jours</h2>
-      <p class="hint" style="margin:0 0 8px;" id="week-summary">Aucun repas enregistré pour l'instant.</p>
+      <p class="hint" style="margin:0 0 8px;" id="week-summary">Enregistre un premier repas pour voir ta semaine ici.</p>
       <svg class="week-chart" id="week-chart" viewBox="0 0 340 130" role="img"
            aria-label="Glucides nets par jour, 7 derniers jours"></svg>
     </div>
 
     <div class="card">
       <h2>📅 Repas enregistrés</h2>
-      <p class="hint" style="margin:0 0 8px;">Terminez un repas avec « ✅ Enregistrer au journal » dans l'onglet Repas. Touchez ↻ pour recharger un repas passé.</p>
-      <div id="journal-list"><p class="empty">Aucun repas enregistré pour l'instant.</p></div>
+      <p class="hint" style="margin:0 0 8px;">Termine un repas avec « ✅ Enregistrer au journal » dans l'onglet Repas. Touche ↻ pour recharger un repas passé.</p>
+      <div id="journal-list"><p class="empty"><span class="illus" aria-hidden="true">📅</span>Ton journal est vide. Enregistre ton premier repas pour le retrouver ici!</p></div>
     </div>
 
     <div class="card">
       <h2>💾 Sauvegarde et partage</h2>
-      <p class="hint" style="margin:0 0 10px;">Vos données restent sur cet appareil. Exportez un fichier pour les sauvegarder ou les transférer sur un autre appareil.</p>
+      <p class="hint" style="margin:0 0 10px;">Tes données restent sur cet appareil. Exporte un fichier pour les sauvegarder ou les transférer sur un autre appareil.</p>
       <div class="btn-row">
         <button class="btn btn-secondary" id="export-btn" type="button">⬇️ Exporter</button>
         <button class="btn btn-secondary" id="import-btn" type="button">⬆️ Importer</button>
@@ -823,8 +1182,8 @@
 </main>
 
 <p class="disclaimer">
-  ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de votre équipe de soins en diabète.
-  Vérifiez toujours les valeurs entrées dans votre pompe et suivez les recommandations de votre professionnel de la santé.
+  ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
+  Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -833,14 +1192,14 @@
     <h3>📲 Installer Glucides Nets</h3>
     <p class="stats-line">L'app s'installe directement depuis le navigateur — rien à télécharger sur un magasin d'applications.</p>
     <ul class="install-steps" id="install-steps-ios" style="display:none;">
-      <li><span class="num">1</span><span>Touchez le bouton <strong>Partager</strong> <span aria-hidden="true">(carré avec flèche ↑)</span> dans la barre de Safari.</span></li>
-      <li><span class="num">2</span><span>Faites défiler et choisissez <strong>« Sur l'écran d'accueil »</strong>.</span></li>
-      <li><span class="num">3</span><span>Touchez <strong>Ajouter</strong> — l'icône verte apparaît sur votre écran d'accueil.</span></li>
+      <li><span class="num">1</span><span>Touche le bouton <strong>Partager</strong> <span aria-hidden="true">(carré avec flèche ↑)</span> dans la barre de Safari.</span></li>
+      <li><span class="num">2</span><span>Fais défiler et choisis <strong>« Sur l'écran d'accueil »</strong>.</span></li>
+      <li><span class="num">3</span><span>Touche <strong>Ajouter</strong> — l'icône verte apparaît sur ton écran d'accueil.</span></li>
     </ul>
     <ul class="install-steps" id="install-steps-generic" style="display:none;">
-      <li><span class="num">1</span><span>Ouvrez le <strong>menu du navigateur</strong> (⋮ ou ⋯).</span></li>
-      <li><span class="num">2</span><span>Choisissez <strong>« Ajouter à l'écran d'accueil »</strong> ou <strong>« Installer l'application »</strong>.</span></li>
-      <li><span class="num">3</span><span>Confirmez — l'icône verte apparaît sur votre écran d'accueil.</span></li>
+      <li><span class="num">1</span><span>Ouvre le <strong>menu du navigateur</strong> (⋮ ou ⋯).</span></li>
+      <li><span class="num">2</span><span>Choisis <strong>« Ajouter à l'écran d'accueil »</strong> ou <strong>« Installer l'application »</strong>.</span></li>
+      <li><span class="num">3</span><span>Confirme — l'icône verte apparaît sur ton écran d'accueil.</span></li>
     </ul>
     <p class="stats-line">Une fois installée, l'app s'ouvre en plein écran et fonctionne même sans connexion.</p>
     <button class="btn btn-secondary" id="install-modal-close" type="button">Fermer</button>
@@ -851,9 +1210,15 @@
 <div class="modal-overlay" id="scan-modal">
   <div class="modal">
     <h3>📷 Scanner un code-barres</h3>
-    <p class="stats-line" id="scan-status">Pointez la caméra vers le code-barres du produit.</p>
+    <!-- Amorce : on explique le bénéfice AVANT la demande système de caméra -->
+    <div class="cam-primer" id="cam-primer" style="display:none;">
+      <div class="ico" aria-hidden="true">📷</div>
+      <p>Autorise la caméra pour scanner le code-barres de tes produits et remplir les valeurs automatiquement.</p>
+      <button class="btn" id="cam-allow" type="button">Autoriser la caméra</button>
+    </div>
+    <p class="stats-line" id="scan-status" role="status" aria-live="polite">Pointe la caméra vers le code-barres du produit.</p>
     <video id="scan-video" autoplay playsinline muted></video>
-    <label for="barcode-manual">Ou entrez le code manuellement</label>
+    <label for="barcode-manual">Ou entre le code manuellement</label>
     <div class="scan-row">
       <input type="text" id="barcode-manual" inputmode="numeric" autocomplete="off" placeholder="ex. : 3017620422003">
       <button class="btn" id="barcode-lookup" type="button">OK</button>
@@ -868,8 +1233,13 @@
     <h3 id="qty-title">Recette</h3>
     <p class="stats-line" id="qty-stats"></p>
     <label for="qty-grams">Poids de la portion consommée (g)</label>
-    <input type="number" id="qty-grams" inputmode="decimal" min="0" step="1" placeholder="ex. : 250">
-    <div class="live-net" id="qty-net">0 <small>g nets</small></div>
+    <!-- Gros boutons − / + espacés : utilisables avec des gants -->
+    <div class="stepper">
+      <button class="step-btn" id="qty-minus" type="button" aria-label="Réduire de 25 grammes">−</button>
+      <input type="number" id="qty-grams" inputmode="decimal" min="0" step="1" placeholder="ex. : 250">
+      <button class="step-btn" id="qty-plus" type="button" aria-label="Augmenter de 25 grammes">+</button>
+    </div>
+    <div class="live-net" id="qty-net" role="status" aria-live="polite">0 <small>g nets</small></div>
     <div class="actions">
       <button class="btn btn-secondary" id="qty-cancel" type="button">Annuler</button>
       <button class="btn" id="qty-add" type="button">Ajouter au repas</button>
@@ -877,7 +1247,7 @@
   </div>
 </div>
 
-<div class="total-bar">
+<div class="total-bar" role="status" aria-live="polite">
   <div class="inner">
     <div>
       <div class="label">TOTAL À ENTRER DANS LA POMPE</div>
@@ -886,6 +1256,8 @@
     <div class="value" id="total-net">0<small> g</small></div>
   </div>
 </div>
+
+<div class="toast-zone" id="toast-zone" role="status" aria-live="polite"></div>
 
 <script>
 (function () {
@@ -977,6 +1349,28 @@
 
   var $ = function (id) { return document.getElementById(id); };
 
+  /* ── Toasts de confirmation ──
+     Ton neutre et court, 5 s pour laisser le temps de lire,
+     max 3 à l'écran, aria-live="polite" sur la zone. */
+  function toast(msg) {
+    var zone = $('toast-zone');
+    while (zone.children.length >= 3) zone.removeChild(zone.firstChild);
+    var t = document.createElement('div');
+    t.className = 'toast';
+    t.textContent = msg;
+    zone.appendChild(t);
+    setTimeout(function () { if (t.parentNode) t.parentNode.removeChild(t); }, 5000);
+  }
+
+  /* Engagement : la bannière d'installation n'apparaît qu'après le
+     premier aliment ajouté — jamais au premier écran. */
+  function markEngagement() {
+    if (!localStorage.getItem('gn_engaged')) {
+      localStorage.setItem('gn_engaged', '1');
+    }
+    maybeShowInstallBanner();
+  }
+
   function round1(n) { return Math.round(n * 10) / 10; }
   function round2(n) { return Math.round(n * 100) / 100; }
 
@@ -997,7 +1391,7 @@
     try {
       localStorage.setItem('gn_recipes', JSON.stringify(recipes));
     } catch (e) {
-      alert('Espace de stockage plein — la photo n’a pas pu être enregistrée. Supprimez d’anciennes recettes avec photo.');
+      alert('Espace de stockage plein — la photo n’a pas pu être enregistrée. Supprime d’anciennes recettes avec photo.');
     }
   }
 
@@ -1014,36 +1408,70 @@
     document.querySelector('.tab-btn[data-tab="' + name + '"]').click();
   }
 
-  /* ── Recherche dans la base d'aliments (réutilisable) ── */
+  /* ── Recherche dans la base d'aliments (réutilisable) ──
+     Débounce de 250 ms (la zone confortable est 200-300 ms), recherche à
+     partir de 2 caractères, max 8 résultats. Sans résultat : état
+     accueillant avec une porte de sortie « Créer cet aliment ». */
   function normalize(s) {
     return s.toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
   }
-  function bindDbSearch(inputId, resultsId, onPick) {
+  function bindDbSearch(inputId, resultsId, onPick, onCreate) {
+    var timer = null;
     $(inputId).addEventListener('input', function () {
-      var q = normalize(this.value.trim());
+      var input = this;
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(function () { runSearch(input); }, 250);
+    });
+    function runSearch(input) {
+      var raw = input.value.trim();
+      var q = normalize(raw);
       var box = $(resultsId);
       box.innerHTML = '';
       if (q.length < 2) { box.classList.remove('open'); return; }
       var matches = FOOD_DB.filter(function (f) { return normalize(f.n).indexOf(q) !== -1; }).slice(0, 8);
-      if (matches.length === 0) { box.classList.remove('open'); return; }
+      if (matches.length === 0) {
+        if (onCreate) {
+          var wrap = document.createElement('div');
+          wrap.className = 'search-empty';
+          var msg = document.createElement('p');
+          msg.textContent = 'Rien trouvé pour « ' + raw + ' ». Pas grave — tu peux le créer toi-même avec les valeurs de l’étiquette.';
+          var create = document.createElement('button');
+          create.className = 'btn btn-secondary';
+          create.type = 'button';
+          create.textContent = '➕ Créer cet aliment';
+          create.addEventListener('click', function () {
+            box.classList.remove('open');
+            input.value = '';
+            onCreate(raw);
+          });
+          wrap.appendChild(msg);
+          wrap.appendChild(create);
+          box.appendChild(wrap);
+          box.classList.add('open');
+        } else {
+          box.classList.remove('open');
+        }
+        return;
+      }
       matches.forEach(function (f) {
         var b = document.createElement('button');
+        b.type = 'button';
         var name = document.createElement('span');
         name.textContent = f.n;
         var val = document.createElement('span');
         val.className = 'val';
-        val.textContent = f.c + ' g gluc. / 100 g';
+        val.textContent = f.c + ' g / 100 g';
         b.appendChild(name);
         b.appendChild(val);
         b.addEventListener('click', function () {
           box.classList.remove('open');
-          $(inputId).value = '';
+          input.value = '';
           onPick(f);
         });
         box.appendChild(b);
       });
       box.classList.add('open');
-    });
+    }
   }
 
   bindDbSearch('db-search', 'db-results', function (f) {
@@ -1054,6 +1482,10 @@
     $('portion-label').value = 100;
     $('portion-eaten').value = '';
     $('portion-eaten').focus();
+  }, function (query) {
+    $('food-name').value = query;
+    $('carbs').focus();
+    $('food-name').scrollIntoView({ behavior: 'smooth', block: 'center' });
   });
 
   /* ── Formulaire aliment ── */
@@ -1082,7 +1514,7 @@
     var list = $('meal-list');
     var actions = $('meal-actions');
     if (meal.length === 0) {
-      list.innerHTML = '<p class="empty">Aucun aliment ajouté pour l’instant.</p>';
+      list.innerHTML = '<p class="empty"><span class="illus" aria-hidden="true">🍽️</span>Ton repas est vide. Ajoute ton premier aliment ci-dessus!</p>';
       actions.style.display = 'none';
     } else {
       list.innerHTML = '';
@@ -1180,6 +1612,8 @@
         });
         save();
         renderMeal();
+        toast('✓ ' + fav.name + ' ajouté au repas');
+        markEngagement();
       });
       list.appendChild(chip);
     });
@@ -1203,6 +1637,8 @@
     renderFavorites();
     resetForm();
     $('food-name').focus();
+    toast('✓ ' + item.name + ' ajouté au repas');
+    markEngagement();
   });
 
   $('clear-btn').addEventListener('click', function () {
@@ -1268,6 +1704,7 @@
     renderRecipes();
     buildToolOptions();
     drawToolChart();
+    toast('✓ Recette enregistrée');
   });
 
   function renderRecipes() {
@@ -1416,9 +1853,20 @@
     save();
     renderMeal();
     $('qty-modal').classList.remove('open');
+    toast('✓ ' + modalRecipe.name + ' ajouté au repas');
     modalRecipe = null;
     switchTab('meal');
+    markEngagement();
   });
+
+  /* Sélecteur de portion : gros pas de 25 g, utilisable avec des gants */
+  function stepQty(delta) {
+    var current = parseFloat($('qty-grams').value) || 0;
+    $('qty-grams').value = Math.max(0, current + delta);
+    updateQtyNet();
+  }
+  $('qty-minus').addEventListener('click', function () { stepQty(-25); });
+  $('qty-plus').addEventListener('click', function () { stepQty(25); });
 
   /* ══════════ Outil interactif : glucides ↔ grammes ══════════ */
   var TOOL = {
@@ -1583,7 +2031,7 @@
     var target = parseFloat($('inverse-target').value) || 0;
     var box = $('inverse-result');
     if (!TOOL.item || target <= 0) {
-      box.textContent = 'Entrez une cible pour connaître le poids à servir.';
+      box.textContent = 'Entre une cible pour connaître le poids à servir.';
       return;
     }
     if (TOOL.item.net100 <= 0) {
@@ -1594,7 +2042,7 @@
     box.innerHTML = '';
     var b = document.createElement('b');
     b.textContent = Math.round(grams) + ' g';
-    box.appendChild(document.createTextNode('Servez '));
+    box.appendChild(document.createTextNode('Sers-toi '));
     box.appendChild(b);
     box.appendChild(document.createTextNode(' de « ' + TOOL.item.name + ' » pour ' + target + ' g nets.'));
   }
@@ -1655,20 +2103,35 @@
     $('scan-modal').classList.remove('open');
   }
 
+  /* Permission caméra juste-à-temps : jamais au démarrage de l'app.
+     Au premier scan, un écran d'amorce explique le bénéfice AVANT la
+     demande système; ensuite, la caméra démarre directement. */
   function startScanner() {
     $('scan-modal').classList.add('open');
     $('barcode-manual').value = '';
+    $('cam-primer').style.display = 'none';
     if (!('BarcodeDetector' in window)) {
-      scanStatus('Le scan caméra n’est pas supporté par ce navigateur — entrez le code sous le code-barres manuellement.');
+      scanStatus('Le scan caméra n’est pas supporté par ce navigateur — entre le code inscrit sous le code-barres manuellement.');
       return;
     }
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      scanStatus('Caméra inaccessible — entrez le code manuellement.');
+      scanStatus('Caméra inaccessible — entre le code manuellement.');
       return;
     }
-    scanStatus('Pointez la caméra vers le code-barres du produit.');
+    if (!localStorage.getItem('gn_cam_ok')) {
+      $('cam-primer').style.display = 'block';
+      scanStatus('Ou entre le code toi-même, juste en dessous.');
+      return;
+    }
+    openCamera();
+  }
+
+  function openCamera() {
+    $('cam-primer').style.display = 'none';
+    scanStatus('Pointe la caméra vers le code-barres du produit.');
     navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
       .then(function (stream) {
+        localStorage.setItem('gn_cam_ok', '1');
         scanStream = stream;
         var video = $('scan-video');
         video.srcObject = stream;
@@ -1686,9 +2149,11 @@
         }, 350);
       })
       .catch(function () {
-        scanStatus('Caméra inaccessible (permission refusée ou non disponible) — entrez le code manuellement.');
+        scanStatus('Caméra inaccessible (permission refusée ou non disponible) — entre le code manuellement, ça marche aussi bien.');
       });
   }
+
+  $('cam-allow').addEventListener('click', openCamera);
 
   function lookupBarcode(code) {
     code = String(code).replace(/\D/g, '');
@@ -1704,7 +2169,7 @@
         var carbs = nut.carbohydrates_100g;
         if (carbs === undefined || carbs === null) {
           scanStatus('Produit trouvé (' + (p.product_name_fr || p.product_name || code) +
-            ') mais sans données de glucides — entrez les valeurs de l’étiquette à la main.');
+            ') mais sans données de glucides — entre les valeurs de l’étiquette à la main.');
           return;
         }
         var name = p.product_name_fr || p.product_name || 'Produit ' + code;
@@ -1720,7 +2185,7 @@
         $('portion-eaten').focus();
       })
       .catch(function () {
-        scanStatus('Erreur réseau — vérifiez votre connexion Internet et réessayez.');
+        scanStatus('Erreur réseau — vérifie ta connexion Internet et réessaie.');
       });
   }
 
@@ -1740,6 +2205,9 @@
     $('ing-carbs').value = f.c;
     $('ing-fiber').value = f.f;
     $('ing-weight').focus();
+  }, function (query) {
+    $('ing-name').value = query;
+    $('ing-carbs').focus();
   });
 
   function renderIngredients() {
@@ -1830,6 +2298,7 @@
     renderMeal();
     renderJournal();
     switchTab('journal');
+    toast('✓ Repas enregistré au journal');
   });
 
   function dayKey(ts) {
@@ -1845,7 +2314,7 @@
     var list = $('journal-list');
     list.innerHTML = '';
     if (history.length === 0) {
-      list.innerHTML = '<p class="empty">Aucun repas enregistré pour l’instant.</p>';
+      list.innerHTML = '<p class="empty"><span class="illus" aria-hidden="true">📅</span>Ton journal est vide. Enregistre ton premier repas pour le retrouver ici!</p>';
       renderWeekChart();
       return;
     }
@@ -1933,7 +2402,7 @@
     });
     var activeDays = days.filter(function (d) { return d.total > 0; }).length;
     $('week-summary').textContent = mealsCount === 0
-      ? 'Aucun repas enregistré pour l’instant.'
+      ? 'Enregistre un premier repas pour voir ta semaine ici.'
       : mealsCount + ' repas cette semaine · moyenne ' +
         round1(weekTotal / Math.max(1, activeDays)) + ' g nets par jour actif';
 
@@ -2005,7 +2474,7 @@
         backupStatus('❌ Ce fichier n’est pas une sauvegarde Glucides Nets.');
         return;
       }
-      if (!confirm('Remplacer vos recettes, favoris et journal actuels par ceux du fichier?')) return;
+      if (!confirm('Remplacer tes recettes, favoris et journal actuels par ceux du fichier?')) return;
       recipes = Array.isArray(data.recipes) ? data.recipes : [];
       favorites = Array.isArray(data.favorites) ? data.favorites : [];
       history = Array.isArray(data.history) ? data.history : [];
@@ -2030,7 +2499,7 @@
       navigator.share({ title: r.name, text: text }).catch(function () { /* annulé */ });
     } else if (navigator.clipboard) {
       navigator.clipboard.writeText(text).then(function () {
-        alert('Recette copiée dans le presse-papiers!');
+        toast('✓ Recette copiée dans le presse-papiers');
       });
     } else {
       alert(text);
@@ -2042,7 +2511,9 @@
     navigator.serviceWorker.register('sw.js').catch(function () { /* hors ligne ou non supporté */ });
   }
 
-  /* ══════════ Bouton « Télécharger l'app » ══════════ */
+  /* ══════════ Bouton « Ajouter à l'écran d'accueil » ══════════
+     Jamais au premier écran : la bannière n'apparaît qu'après un moment
+     d'engagement (premier aliment ajouté au repas). */
   var deferredInstallPrompt = null;
 
   function isStandalone() {
@@ -2054,17 +2525,25 @@
       (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
   }
 
+  function maybeShowInstallBanner() {
+    if (isStandalone() || location.protocol !== 'https:') return;
+    if (!localStorage.getItem('gn_onboarded')) return;
+    if (!localStorage.getItem('gn_engaged')) return;
+    $('install-banner').classList.add('visible');
+  }
+
   function showInstallInstructions() {
     $('install-steps-ios').style.display = isIOS() ? 'block' : 'none';
     $('install-steps-generic').style.display = isIOS() ? 'none' : 'block';
     $('install-modal').classList.add('open');
   }
 
-  // Chrome/Edge/Android : installation native en un geste
+  // Chrome/Edge/Android : on capture l'événement, on empêche l'invite
+  // par défaut et on la garde pour le bon moment.
   window.addEventListener('beforeinstallprompt', function (e) {
     e.preventDefault();
     deferredInstallPrompt = e;
-    $('install-banner').classList.add('visible');
+    maybeShowInstallBanner();
   });
 
   window.addEventListener('appinstalled', function () {
@@ -2082,6 +2561,7 @@
         deferredInstallPrompt = null;
       });
     } else {
+      // Safari iOS n'émet pas beforeinstallprompt : instructions manuelles.
       showInstallInstructions();
     }
   });
@@ -2093,11 +2573,93 @@
     if (e.target === this) this.classList.remove('open');
   });
 
-  // Safari iOS n'émet pas beforeinstallprompt : on montre quand même le
-  // bouton (instructions pas-à-pas), sauf si l'app est déjà installée.
-  if (!isStandalone() && location.protocol === 'https:') {
-    $('install-banner').classList.add('visible');
+  maybeShowInstallBanner();
+
+  /* ══════════ Indicateur de mode hors ligne ══════════ */
+  function renderOnlineState() {
+    $('offline-badge').classList.toggle('visible', !navigator.onLine);
   }
+  window.addEventListener('online', renderOnlineState);
+  window.addEventListener('offline', renderOnlineState);
+  renderOnlineState();
+
+  /* ══════════ Onboarding : premier lancement ══════════
+     Court (4 écrans, < 90 s). Les écrans de présentation se sautent;
+     l'avertissement médical est obligatoire et bloquant. Le consentement
+     est stocké localement et l'onboarding ne réapparaît plus. */
+  (function () {
+    if (localStorage.getItem('gn_onboarded')) return;
+
+    var ob = $('onboarding');
+    ob.classList.add('open');
+    document.body.style.overflow = 'hidden';
+
+    function showStep(n) {
+      [1, 2, 3, 4].forEach(function (i) {
+        $('ob-step-' + i).classList.toggle('active', i === n);
+      });
+      ob.scrollTop = 0;
+    }
+
+    $('ob-start').addEventListener('click', function () { showStep(2); });
+    $('ob-next-2').addEventListener('click', function () { showStep(3); });
+    // « Passer » saute la présentation, jamais l'avertissement médical.
+    $('ob-skip-1').addEventListener('click', function () { showStep(3); });
+    $('ob-skip-2').addEventListener('click', function () { showStep(3); });
+
+    $('ob-consent-check').addEventListener('change', function () {
+      $('ob-accept').disabled = !this.checked;
+    });
+
+    $('ob-accept').addEventListener('click', function () {
+      if (!$('ob-consent-check').checked) return;
+      localStorage.setItem('gn_disclaimer_ok', String(Date.now()));
+      showStep(4);
+      prepareOffline();
+    });
+
+    /* Écran 4 : indicateur déterminé (pas un simple spinner), relié aux
+       vraies étapes de mise en cache du service worker. */
+    function setProgress(pct) {
+      pct = Math.max(0, Math.min(100, Math.round(pct)));
+      $('ob-progress').style.width = pct + '%';
+      $('ob-progress-label').textContent = pct + ' %';
+    }
+
+    function finishOnboarding() {
+      localStorage.setItem('gn_onboarded', '1');
+      setProgress(100);
+      setTimeout(function () {
+        ob.classList.remove('open');
+        document.body.style.overflow = '';
+        maybeShowInstallBanner();
+      }, 400);
+    }
+
+    function prepareOffline() {
+      setProgress(15);
+      var done = false;
+      function complete() {
+        if (done) return;
+        done = true;
+        finishOnboarding();
+      }
+      if ('serviceWorker' in navigator &&
+          (location.protocol === 'https:' || location.hostname === 'localhost')) {
+        setProgress(40);
+        navigator.serviceWorker.ready.then(function () {
+          setProgress(90);
+          setTimeout(complete, 300);
+        }).catch(complete);
+        // Filet de sécurité : on ne bloque jamais plus de 6 s.
+        setTimeout(complete, 6000);
+      } else {
+        // Pas de service worker possible : la base est déjà intégrée à la page.
+        setProgress(80);
+        setTimeout(complete, 500);
+      }
+    }
+  })();
 
   renderMeal();
   renderFavorites();

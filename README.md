@@ -44,6 +44,15 @@ Le site est servi par GitHub Pages depuis la branche `gh-pages`; le workflow `.g
 - **↻ Rechargez** un repas passé en un geste (pratique pour les repas récurrents).
 - **💾 Export / import** : sauvegardez toutes vos données (recettes, favoris, journal) dans un fichier JSON pour les transférer sur un autre appareil.
 
+## Design et onboarding
+
+- **Direction artistique** : style coloré et convivial (inspiré de mySugr), jamais clinique. Vert de marque `#16A34A` pour le décor et les gros éléments; `#15803D` pour les textes colorés et boutons (contraste WCAG AA vérifié); accent chaud ambre pour le bandeau hors ligne. Le compteur principal reste en **encre neutre à fort contraste (AAA)** — la couleur ne porte jamais un avis médical.
+- **Ton** : français québécois, chaleureux et direct, tutoiement partout.
+- **Onboarding** (premier lancement) : 4 écrans en moins de 90 s — bienvenue, comment ça marche, **avertissement médical obligatoire et bloquant** (case à cocher + « J'ai compris », stocké localement, jamais réaffiché), puis préparation hors ligne avec barre de progression déterminée. Les écrans de présentation se sautent; l'avertissement, non.
+- **Permission caméra juste-à-temps** : jamais demandée au démarrage — un écran d'amorce explique le bénéfice au moment du premier scan de code-barres.
+- **Installation PWA après engagement** : la bannière n'apparaît qu'après le premier aliment ajouté au repas (l'événement `beforeinstallprompt` est capturé et gardé; sur iOS, instructions manuelles).
+- **Accessibilité** : corps de texte à 17 px (jamais sous 16 px), cibles tactiles d'au moins 48 px (utilisables avec des gants), gros boutons − / + pour les portions, `:focus-visible`, `aria-live="polite"` sur le compteur et les toasts, `prefers-reduced-motion` respecté, mode sombre automatique, jamais la couleur seule pour un état (toujours icône ou libellé).
+
 ## Formule de calcul
 
 ```
