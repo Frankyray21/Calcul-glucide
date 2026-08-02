@@ -1740,7 +1740,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.8.2</span>
+  <br><span id="app-version">Glucides Nets v2.8.3</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -3751,7 +3751,15 @@
       erythritol: { type: 'boolean', description: 'true si le polyol principal est l’érythritol' },
       barcode: { type: ['string', 'null'], description: 'Chiffres imprimés sous un code-barres visible (EAN/UPC), sinon null' },
       scaleRef: { type: ['string', 'null'], description: 'Objet de taille connue utilisé pour calibrer les portions (ex. « cuillère à soupe », « fourchette », « assiette standard de 27 cm », « main d’enfant »), sinon null' },
-      confidence: { type: ['string', 'null'], enum: ['bonne', 'moyenne', 'faible', null], description: 'Confiance dans l’estimation des poids : bonne (repère de taille clair), moyenne, faible (aucun repère, angle difficile)' },
+      /* Attention : l'API structured outputs refuse un enum combiné à un
+         type union (['string','null']) — anyOf est la forme acceptée. */
+      confidence: {
+        anyOf: [
+          { type: 'string', enum: ['bonne', 'moyenne', 'faible'] },
+          { type: 'null' }
+        ],
+        description: 'Confiance dans l’estimation des poids : bonne (repère de taille clair), moyenne, faible (aucun repère, angle difficile)'
+      },
       foods: {
         type: ['array', 'null'],
         description: 'Quand la photo montre un plat, une assiette ou une collation sans étiquette : un élément par aliment identifié, sinon null',
@@ -3992,7 +4000,13 @@
       .then(function (r) {
         if (r.status === 401) throw { kind: 'auth' };
         if (r.status === 429) throw { kind: 'rate' };
-        if (!r.ok) throw { kind: 'api' };
+        if (!r.ok) {
+          // Lire le message d'erreur de l'API : un 400 (requête invalide)
+          // n'est pas un problème de connexion et mérite son vrai message.
+          return r.json().then(function (e) {
+            throw { kind: 'api', status: r.status, message: e && e.error && e.error.message };
+          }, function () { throw { kind: 'api', status: r.status }; });
+        }
         return r.json();
       })
       .then(function (data) {
@@ -4013,6 +4027,9 @@
           labelError('Trop de demandes d’un coup — attends un instant, puis réessaie.', true);
         } else if (kind === 'refusal' || kind === 'parse') {
           labelError('L’analyse n’a pas fonctionné sur cette image — réessaie avec une photo plus proche du tableau.', true);
+        } else if (kind === 'api') {
+          labelError('Le service IA a refusé la demande (erreur ' + (err.status || '?') + ')' +
+            (err.message ? ' : ' + err.message : '') + ' — réessaie, et si ça persiste, signale le problème.', true);
         } else {
           labelError('Erreur réseau ou service indisponible — vérifie ta connexion et réessaie.', true);
         }
