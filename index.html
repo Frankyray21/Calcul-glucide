@@ -41,25 +41,28 @@
     --chart: #16A34A;
     --chart-soft: rgba(22, 163, 74, 0.14);
   }
+  /* Mode sombre : bleu nuit profond + vert signal (maquette de référence).
+     Contrastes vérifiés : #35E06F sur #07111F ≈ 9,9:1, #A7B2C5 sur
+     #101D30 ≈ 6,6:1, #F5F7FA sur #101D30 ≈ 13:1. */
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #0F172A;
-      --card: #1E293B;
-      --text: #F1F5F9;
-      --muted: #94A3B8;
-      --accent: #22C55E;
-      --accent-text: #4ADE80;
-      --accent-deep: #166534;
-      --accent-light: rgba(74, 222, 128, 0.14);
-      --btn-bg: #22C55E;
-      --btn-text: #052E16;
+      --bg: #07111F;
+      --card: #101D30;
+      --text: #F5F7FA;
+      --muted: #A7B2C5;
+      --accent: #35E06F;
+      --accent-text: #35E06F;
+      --accent-deep: #1B7A44;
+      --accent-light: rgba(53, 224, 111, 0.13);
+      --btn-bg: #35E06F;
+      --btn-text: #06220F;
       --warm-soft: rgba(245, 158, 11, 0.16);
       --warm-text: #FCD34D;
       --danger: #F87171;
       --info: #60A5FA;
-      --border: #334155;
-      --chart: #4ADE80;
-      --chart-soft: rgba(74, 222, 128, 0.16);
+      --border: #28384D;
+      --chart: #35E06F;
+      --chart-soft: rgba(53, 224, 111, 0.16);
     }
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -92,6 +95,13 @@
     color: #fff;
     padding: 16px 16px 0;
     text-align: center;
+  }
+  /* Thème bleu nuit : l'en-tête suit le fond, le vert reste un signal */
+  @media (prefers-color-scheme: dark) {
+    header {
+      background: linear-gradient(150deg, #0B1828, #07111F);
+      border-bottom: 1px solid var(--border);
+    }
   }
   header h1 { font-size: 1.25rem; font-weight: 800; }
   header p { font-size: 0.85rem; margin-top: 2px; }
@@ -441,83 +451,173 @@
   .modal--full .actions { margin-top: auto; padding-top: 16px; }
   .modal--full .live-net { font-size: 3rem; margin: 2px 0 0; }
   .modal--full .live-net small { font-size: 1.3rem; }
-  /* Carte vedette « Glucides calculés » : LE résultat, tout en haut,
-     mis à jour en direct avec la quantité (inspirée de la maquette) */
-  .hero-card {
-    margin: 14px 0 16px;
-    padding: 16px 16px 14px;
-    background: var(--accent-light);
-    border-radius: 18px;
-    text-align: center;
+  /* ── Fiche aliment (maquette bleu nuit) ── */
+  .fiche-topbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
   }
-  .hero-label {
-    font-size: 0.8rem;
-    font-weight: 800;
-    color: var(--accent-text);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-  }
-  .modal .hero-card .live-net { color: var(--accent-text); }
-  .hero-sub {
-    font-size: 0.95rem;
+  .circle-btn {
+    width: 48px;
+    height: 48px;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    background: var(--card);
     color: var(--text);
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .qty-head-txt { min-width: 0; }
+  .qty-brand {
+    font-size: 0.9rem;
+    color: var(--muted);
     font-weight: 600;
-    margin-top: 2px;
+    margin: 1px 0 0;
   }
   .hero-badge {
     display: inline-block;
-    margin-top: 10px;
+    margin-top: 6px;
     padding: 4px 12px;
     border-radius: 999px;
     background: var(--card);
+    border: 1px solid var(--border);
     color: var(--muted);
-    font-size: 0.78rem;
+    font-size: 0.75rem;
     font-weight: 700;
   }
-  /* Cœur favori dans l'en-tête de fiche */
+  .hero-badge::first-letter { color: var(--accent-text); }
+  /* Cœur favori dans la barre du haut */
   .fav-heart {
-    margin-left: auto;
     flex: none;
     width: 48px;
     height: 48px;
-    border: none;
+    border: 1px solid var(--border);
     border-radius: 50%;
-    background: var(--accent-light);
+    background: var(--card);
     color: var(--accent-text);
     font-size: 1.4rem;
     line-height: 1;
     cursor: pointer;
   }
-  .fav-heart[aria-pressed="true"] { background: var(--accent-text); color: #fff; }
-  /* Carte des références (portion / 100 grammes / gramme) : information
-     de contexte, volontairement discrète */
-  .ref-card {
-    margin: 16px 0 4px;
-    padding: 12px 14px;
+  .fav-heart[aria-pressed="true"] { background: var(--accent-text); color: var(--btn-text); border-color: var(--accent-text); }
+  /* Carte principale : quantité (haut) et résultat (bas), séparés */
+  .calc-card {
+    margin: 16px 0 12px;
+    background: var(--card);
     border: 1px solid var(--border);
-    border-radius: 16px;
+    border-radius: 20px;
   }
-  .ref-title {
-    font-size: 0.78rem;
-    font-weight: 800;
+  .calc-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 14px 16px;
+  }
+  .calc-row--result { border-top: 1px solid var(--border); }
+  .calc-label {
+    font-size: 0.92rem;
+    font-weight: 700;
     color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-bottom: 8px;
+    max-width: 108px;
+    line-height: 1.25;
   }
-  .ref-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px 12px;
+  .hero-label { color: var(--accent-text); }
+  .stepper--inline {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin: 0;
+    flex: 1;
+    justify-content: flex-end;
+    min-width: 0;
   }
-  .ref-item b {
-    display: block;
-    font-size: 1.15rem;
-    color: var(--text);
+  .stepper.stepper--inline .step-btn {
+    width: 46px;
+    min-width: 46px;
+    height: 46px;
+    flex: none;
+  }
+  .stepper.stepper--inline input {
+    width: 60px;
+    min-width: 0;
+    text-align: center;
+    font-size: 1.4rem;
+    font-weight: 800;
     font-variant-numeric: tabular-nums;
+    background: none;
+    border: none;
+    border-bottom: 2px solid var(--border);
+    border-radius: 0;
+    color: var(--text);
+    padding: 2px 0;
   }
-  .ref-item span { font-size: 0.8rem; color: var(--muted); font-weight: 600; }
-  .ref-item--wide { grid-column: 1 / -1; }
+  .qty-unit { color: var(--muted); font-weight: 700; }
+  .calc-result { text-align: right; }
+  .modal .calc-result .live-net { color: var(--accent-text); text-align: right; margin: 0; }
+  .hero-sub {
+    font-size: 0.85rem;
+    color: var(--muted);
+    font-weight: 600;
+    margin-top: 2px;
+  }
+  /* Accordéons : référence nutritionnelle et détail du calcul */
+  .acc {
+    margin: 12px 0 0;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    overflow: hidden;
+  }
+  .acc summary {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 16px;
+    font-weight: 800;
+    cursor: pointer;
+    list-style: none;
+    min-height: 48px;
+  }
+  .acc summary::-webkit-details-marker { display: none; }
+  .acc summary::after {
+    content: '⌄';
+    margin-left: auto;
+    color: var(--muted);
+    transition: transform 150ms ease-out;
+  }
+  .acc[open] summary::after { transform: rotate(180deg); }
+  .acc-ico { color: var(--accent-text); }
+  .ref-rows { padding: 0 16px 8px; }
+  .ref-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-top: 1px solid var(--border);
+  }
+  .ref-ico {
+    flex: none;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--accent-light);
+    font-size: 1.05rem;
+  }
+  .ref-lbl { flex: 1; min-width: 0; font-weight: 700; font-size: 0.95rem; }
+  .ref-lbl small { display: block; color: var(--muted); font-weight: 600; }
+  .ref-val {
+    font-size: 1.3rem;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+    white-space: nowrap;
+  }
+  .ref-val small { font-size: 0.85rem; color: var(--muted); font-weight: 700; }
 
   /* En-tête de fiche : photo du produit (Open Food Facts ou recette) + nom */
   .qty-head {
@@ -1023,19 +1123,31 @@
   .cam-primer p { font-size: 0.95rem; color: var(--muted); margin-bottom: 14px; }
 
   /* Raccourcis de portions dans la fiche produit (½ / 1 / 2 portions) */
-  .qty-portions { display: flex; gap: 8px; margin-top: 10px; }
+  .qty-portions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-top: 12px;
+  }
   .qty-portions button {
-    flex: 1;
     min-height: 48px;
+    padding: 8px 10px;
     border: 1px solid var(--border);
-    border-radius: 12px;
-    background: var(--accent-light);
-    color: var(--accent-text);
+    border-radius: 999px;
+    background: var(--card);
+    color: var(--text);
     font-family: inherit;
-    font-size: 0.94rem;
+    font-size: 0.9rem;
     font-weight: 700;
     cursor: pointer;
     transition: transform 150ms ease-out;
+  }
+  .qty-portions button small { color: var(--muted); font-weight: 600; }
+  .qty-portions button .chip-ico { color: var(--accent-text); margin-right: 4px; }
+  /* Raccourci sélectionné : bordure verte + fond légèrement teinté */
+  .qty-portions button.sel {
+    border-color: var(--accent-text);
+    background: var(--accent-light);
   }
   .qty-portions button:active { transform: scale(0.96); }
 
@@ -1510,7 +1622,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.5.0</span>
+  <br><span id="app-version">Glucides Nets v2.6.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -1561,32 +1673,48 @@
      tout en haut, la quantité dessous, les références en carte discrète. -->
 <div class="modal-overlay full" id="qty-modal" role="dialog" aria-modal="true" aria-labelledby="qty-title">
   <div class="modal modal--full">
-    <div class="qty-head">
-      <img id="qty-photo" alt="" style="display:none;">
-      <h3 id="qty-title">Recette</h3>
+    <div class="fiche-topbar">
+      <button class="circle-btn" id="qty-back" type="button" aria-label="Fermer la fiche">‹</button>
       <button class="fav-heart" id="qty-fav" type="button" aria-label="Garder dans mes favoris" aria-pressed="false">♡</button>
     </div>
-    <div class="hero-card">
-      <div class="hero-label">Glucides calculés</div>
-      <div class="live-net" id="qty-net" role="status" aria-live="polite">0 <small>g</small></div>
-      <div class="hero-sub" id="qty-net-sub">pour 0 gramme consommé</div>
-      <div class="hero-badge">✓ Valeur calculée — vérifie l'étiquette</div>
+    <div class="qty-head">
+      <img id="qty-photo" alt="" style="display:none;">
+      <div class="qty-head-txt">
+        <h3 id="qty-title">Recette</h3>
+        <p class="qty-brand" id="qty-brand" style="display:none;"></p>
+        <span class="hero-badge">✓ Valeur calculée — vérifie l'étiquette</span>
+      </div>
     </div>
-    <label for="qty-grams">Quantité consommée (grammes)</label>
-    <!-- Gros boutons − / + espacés : utilisables avec des gants -->
-    <div class="stepper">
-      <button class="step-btn" id="qty-minus" type="button" aria-label="Réduire de 25 grammes">−</button>
-      <input type="number" id="qty-grams" inputmode="decimal" min="0" step="1" placeholder="ex. : 250">
-      <button class="step-btn" id="qty-plus" type="button" aria-label="Augmenter de 25 grammes">+</button>
+    <!-- Carte principale : quantité en haut, résultat en bas -->
+    <div class="calc-card">
+      <div class="calc-row">
+        <label class="calc-label" for="qty-grams">Quantité consommée</label>
+        <div class="stepper stepper--inline">
+          <button class="step-btn" id="qty-minus" type="button" aria-label="Réduire de 25 grammes">−</button>
+          <input type="number" id="qty-grams" inputmode="decimal" min="0" step="1" placeholder="0">
+          <span class="qty-unit" aria-hidden="true">g</span>
+          <button class="step-btn" id="qty-plus" type="button" aria-label="Augmenter de 25 grammes">+</button>
+        </div>
+      </div>
+      <div class="calc-row calc-row--result">
+        <span class="calc-label hero-label">Glucides calculés</span>
+        <div class="calc-result">
+          <div class="live-net" id="qty-net" role="status" aria-live="polite">0 <small>g</small></div>
+          <div class="hero-sub" id="qty-net-sub">pour 0 gramme consommé</div>
+        </div>
+      </div>
     </div>
     <!-- Raccourcis quand la portion de l'étiquette est connue -->
     <div class="qty-portions" id="qty-portions" style="display:none;"></div>
-    <div class="ref-card">
-      <div class="ref-title">Référence nutritionnelle</div>
-      <div class="ref-grid" id="qty-stats"></div>
-    </div>
+    <details class="acc" id="ref-acc" open>
+      <summary><span class="acc-ico" aria-hidden="true">📊</span>Référence nutritionnelle</summary>
+      <div class="ref-rows" id="qty-stats"></div>
+    </details>
+    <details class="acc" id="calc-acc">
+      <summary><span class="acc-ico" aria-hidden="true">🧮</span>Détail du calcul</summary>
+      <div class="ref-rows" id="calc-detail"></div>
+    </details>
     <div class="actions">
-      <button class="btn btn-secondary" id="qty-cancel" type="button">Annuler</button>
       <button class="btn" id="qty-add" type="button">Ajouter au repas</button>
     </div>
     <button class="link-btn" id="qty-edit" type="button" style="display:none; width:100%; text-align:center;">✏️ Corriger les valeurs à la main</button>
@@ -2631,21 +2759,41 @@
      calculés ») en vedette tout en haut, mis à jour en direct, puis la
      quantité avec raccourcis ½ / 1 / 2 portions, puis la carte de
      référence (portion / 100 grammes / gramme). */
-  function refItem(value, label, wide) {
+  function refItem(icon, label, sub, value) {
     var item = document.createElement('div');
-    item.className = 'ref-item' + (wide ? ' ref-item--wide' : '');
-    var b = document.createElement('b');
-    b.textContent = value;
-    var s = document.createElement('span');
-    s.textContent = label;
-    item.appendChild(b);
-    item.appendChild(s);
+    item.className = 'ref-item';
+    var ico = document.createElement('span');
+    ico.className = 'ref-ico';
+    ico.setAttribute('aria-hidden', 'true');
+    ico.textContent = icon;
+    var lbl = document.createElement('span');
+    lbl.className = 'ref-lbl';
+    lbl.textContent = label;
+    if (sub) {
+      var small = document.createElement('small');
+      small.textContent = sub;
+      lbl.appendChild(small);
+    }
+    var val = document.createElement('span');
+    val.className = 'ref-val';
+    val.innerHTML = value + ' <small>g</small>';
+    item.appendChild(ico);
+    item.appendChild(lbl);
+    item.appendChild(val);
     return item;
   }
 
   function openQtyModal(recipe) {
     modalRecipe = recipe;
     $('qty-title').textContent = recipe.name;
+    // Sous-titre : marque du produit (Open Food Facts), si connue
+    var brandEl = $('qty-brand');
+    if (recipe.brand) {
+      brandEl.textContent = recipe.brand;
+      brandEl.style.display = 'block';
+    } else {
+      brandEl.style.display = 'none';
+    }
     // Photo du produit (Open Food Facts) ou de la recette, si disponible;
     // cachée sans bruit si elle ne charge pas (ex. hors ligne)
     var photo = $('qty-photo');
@@ -2663,49 +2811,65 @@
     // Cœur favori : reflète l'état actuel, permet de garder l'aliment
     syncFavHeart();
 
-    // Carte de référence : portion de l'étiquette (si connue), 100
-    // grammes, 1 gramme. Les « g » de poids sont écrits « grammes ».
+    // Référence nutritionnelle : portion de l'étiquette (si connue),
+    // 100 grammes, 1 gramme — lignes avec icône, libellé et valeur
     var grid = $('qty-stats');
     grid.innerHTML = '';
     if (serving) {
       var servLabel = String(serving.label)
         .replace(/^\s*(pour|per|par)\s+/i, '')
         .replace(/(\d(?:[.,]\d+)?)\s*g\b/gi, '$1 grammes');
-      grid.appendChild(refItem(round1(n * serving.grams / 100) + ' g', 'par ' + servLabel, false));
-      grid.appendChild(refItem(round1(n) + ' g', 'par 100 grammes', false));
-      grid.appendChild(refItem(round2(n / 100) + ' g', 'par gramme', true));
-    } else {
-      grid.appendChild(refItem(round1(n) + ' g', 'par 100 grammes', false));
-      grid.appendChild(refItem(round2(n / 100) + ' g', 'par gramme', false));
+      // « 1 portion (27 g) » se réduit au poids; « 3/4 tasse (30 g) »
+      // reste tel quel — jamais de doublon « portion (1 portion… »
+      var servSub = /^\s*1?\s*portion\b/i.test(servLabel)
+        ? '(' + round1(serving.grams) + ' grammes)'
+        : '(' + servLabel + ')';
+      grid.appendChild(refItem('🥣', 'Par 1 portion', servSub, round1(n * serving.grams / 100)));
     }
+    grid.appendChild(refItem('⚖️', 'Par 100 grammes', null, round1(n)));
+    grid.appendChild(refItem('🔍', 'Par gramme', null, round2(n / 100)));
+
+    // Détail du calcul : la formule appliquée à CET aliment, transparente
+    var detail = $('calc-detail');
+    detail.innerHTML = '';
+    detail.appendChild(refItem('🍞', 'Glucides totaux', 'par 100 grammes', round1(recipe.carbs)));
+    detail.appendChild(refItem('🌾', '− Fibres', 'non absorbées', round1(recipe.fiber)));
+    if (recipe.polyols > 0) {
+      detail.appendChild(refItem('🍬',
+        recipe.polyolType === 'full' ? '− Érythritol (à 100 %)' : '− Polyols (à 50 %)',
+        'sucres-alcools', round1(recipe.polyolType === 'full' ? recipe.polyols : recipe.polyols / 2)));
+    }
+    detail.appendChild(refItem('✅', '= Glucides nets', 'par 100 grammes', round1(n)));
 
     var chips = $('qty-portions');
     chips.innerHTML = '';
     if (serving) {
-      [[0.5, '½ portion'], [1, '1 portion'], [2, '2 portions']].forEach(function (opt) {
+      [[0.5, '◐', '½ portion'], [1, '●', '1 portion'], [2, '◉', '2 portions']].forEach(function (opt) {
         var b = document.createElement('button');
         b.type = 'button';
         var grams = round1(serving.grams * opt[0]);
-        b.textContent = opt[1];
-        b.setAttribute('aria-label', opt[1] + ' (' + grams + ' grammes)');
+        b.dataset.grams = grams;
+        b.innerHTML = '<span class="chip-ico" aria-hidden="true">' + opt[1] + '</span>' +
+          opt[2] + ' <small>· ' + grams + ' g</small>';
+        b.setAttribute('aria-label', opt[2] + ' (' + grams + ' grammes)');
         b.addEventListener('click', function () {
           $('qty-grams').value = grams;
           updateQtyNet();
         });
         chips.appendChild(b);
       });
-      // « Perso. » : ramène au champ pour entrer un poids exact
+      // « Autre quantité » : ramène au champ pour entrer un poids exact
       var perso = document.createElement('button');
       perso.type = 'button';
-      perso.textContent = 'Perso.';
-      perso.setAttribute('aria-label', 'Entrer un poids personnalisé');
+      perso.innerHTML = '<span class="chip-ico" aria-hidden="true">✏️</span>Autre quantité';
+      perso.setAttribute('aria-label', 'Entrer une autre quantité');
       perso.addEventListener('click', function () {
         var input = $('qty-grams');
         input.focus();
         input.select();
       });
       chips.appendChild(perso);
-      chips.style.display = 'flex';
+      chips.style.display = 'grid';
       // Présélectionne 1 portion : le cas le plus courant au repas
       $('qty-grams').value = round1(serving.grams);
     } else {
@@ -2751,7 +2915,15 @@
     $('qty-net').innerHTML = round1(net) + ' <small>g</small>';
     $('qty-net-sub').textContent = g > 0
       ? 'pour ' + round1(g) + ' grammes consommés'
-      : 'entre la quantité consommée ci-dessous';
+      : 'entre la quantité consommée ci-dessus';
+    // Le bouton principal annonce ce qu'il ajoute
+    $('qty-add').textContent = g > 0
+      ? 'Ajouter ' + round1(net) + ' g au repas'
+      : 'Ajouter au repas';
+    // Raccourci correspondant à la quantité entrée : mis en évidence
+    document.querySelectorAll('#qty-portions button').forEach(function (b) {
+      b.classList.toggle('sel', b.dataset.grams != null && Math.abs(parseFloat(b.dataset.grams) - g) < 0.01);
+    });
   }
 
   /* Cœur favori de la fiche : garde (ou retire) l'aliment affiché dans
@@ -2787,7 +2959,7 @@
   });
 
   $('qty-grams').addEventListener('input', updateQtyNet);
-  $('qty-cancel').addEventListener('click', closeQtyModal);
+  $('qty-back').addEventListener('click', closeQtyModal);
   $('qty-modal').addEventListener('click', function (e) {
     if (e.target === this) closeQtyModal();
   });
@@ -3204,9 +3376,9 @@
         }
 
         var name = p.product_name_fr || p.product_name || 'Produit ' + code;
-        if (p.brands) name += ' (' + p.brands.split(',')[0].trim() + ')';
         var product = {
           name: name,
+          brand: p.brands ? p.brands.split(',')[0].trim() : null,
           carbs: round1(carbs100),
           fiber: round1(fiber100),
           polyols: round1(polyols100),
