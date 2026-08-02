@@ -1106,18 +1106,12 @@
     </details>
 
     <div class="card">
-      <h2>📷 Scanner un produit</h2>
-      <p class="hint" style="margin:0 0 10px;">Scanne le code-barres d'un produit emballé — tu obtiens ses glucides par 100 g, par gramme et par portion (Open Food Facts, connexion Internet requise).</p>
-      <button class="btn btn-secondary" id="scan-open-btn" type="button">📷 Scanner un code-barres</button>
-    </div>
-
-    <div class="card">
-      <h2>📸 Photo des valeurs nutritives</h2>
-      <p class="hint" style="margin:0 0 10px;">Pas de code-barres, ou produit introuvable? Prends en photo le tableau de valeur nutritive — l'app lit les glucides, fibres et la portion pour toi (connexion Internet requise).</p>
-      <button class="btn btn-secondary" id="label-photo-btn" type="button">📸 Photographier l'étiquette</button>
+      <h2>📷 Scanner ou photographier un produit</h2>
+      <p class="hint" style="margin:0 0 10px;">Vise le code-barres <em>ou</em> le tableau de valeur nutritive — l'app s'adapte à ce qu'elle voit : code-barres → Open Food Facts; étiquette → lecture par l'IA Claude. Tu obtiens les glucides par 100 g, par gramme et par portion (connexion Internet requise).</p>
+      <button class="btn btn-secondary" id="scan-open-btn" type="button">📷 Scanner / photographier</button>
       <input type="file" id="label-photo-input" accept="image/*" capture="environment" style="display:none;">
       <div id="label-analysis" role="status" aria-live="polite"></div>
-      <button class="link-btn" id="api-key-manage" type="button">🔑 Configurer la clé API pour l'analyse photo</button>
+      <button class="link-btn" id="api-key-manage" type="button">🔑 Configurer la clé API (lecture d'étiquette)</button>
     </div>
 
     <div class="card">
@@ -1373,7 +1367,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.1.1</span>
+  <br><span id="app-version">Glucides Nets v2.2.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -1399,21 +1393,22 @@
 <!-- Modal : scanner de code-barres -->
 <div class="modal-overlay" id="scan-modal" role="dialog" aria-modal="true" aria-labelledby="scan-title">
   <div class="modal">
-    <h3 id="scan-title">📷 Scanner un code-barres</h3>
+    <h3 id="scan-title">📷 Scanner ou photographier</h3>
     <!-- Amorce : on explique le bénéfice AVANT la demande système de caméra -->
     <div class="cam-primer" id="cam-primer" style="display:none;">
       <div class="ico" aria-hidden="true">📷</div>
-      <p>Autorise la caméra pour scanner le code-barres de tes produits et remplir les valeurs automatiquement.</p>
+      <p>Autorise la caméra pour scanner un code-barres ou photographier le tableau de valeur nutritive — les valeurs se remplissent toutes seules.</p>
       <button class="btn" id="cam-allow" type="button">Autoriser la caméra</button>
     </div>
-    <p class="stats-line" id="scan-status" role="status" aria-live="polite">Pointe la caméra vers le code-barres du produit.</p>
+    <p class="stats-line" id="scan-status" role="status" aria-live="polite">Vise le code-barres ou le tableau de valeur nutritive.</p>
     <video id="scan-video" autoplay playsinline muted></video>
-    <label for="barcode-manual">Ou entre le code manuellement</label>
+    <button class="btn" id="capture-btn" type="button" style="display:none; margin-bottom:12px;">📸 Prendre la photo</button>
+    <label for="barcode-manual">Ou entre le code-barres manuellement</label>
     <div class="scan-row">
       <input type="text" id="barcode-manual" inputmode="numeric" autocomplete="off" placeholder="ex. : 3017620422003">
       <button class="btn" id="barcode-lookup" type="button">OK</button>
     </div>
-    <button class="btn btn-secondary" id="scan-photo-btn" type="button" style="margin-top:12px;">📸 Pas de code-barres? Photographie l'étiquette</button>
+    <button class="btn btn-secondary" id="scan-photo-btn" type="button" style="margin-top:12px;">📁 Importer une photo</button>
     <button class="btn btn-secondary" id="scan-close" type="button" style="margin-top:12px;">Fermer</button>
   </div>
 </div>
@@ -2595,6 +2590,7 @@
       scanStream = null;
     }
     $('scan-video').style.display = 'none';
+    $('capture-btn').style.display = 'none';
   }
 
   function closeScanModal() {
@@ -2610,12 +2606,12 @@
     openModal('scan-modal');
     $('barcode-manual').value = '';
     $('cam-primer').style.display = 'none';
-    if (!('BarcodeDetector' in window)) {
-      scanStatus('Le scan caméra n’est pas supporté par ce navigateur — entre le code inscrit sous le code-barres manuellement.');
-      return;
-    }
+    $('capture-btn').style.display = 'none';
+    // La caméra s'ouvre même sans détecteur de code-barres (ex. iPhone) :
+    // la photo capturée est alors analysée par l'IA, qui sait aussi lire
+    // les chiffres imprimés sous un code-barres.
     if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      scanStatus('Caméra inaccessible — entre le code manuellement.');
+      scanStatus('Caméra inaccessible — entre le code manuellement ou importe une photo.');
       return;
     }
     if (!lsGet('gn_cam_ok')) {
@@ -2628,7 +2624,10 @@
 
   function openCamera() {
     $('cam-primer').style.display = 'none';
-    scanStatus('Pointe la caméra vers le code-barres du produit.');
+    var liveScan = 'BarcodeDetector' in window;
+    scanStatus(liveScan
+      ? 'Vise le code-barres (détecté tout seul) ou le tableau de valeur nutritive, puis prends la photo.'
+      : 'Vise le code-barres ou le tableau de valeur nutritive, puis prends la photo.');
     var session = ++scanSession;
     navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
       .then(function (stream) {
@@ -2643,36 +2642,87 @@
         var video = $('scan-video');
         video.srcObject = stream;
         video.style.display = 'block';
-        var detector = new BarcodeDetector({
-          formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128']
-        });
-        scanTimer = setInterval(function () {
-          detector.detect(video).then(function (codes) {
-            if (codes.length > 0) {
-              stopScanner();
-              lookupBarcode(codes[0].rawValue);
-            }
-          }).catch(function () { /* image pas prête, on réessaie */ });
-        }, 350);
+        $('capture-btn').style.display = 'block';
+        if (liveScan) {
+          var detector = new BarcodeDetector({
+            formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128']
+          });
+          scanTimer = setInterval(function () {
+            detector.detect(video).then(function (codes) {
+              if (codes.length > 0) {
+                stopScanner();
+                lookupBarcode(codes[0].rawValue);
+              }
+            }).catch(function () { /* image pas prête, on réessaie */ });
+          }, 350);
+        }
       })
       .catch(function () {
         if (session !== scanSession) return;
-        scanStatus('Caméra inaccessible (permission refusée ou non disponible) — entre le code manuellement, ça marche aussi bien.');
+        scanStatus('Caméra inaccessible (permission refusée ou non disponible) — entre le code manuellement ou importe une photo.');
       });
   }
 
   $('cam-allow').addEventListener('click', openCamera);
 
-  function lookupBarcode(code) {
+  /* 📸 Capture d'une image fixe depuis la caméra du scanner.
+     Adaptation au contenu : un code-barres net sur la photo → recherche
+     Open Food Facts locale; sinon la photo part à l'analyse d'étiquette
+     (où l'IA peut aussi lire les chiffres d'un code-barres). */
+  $('capture-btn').addEventListener('click', function () {
+    var video = $('scan-video');
+    if (!scanStream || !video.videoWidth) {
+      closeScanModal();
+      startLabelPhoto();
+      return;
+    }
+    var canvas = document.createElement('canvas');
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    canvas.getContext('2d').drawImage(video, 0, 0);
+
+    function analyzeCaptured() {
+      var b64 = downscaleToB64(canvas);
+      closeScanModal();
+      lastLabelImage = b64;
+      if (!lsGet('gn_api_key')) {
+        pendingAfterKey = 'analyze';
+        openKeyModal();
+        return;
+      }
+      analyzeLabel(b64);
+    }
+
+    if ('BarcodeDetector' in window) {
+      new BarcodeDetector({ formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128'] })
+        .detect(canvas)
+        .then(function (codes) {
+          if (codes.length > 0) {
+            stopScanner();
+            lookupBarcode(codes[0].rawValue);
+          } else {
+            analyzeCaptured();
+          }
+        })
+        .catch(analyzeCaptured);
+    } else {
+      analyzeCaptured();
+    }
+  });
+
+  // statusFn : où afficher la progression — le modal de scan par défaut,
+  // ou la zone d'analyse quand le code-barres vient d'une photo
+  function lookupBarcode(code, statusFn) {
+    var report = statusFn || scanStatus;
     code = String(code).replace(/\D/g, '');
-    if (!code) { scanStatus('Code invalide.'); return; }
-    scanStatus('🔎 Recherche du produit ' + code + '…');
+    if (!code) { report('Code invalide.'); return; }
+    report('🔎 Recherche du produit ' + code + '…');
     fetch('https://world.openfoodfacts.org/api/v2/product/' + encodeURIComponent(code) +
           '?fields=product_name,product_name_fr,brands,nutriments,serving_size,serving_quantity')
       .then(function (r) { return r.json(); })
       .then(function (data) {
         var p = data && data.product;
-        if (!p) { scanStatus('Produit ' + code + ' introuvable dans Open Food Facts. Essaie plutôt la photo de l’étiquette.'); return; }
+        if (!p) { report('Produit ' + code + ' introuvable dans Open Food Facts. Essaie plutôt la photo de l’étiquette.'); return; }
         var nut = p.nutriments || {};
         var servingGrams = num(p.serving_quantity) || 0;
 
@@ -2686,7 +2736,7 @@
           polyols100 = num(nut.polyols_serving) * 100 / servingGrams;
         }
         if (!carbs100 && !fiber100) {
-          scanStatus('Produit trouvé (' + (p.product_name_fr || p.product_name || code) +
+          report('Produit trouvé (' + (p.product_name_fr || p.product_name || code) +
             ') mais sans données de glucides — prends l’étiquette en photo ou entre les valeurs à la main.');
           return;
         }
@@ -2704,10 +2754,11 @@
             : null
         };
         closeScanModal();
+        labelClear();
         openProductModal(product);
       })
       .catch(function () {
-        scanStatus('Erreur réseau — vérifie ta connexion Internet et réessaie.');
+        report('Erreur réseau — vérifie ta connexion Internet et réessaie.');
       });
   }
 
@@ -2740,18 +2791,21 @@
       carbs: { type: ['number', 'null'], description: 'Glucides totaux en g pour la base indiquée' },
       fiber: { type: ['number', 'null'], description: 'Fibres en g pour la base indiquée' },
       polyols: { type: ['number', 'null'], description: 'Sucres-alcools (polyols) en g, 0 si absents' },
-      erythritol: { type: 'boolean', description: 'true si le polyol principal est l’érythritol' }
+      erythritol: { type: 'boolean', description: 'true si le polyol principal est l’érythritol' },
+      barcode: { type: ['string', 'null'], description: 'Chiffres imprimés sous un code-barres visible (EAN/UPC), sinon null' }
     },
-    required: ['found', 'productName', 'basis', 'portionGrams', 'portionLabel', 'carbs', 'fiber', 'polyols', 'erythritol'],
+    required: ['found', 'productName', 'basis', 'portionGrams', 'portionLabel', 'carbs', 'fiber', 'polyols', 'erythritol', 'barcode'],
     additionalProperties: false
   };
 
-  var LABEL_PROMPT = 'Voici la photo de l’étiquette d’un produit alimentaire (tableau de valeur ' +
-    'nutritive canadien ou américain, ou étiquette européenne). Extrais les informations pour le ' +
-    'calcul des glucides : glucides totaux, fibres, sucres-alcools (polyols) en grammes, la portion ' +
-    'de référence (poids en grammes si indiqué, et son libellé), et le nom du produit si visible. ' +
-    'Indique basis="portion" si les valeurs sont par portion, basis="100g" si elles sont par 100 g. ' +
-    'Si aucun tableau de valeur nutritive lisible n’est visible, mets found=false.';
+  var LABEL_PROMPT = 'Voici la photo d’un produit alimentaire. Adapte-toi à ce qu’elle montre. ' +
+    'CAS 1 — un tableau de valeur nutritive lisible (canadien, américain ou européen) : extrais les ' +
+    'informations pour le calcul des glucides — glucides totaux, fibres, sucres-alcools (polyols) en ' +
+    'grammes, la portion de référence (poids en grammes si indiqué, et son libellé), et le nom du ' +
+    'produit si visible. Indique basis="portion" si les valeurs sont par portion, basis="100g" si ' +
+    'elles sont par 100 g. CAS 2 — pas de tableau lisible mais un code-barres avec ses chiffres ' +
+    'imprimés : mets found=false et recopie les chiffres dans barcode. CAS 3 — ni l’un ni l’autre : ' +
+    'found=false et barcode=null.';
 
   var lastLabelImage = null;
 
@@ -2803,8 +2857,10 @@
     box.appendChild(manual);
   }
 
-  /* Clé API : demandée juste-à-temps, stockée localement */
-  var pendingPhotoAfterKey = false;
+  /* Clé API : demandée juste-à-temps, stockée localement.
+     pendingAfterKey : quoi relancer une fois la clé enregistrée —
+     'file' (sélecteur de photo) ou 'analyze' (image déjà capturée) */
+  var pendingAfterKey = null;
 
   function openKeyModal() {
     $('api-key-input').value = '';
@@ -2814,7 +2870,7 @@
     openModal('key-modal', '#api-key-input');
   }
   function closeKeyModal() {
-    pendingPhotoAfterKey = false;
+    pendingAfterKey = null;
     closeModal('key-modal');
   }
   trapModal('key-modal', closeKeyModal);
@@ -2829,36 +2885,47 @@
       toast('⚠️ Impossible d’enregistrer la clé (stockage indisponible)', { type: 'error' });
       return;
     }
-    var launchPhoto = pendingPhotoAfterKey;
-    pendingPhotoAfterKey = false;
+    var next = pendingAfterKey;
+    pendingAfterKey = null;
     closeModal('key-modal');
     toast('✓ Clé enregistrée sur cet appareil');
-    if (launchPhoto) $('label-photo-input').click();
+    if (next === 'file') $('label-photo-input').click();
+    else if (next === 'analyze' && lastLabelImage) analyzeLabel(lastLabelImage);
   });
   $('api-key-manage').addEventListener('click', openKeyModal);
 
-  /* Point d'entrée commun de la photo d'étiquette : depuis la carte du
-     Repas, ou directement depuis le scanner quand il n'y a pas de
-     code-barres */
+  /* Import d'une photo existante (galerie, ou appareil sans caméra web) */
   function startLabelPhoto() {
     if (!navigator.onLine) {
       toast('📡 L’analyse photo a besoin d’une connexion Internet', { type: 'warn' });
       return;
     }
     if (!lsGet('gn_api_key')) {
-      pendingPhotoAfterKey = true;
+      pendingAfterKey = 'file';
       openKeyModal();
       return;
     }
     $('label-photo-input').click();
   }
 
-  $('label-photo-btn').addEventListener('click', startLabelPhoto);
-
   $('scan-photo-btn').addEventListener('click', function () {
     closeScanModal();
     startLabelPhoto();
   });
+
+  /* Réduction commune : 1400 px max — assez net pour lire une étiquette,
+     raisonnable en données mobiles et en jetons d'analyse */
+  function downscaleToB64(source) {
+    var MAX = 1400;
+    var w = source.videoWidth || source.width;
+    var h = source.videoHeight || source.height;
+    var scale = Math.min(1, MAX / Math.max(w, h));
+    var canvas = document.createElement('canvas');
+    canvas.width = Math.round(w * scale);
+    canvas.height = Math.round(h * scale);
+    canvas.getContext('2d').drawImage(source, 0, 0, canvas.width, canvas.height);
+    return canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+  }
 
   $('label-photo-input').addEventListener('change', function () {
     var file = this.files && this.files[0];
@@ -2868,15 +2935,7 @@
     reader.onload = function (e) {
       var img = new Image();
       img.onload = function () {
-        // Réduction : 1400 px max — assez net pour lire l'étiquette,
-        // raisonnable en données mobiles et en jetons d'analyse
-        var MAX = 1400;
-        var scale = Math.min(1, MAX / Math.max(img.width, img.height));
-        var canvas = document.createElement('canvas');
-        canvas.width = Math.round(img.width * scale);
-        canvas.height = Math.round(img.height * scale);
-        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-        var b64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+        var b64 = downscaleToB64(img);
         lastLabelImage = b64;
         analyzeLabel(b64);
       };
@@ -2942,9 +3001,24 @@
       });
   }
 
+  function labelMsg(message) {
+    var box = $('label-analysis');
+    box.innerHTML = '';
+    var msg = document.createElement('p');
+    msg.className = 'msg';
+    msg.textContent = message;
+    box.appendChild(msg);
+  }
+
   function handleLabelResult(res) {
+    // Adaptation au contenu : la photo montrait un code-barres plutôt
+    // qu'un tableau → on repart sur la recherche Open Food Facts
+    if (res && !res.found && res.barcode && String(res.barcode).replace(/\D/g, '').length >= 8) {
+      lookupBarcode(res.barcode, labelMsg);
+      return;
+    }
     if (!res || !res.found || res.carbs == null) {
-      labelError('Je n’ai pas réussi à lire les valeurs — réessaie avec une photo nette, bien éclairée et cadrée sur le tableau.', true);
+      labelError('Je n’ai pas réussi à lire les valeurs — réessaie avec une photo nette, bien éclairée et cadrée sur le tableau ou le code-barres.', true);
       return;
     }
     var name = res.productName || 'Produit (étiquette photographiée)';
