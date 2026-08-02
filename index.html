@@ -413,6 +413,22 @@
   .modal--full .live-net { font-size: 2.8rem; margin: 20px 0; }
   .modal--full .live-net small { font-size: 1.1rem; }
 
+  /* En-tête de fiche : photo du produit (Open Food Facts ou recette) + nom */
+  .qty-head {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .qty-head h3 { margin: 0; }
+  #qty-photo {
+    width: 72px;
+    height: 72px;
+    flex: none;
+    border-radius: 14px;
+    object-fit: cover;
+    background: var(--accent-light);
+  }
+
   /* Valeurs clés en évidence : tuiles portion / 100 g / gramme */
   .stat-grid {
     display: grid;
@@ -1368,7 +1384,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.3.0</span>
+  <br><span id="app-version">Glucides Nets v2.4.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -1417,7 +1433,10 @@
 <!-- Modal : fiche produit / quantité consommée (pleine hauteur) -->
 <div class="modal-overlay full" id="qty-modal" role="dialog" aria-modal="true" aria-labelledby="qty-title">
   <div class="modal modal--full">
-    <h3 id="qty-title">Recette</h3>
+    <div class="qty-head">
+      <img id="qty-photo" alt="" style="display:none;">
+      <h3 id="qty-title">Recette</h3>
+    </div>
     <div class="stat-grid" id="qty-stats"></div>
     <label for="qty-grams">Poids de la portion consommée (g)</label>
     <!-- Gros boutons − / + espacés : utilisables avec des gants -->
@@ -1691,6 +1710,40 @@
     }
   }
 
+  /* ── Expiration automatique du repas en cours ──
+     Un repas commencé mais jamais enregistré ne doit pas traîner jusqu'au
+     repas suivant (ex. : les items du déjeuner encore là au souper, et un
+     total pompe faussé). Chaque ajout horodate le repas; après 3 h sans
+     nouvel ajout, il est vidé automatiquement à l'ouverture ou au retour
+     dans l'app — avec un toast annulable, jamais de perte silencieuse. */
+  var MEAL_TTL = 3 * 60 * 60 * 1000;
+  function touchMeal() { lsSet('gn_meal_ts', String(Date.now())); }
+  function expireStaleMeal() {
+    if (meal.length === 0) return;
+    var ts = num(lsGet('gn_meal_ts'));
+    if (!ts) { touchMeal(); return; } // repas hérité d'une version sans horodatage
+    if (Date.now() - ts <= MEAL_TTL) return;
+    var backup = meal.slice();
+    meal = [];
+    save();
+    renderMeal();
+    toast('🕐 Repas précédent vidé — son heure est passée', {
+      duration: 8000,
+      action: {
+        label: 'Annuler',
+        fn: function () {
+          meal = backup.concat(meal);
+          touchMeal();
+          save();
+          renderMeal();
+        }
+      }
+    });
+  }
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) expireStaleMeal();
+  });
+
   /* ── Onglets ── */
   document.querySelectorAll('.tab-btn').forEach(function (btn) {
     btn.addEventListener('click', function () {
@@ -1935,6 +1988,7 @@
           name: fav.name, carbs: fav.carbs, fiber: fav.fiber,
           polyols: fav.polyols, polyolType: fav.polyolType, ratio: 1
         });
+        touchMeal();
         save();
         renderMeal();
         toast('✓ ' + fav.name + ' ajouté au repas');
@@ -1965,6 +2019,7 @@
       return;
     }
     meal.push(item);
+    touchMeal();
     if ($('save-fav').checked) {
       favorites.push({
         name: item.name, carbs: item.carbs, fiber: item.fiber,
@@ -1994,6 +2049,7 @@
         label: 'Annuler',
         fn: function () {
           meal = backup.concat(meal);
+          touchMeal();
           save();
           renderMeal();
         }
@@ -2258,6 +2314,17 @@
   function openQtyModal(recipe) {
     modalRecipe = recipe;
     $('qty-title').textContent = recipe.name;
+    // Photo du produit (Open Food Facts) ou de la recette, si disponible;
+    // cachée sans bruit si elle ne charge pas (ex. hors ligne)
+    var photo = $('qty-photo');
+    if (recipe.photo) {
+      photo.style.display = 'block';
+      photo.onerror = function () { photo.style.display = 'none'; };
+      photo.src = recipe.photo;
+    } else {
+      photo.style.display = 'none';
+      photo.removeAttribute('src');
+    }
     var n = net100(recipe);
     var serving = recipe.serving && num(recipe.serving.grams) > 0 ? recipe.serving : null;
 
@@ -2355,6 +2422,7 @@
       ratio: g / 100,
       grams: g
     });
+    touchMeal();
     save();
     renderMeal();
     closeQtyModal();
@@ -2727,7 +2795,7 @@
     if (!code) { report('Code invalide.'); return; }
     report('🔎 Recherche du produit ' + code + '…');
     fetch('https://world.openfoodfacts.org/api/v2/product/' + encodeURIComponent(code) +
-          '?fields=product_name,product_name_fr,brands,nutriments,serving_size,serving_quantity')
+          '?fields=product_name,product_name_fr,brands,nutriments,serving_size,serving_quantity,image_front_small_url,image_front_url')
       .then(function (r) { return r.json(); })
       .then(function (data) {
         var p = data && data.product;
@@ -2758,6 +2826,7 @@
           fiber: round1(fiber100),
           polyols: round1(polyols100),
           polyolType: 'half',
+          photo: p.image_front_small_url || p.image_front_url || null,
           serving: servingGrams > 0
             ? { grams: servingGrams, label: (p.serving_size || servingGrams + ' g') }
             : null
@@ -3370,6 +3439,7 @@
         meal = meal.concat(entry.items.map(function (it) {
           return JSON.parse(JSON.stringify(it));
         }));
+        touchMeal();
         save();
         renderMeal();
         switchTab('meal');
@@ -3740,6 +3810,7 @@
     }
   })();
 
+  expireStaleMeal();
   renderMeal();
   renderFavorites();
   renderRecipes();
