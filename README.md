@@ -29,7 +29,8 @@ Barre du bas à cinq destinations — **Accueil**, **Favoris**, **➕ Calculer**
 ### 🍽️ Repas
 1. **📷 Scanne ou photographie un produit** — un seul bouton, et l'app **s'adapte à ce qu'elle voit** : un code-barres est détecté en direct (ou lu sur la photo, même via ses chiffres imprimés) → recherche **Open Food Facts**; un tableau de valeur nutritive → **lecture directement sur l'appareil** (OCR Tesseract embarqué, gratuit, sans compte ni clé — ~5 Mo téléchargés à la première analyse puis mis en cache, donc utilisable hors ligne ensuite), qui extrait glucides, fibres, polyols et portion des tableaux canadiens/américains/européens. Dans les deux cas s'ouvre une **fiche produit pleine hauteur** avec les glucides nets **par portion (en grand), par 100 g et par gramme**, et les raccourcis « ½ / 1 / 2 portions » — pensée pour évaluer vite les glucides au repas ou à la garderie. Saisie manuelle du code et import d'une photo existante possibles. En option, la **lecture IA Claude** (bouton ✨, clé API Anthropic personnelle) prend le relais pour les photos difficiles **et sait analyser une assiette ou un plat en photo** : chaque aliment détecté devient une carte modifiable (nom, poids estimé, glucides) avec le total estimé, à vérifier puis ajouter au repas d'un geste. Dans tous les cas les valeurs sont des **estimations à vérifier**, corrigeables à la main.
 2. Ou cherche un aliment dans la **base intégrée** (valeurs par 100 g), ou entre les valeurs de l'étiquette.
-3. Ajuste la portion (règle de trois automatique) et ajoute au repas — le **total à entrer dans la pompe** s'affiche en gros en bas de l'écran. La fiche d'un produit scanné affiche aussi sa **photo** (trouvée sur Open Food Facts) pour confirmer d'un coup d'œil que c'est le bon produit.
+3. **🥄 Mesures maison** : sans balance (assiette, garderie), choisis le type d'aliment (liquide, riz/pâtes cuits, céréales, fruits coupés…) et touche une mesure — 1 c. à thé, 1 c. à soupe, ¼ à 1½ tasse (canadienne, 250 ml) — l'équivalent en grammes s'inscrit dans la quantité (approximations usuelles USDA/FCÉN; le choix du type est mémorisé).
+4. Ajuste la portion (règle de trois automatique) et ajoute au repas — le **total à entrer dans la pompe** s'affiche en gros en bas de l'écran. La fiche d'un produit scanné affiche aussi sa **photo** (trouvée sur Open Food Facts) pour confirmer d'un coup d'œil que c'est le bon produit.
    - **Expiration automatique** : un repas commencé mais jamais enregistré est vidé de lui-même après **3 h sans nouvel ajout** (à l'ouverture de l'app), pour que les items du déjeuner ne faussent pas le total du souper. Un toast permet d'annuler le vidage.
 4. Coche « Enregistrer dans mes favoris » pour tes aliments fréquents.
 5. Quand le repas est terminé : **✅ Enregistrer au journal**.
@@ -55,7 +56,7 @@ Barre du bas à cinq destinations — **Accueil**, **Favoris**, **➕ Calculer**
 
 ## Version de l'app
 
-La version courante est **v2.7.1**, affichée dans le pied de page de l'app (`#app-version` dans `index.html`).
+La version courante est **v2.8.0**, affichée dans le pied de page de l'app (`#app-version` dans `index.html`).
 
 **Règle à chaque mise à jour publiée** : incrémenter le numéro aux **deux** endroits, sinon les utilisateurs installés gardent l'ancienne version en cache :
 1. le pied de page d'`index.html` (`Glucides Nets vX.Y.Z`);

@@ -448,6 +448,9 @@
     padding-top: calc(20px + env(safe-area-inset-top));
   }
   .modal--full h3 { font-size: 1.35rem; }
+  /* Enfants du modal plein écran : jamais comprimés par le flex —
+     le contenu défile au lieu d'être rogné (accordéons, listes) */
+  .modal--full > * { flex-shrink: 0; }
   .modal--full .actions { margin-top: auto; padding-top: 16px; }
   .modal--full .live-net { font-size: 3rem; margin: 2px 0 0; }
   .modal--full .live-net small { font-size: 1.3rem; }
@@ -639,6 +642,28 @@
     font-variant-numeric: tabular-nums;
   }
   .ref-cols .ref-item span { font-size: 0.8rem; color: var(--muted); font-weight: 600; }
+  /* Mesures maison : sélecteur de texture + boutons de mesures */
+  .measure-body { padding: 0 16px 12px; }
+  .measure-chips {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 6px;
+    margin-top: 10px;
+  }
+  .measure-chips button {
+    min-height: 48px;
+    padding: 6px 8px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: none;
+    color: var(--text);
+    font-family: inherit;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .measure-chips button small { display: block; color: var(--accent-text); font-weight: 700; }
+
   .ref-rows { padding: 0 16px 8px; }
   .ref-card .ref-rows { padding: 6px 0 0; }
   .ref-rows .ref-item {
@@ -1704,7 +1729,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.7.1</span>
+  <br><span id="app-version">Glucides Nets v2.8.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -1782,6 +1807,17 @@
     </div>
     <!-- Raccourcis quand la portion de l'étiquette est connue -->
     <div class="qty-portions" id="qty-portions" style="display:none;"></div>
+    <!-- Mesures maison : estimer la quantité sans balance (assiette,
+         garderie). L'équivalent en grammes dépend du type d'aliment. -->
+    <details class="acc" id="measure-acc">
+      <summary><span class="acc-ico" aria-hidden="true">🥄</span>Mesures maison (tasse, cuillère…)</summary>
+      <div class="measure-body">
+        <label for="measure-texture">Type d'aliment</label>
+        <select id="measure-texture"></select>
+        <div class="measure-chips" id="measure-chips"></div>
+        <p class="hint" style="margin-top:8px;">Équivalents approximatifs (tasse canadienne de 250 ml). Touche une mesure : le poids s'inscrit dans la quantité. Pèse quand c'est possible — c'est toujours plus précis.</p>
+      </div>
+    </details>
     <!-- Référence compacte; « Voir les détails » déplie le calcul complet -->
     <div class="ref-card">
       <div class="ref-head">
@@ -3079,6 +3115,65 @@
 
   $('qty-grams').addEventListener('input', updateQtyNet);
   $('qty-back').addEventListener('click', closeQtyModal);
+
+  /* ── Mesures maison ──
+     Volume (tasse canadienne de 250 ml, cuillères) × densité typique du
+     type d'aliment = poids approximatif, inscrit dans la quantité. Les
+     densités sont des moyennes usuelles (USDA/FCÉN), arrondies — c'est
+     un outil d'estimation quand il n'y a pas de balance. */
+  var MEASURES = [
+    ['1 c. à thé', 5], ['1 c. à soupe', 15],
+    ['¼ tasse', 60], ['⅓ tasse', 80],
+    ['½ tasse', 125], ['¾ tasse', 190],
+    ['1 tasse', 250], ['1½ tasse', 375]
+  ];
+  var TEXTURES = [
+    ['Liquide (lait, jus, soupe)', 1.0],
+    ['Purée, compote, yogourt', 1.0],
+    ['Riz, pâtes, légumineuses (cuits)', 0.8],
+    ['Fruits coupés, petits fruits', 0.6],
+    ['Légumes coupés', 0.5],
+    ['Céréales à déjeuner', 0.15],
+    ['Croustilles, maïs soufflé', 0.1],
+    ['Fromage râpé', 0.4],
+    ['Farine', 0.55],
+    ['Sucre, cassonade', 0.85],
+    ['Beurre d’arachide, tartinade', 1.05]
+  ];
+  (function initMeasures() {
+    var sel = $('measure-texture');
+    TEXTURES.forEach(function (t, i) {
+      var o = document.createElement('option');
+      o.value = i;
+      o.textContent = t[0];
+      sel.appendChild(o);
+    });
+    var savedTexture = parseInt(lsGet('gn_measure_texture') || '0', 10);
+    if (savedTexture >= 0 && savedTexture < TEXTURES.length) sel.value = savedTexture;
+    function renderMeasureChips() {
+      var density = TEXTURES[parseInt(sel.value, 10)][1];
+      var box = $('measure-chips');
+      box.innerHTML = '';
+      MEASURES.forEach(function (m) {
+        var grams = Math.round(m[1] * density);
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.innerHTML = m[0] + ' <small>≈ ' + grams + ' g</small>';
+        b.setAttribute('aria-label', m[0] + ', environ ' + grams + ' grammes');
+        b.addEventListener('click', function () {
+          $('qty-grams').value = grams;
+          updateQtyNet();
+        });
+        box.appendChild(b);
+      });
+    }
+    sel.addEventListener('change', function () {
+      lsSet('gn_measure_texture', sel.value);
+      renderMeasureChips();
+    });
+    renderMeasureChips();
+  })();
+
   $('ref-toggle').addEventListener('click', function () {
     var detail = $('calc-detail');
     var open = detail.style.display === 'none';
