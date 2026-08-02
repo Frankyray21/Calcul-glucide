@@ -8,7 +8,7 @@
    affiché dans le pied de page d'index.html (#app-version). L'incrémenter
    à CHAQUE mise à jour publiée, sinon les utilisateurs installés gardent
    l'ancienne version en cache. */
-var CACHE = 'glucides-nets-v2.0.1';
+var CACHE = 'glucides-nets-v2.1.0';
 var ASSETS = [
   '.',
   'index.html',
@@ -55,8 +55,10 @@ self.addEventListener('activate', function (event) {
 self.addEventListener('fetch', function (event) {
   var url = new URL(event.request.url);
 
-  // API Open Food Facts : réseau seulement (pas de cache de données nutritionnelles)
-  if (url.hostname.indexOf('openfoodfacts.org') !== -1) return;
+  // APIs externes (Open Food Facts, Anthropic) : réseau seulement —
+  // jamais de mise en cache de données nutritionnelles ni d'analyses
+  if (url.hostname.indexOf('openfoodfacts.org') !== -1 ||
+      url.hostname.indexOf('anthropic.com') !== -1) return;
 
   if (event.request.mode === 'navigate' || url.pathname.endsWith('/index.html')) {
     // Page : réseau d'abord, cache en secours (fonctionne hors ligne)

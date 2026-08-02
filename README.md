@@ -19,11 +19,12 @@ Le site est servi par GitHub Pages depuis la branche `gh-pages`; le workflow `.g
 ## Onglets
 
 ### 🍽️ Repas
-1. **📷 Scanne le code-barres** d'un produit emballé — nom, glucides, fibres et polyols sont récupérés automatiquement depuis **Open Food Facts** (Internet requis; saisie manuelle du code possible si la caméra n'est pas disponible).
-2. Ou cherche un aliment dans la **base intégrée** (valeurs par 100 g), ou entre les valeurs de l'étiquette.
-3. Ajuste la portion (règle de trois automatique) et ajoute au repas — le **total à entrer dans la pompe** s'affiche en gros en bas de l'écran.
-4. Coche « Enregistrer dans mes favoris » pour tes aliments fréquents.
-5. Quand le repas est terminé : **✅ Enregistrer au journal**.
+1. **📷 Scanne le code-barres** d'un produit emballé — une **fiche produit** s'ouvre avec les glucides nets **par 100 g, par gramme et par portion de l'étiquette**, avec raccourcis « ½ / 1 / 2 portions » (données **Open Food Facts**, Internet requis; saisie manuelle du code possible si la caméra n'est pas disponible). Pensée pour évaluer vite les glucides au repas ou à la garderie.
+2. **📸 Photographie le tableau de valeur nutritive** quand il n'y a pas de code-barres (ou que le produit est introuvable) — l'intelligence artificielle **Claude** (Anthropic) lit les glucides, fibres, polyols et la portion, puis ouvre la même fiche produit. Nécessite une **clé API Anthropic personnelle** (bouton 🔑 dans l'app; la clé reste sur l'appareil, la photo n'est envoyée qu'à Anthropic pour l'analyse). Les valeurs extraites sont des **estimations à vérifier**, toujours corrigeables à la main.
+3. Ou cherche un aliment dans la **base intégrée** (valeurs par 100 g), ou entre les valeurs de l'étiquette.
+4. Ajuste la portion (règle de trois automatique) et ajoute au repas — le **total à entrer dans la pompe** s'affiche en gros en bas de l'écran.
+5. Coche « Enregistrer dans mes favoris » pour tes aliments fréquents.
+6. Quand le repas est terminé : **✅ Enregistrer au journal**.
 
 ### 📖 Recettes
 - **⭐ Recettes populaires intégrées** : 14 plats courants (spaghetti sauce à la viande, pâté chinois, tourtière, poutine, macaroni au fromage, chili, sushi…) avec valeurs moyennes par 100 g issues des plats composés USDA/FCÉN — touche, entre le poids de la portion, c'est ajouté au repas. Ta version maison peut différer : pour un calcul exact, utilise la recette par ingrédients.
@@ -46,7 +47,7 @@ Le site est servi par GitHub Pages depuis la branche `gh-pages`; le workflow `.g
 
 ## Version de l'app
 
-La version courante est **v2.0.1**, affichée dans le pied de page de l'app (`#app-version` dans `index.html`).
+La version courante est **v2.1.0**, affichée dans le pied de page de l'app (`#app-version` dans `index.html`).
 
 **Règle à chaque mise à jour publiée** : incrémenter le numéro aux **deux** endroits, sinon les utilisateurs installés gardent l'ancienne version en cache :
 1. le pied de page d'`index.html` (`Glucides Nets vX.Y.Z`);
@@ -80,7 +81,7 @@ Glucides nets = Glucides totaux − Fibres − (Polyols ÷ 2)
 
 ## Vie privée
 
-Toutes les données (repas, favoris, recettes, photos) sont stockées **localement** dans le navigateur (localStorage). Rien n'est envoyé sur Internet.
+Toutes les données (repas, favoris, recettes, photos de recettes, clé API) sont stockées **localement** dans le navigateur (localStorage). Deux fonctions optionnelles font des appels réseau : le scan de code-barres interroge **Open Food Facts** (seul le code-barres est envoyé), et l'analyse photo envoie **la photo de l'étiquette à Anthropic** (avec ta clé API) uniquement au moment de l'analyse. Rien d'autre ne quitte l'appareil.
 
 ## ⚠️ Avertissement
 

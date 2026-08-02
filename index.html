@@ -883,6 +883,59 @@
   .cam-primer { text-align: center; padding: 8px 0 4px; }
   .cam-primer .ico { font-size: 2.6rem; margin-bottom: 8px; }
   .cam-primer p { font-size: 0.95rem; color: var(--muted); margin-bottom: 14px; }
+
+  /* Raccourcis de portions dans la fiche produit (½ / 1 / 2 portions) */
+  .qty-portions { display: flex; gap: 8px; margin-top: 10px; }
+  .qty-portions button {
+    flex: 1;
+    min-height: 48px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: var(--accent-light);
+    color: var(--accent-text);
+    font-family: inherit;
+    font-size: 0.94rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 150ms ease-out;
+  }
+  .qty-portions button:active { transform: scale(0.96); }
+
+  .link-btn {
+    background: none;
+    border: none;
+    color: var(--muted);
+    text-decoration: underline;
+    font-family: inherit;
+    font-size: 0.88rem;
+    cursor: pointer;
+    min-height: 44px;
+    padding: 4px 0;
+  }
+
+  /* Analyse de la photo d'étiquette : squelette + résultats */
+  .label-skeleton-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 14px;
+    margin-top: 8px;
+  }
+  .skeleton-bar {
+    height: 16px;
+    border-radius: 6px;
+    background: var(--border);
+    animation: skeleton-pulse 1.2s ease-in-out infinite;
+  }
+  @keyframes skeleton-pulse {
+    0%, 100% { opacity: 0.45; }
+    50% { opacity: 1; }
+  }
+  #label-analysis { margin-top: 10px; }
+  #label-analysis .msg { font-size: 0.94rem; color: var(--muted); }
+  #label-analysis .btn { margin-top: 10px; }
 </style>
 </head>
 <body>
@@ -988,7 +1041,7 @@
 
   <div class="offline-badge" id="offline-badge" role="status" aria-live="polite">
     <span aria-hidden="true">📡</span>
-    <span>Hors ligne. La recherche et tes repas fonctionnent. Le scanner de produits revient avec le réseau.</span>
+    <span>Hors ligne. La recherche et tes repas fonctionnent. Le scanner et la photo d'étiquette reviennent avec le réseau.</span>
   </div>
 
   <div class="sr-only" id="search-live" role="status" aria-live="polite"></div>
@@ -1009,8 +1062,17 @@
 
     <div class="card">
       <h2>📷 Scanner un produit</h2>
-      <p class="hint" style="margin:0 0 10px;">Scanne le code-barres d'un produit emballé — ses valeurs nutritionnelles arrivent automatiquement d'Open Food Facts (connexion Internet requise).</p>
+      <p class="hint" style="margin:0 0 10px;">Scanne le code-barres d'un produit emballé — tu obtiens ses glucides par 100 g, par gramme et par portion (Open Food Facts, connexion Internet requise).</p>
       <button class="btn btn-secondary" id="scan-open-btn" type="button">📷 Scanner un code-barres</button>
+    </div>
+
+    <div class="card">
+      <h2>📸 Photo des valeurs nutritives</h2>
+      <p class="hint" style="margin:0 0 10px;">Pas de code-barres, ou produit introuvable? Prends en photo le tableau de valeur nutritive — l'app lit les glucides, fibres et la portion pour toi (connexion Internet requise).</p>
+      <button class="btn btn-secondary" id="label-photo-btn" type="button">📸 Photographier l'étiquette</button>
+      <input type="file" id="label-photo-input" accept="image/*" capture="environment" style="display:none;">
+      <div id="label-analysis" role="status" aria-live="polite"></div>
+      <button class="link-btn" id="api-key-manage" type="button">🔑 Configurer la clé API pour l'analyse photo</button>
     </div>
 
     <div class="card">
@@ -1266,7 +1328,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.0.1</span>
+  <br><span id="app-version">Glucides Nets v2.1.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -1322,10 +1384,32 @@
       <input type="number" id="qty-grams" inputmode="decimal" min="0" step="1" placeholder="ex. : 250">
       <button class="step-btn" id="qty-plus" type="button" aria-label="Augmenter de 25 grammes">+</button>
     </div>
+    <!-- Raccourcis quand la portion de l'étiquette est connue -->
+    <div class="qty-portions" id="qty-portions" style="display:none;"></div>
     <div class="live-net" id="qty-net" role="status" aria-live="polite">0 <small>g nets</small></div>
     <div class="actions">
       <button class="btn btn-secondary" id="qty-cancel" type="button">Annuler</button>
       <button class="btn" id="qty-add" type="button">Ajouter au repas</button>
+    </div>
+    <button class="link-btn" id="qty-edit" type="button" style="display:none; width:100%; text-align:center;">✏️ Corriger les valeurs à la main</button>
+  </div>
+</div>
+
+<!-- Modal : clé API pour l'analyse photo -->
+<div class="modal-overlay" id="key-modal" role="dialog" aria-modal="true" aria-labelledby="key-title">
+  <div class="modal">
+    <h3 id="key-title">🔑 Activer l'analyse photo</h3>
+    <p class="stats-line">
+      La lecture d'étiquette utilise l'intelligence artificielle Claude (Anthropic).
+      Il te faut une clé API personnelle — crée-la sur console.anthropic.com.
+      Ta clé reste sur cet appareil et n'est envoyée qu'à Anthropic; la photo
+      de l'étiquette est envoyée à Anthropic uniquement pour l'analyse.
+    </p>
+    <label for="api-key-input">Ta clé API Anthropic</label>
+    <input type="password" id="api-key-input" autocomplete="off" placeholder="sk-ant-…">
+    <div class="actions" style="margin-top:12px;">
+      <button class="btn btn-secondary" id="key-cancel" type="button">Annuler</button>
+      <button class="btn" id="key-save" type="button">Enregistrer</button>
     </div>
   </div>
 </div>
@@ -2096,13 +2180,45 @@
     });
   }
 
-  /* ── Modal quantité ── */
+  /* ── Modal quantité / fiche produit ──
+     Sert aux recettes ET aux produits scannés ou photographiés. Pour
+     évaluer les glucides d'un coup d'œil (repas, garderie), la fiche
+     montre les nets par 100 g, par gramme et par portion de l'étiquette,
+     avec des raccourcis ½ / 1 / 2 portions. */
   function openQtyModal(recipe) {
     modalRecipe = recipe;
     $('qty-title').textContent = recipe.name;
-    $('qty-stats').textContent = round1(net100(recipe)) + ' g nets / 100 g · ' +
-      round2(net100(recipe) / 100) + ' g net par gramme';
-    $('qty-grams').value = '';
+    var n = net100(recipe);
+    var parts = [round1(n) + ' g nets / 100 g', round2(n / 100) + ' g net par gramme'];
+    var serving = recipe.serving && num(recipe.serving.grams) > 0 ? recipe.serving : null;
+    if (serving) {
+      parts.push('1 portion (' + serving.label + ') = ' + round1(n * serving.grams / 100) + ' g nets');
+    }
+    $('qty-stats').textContent = parts.join(' · ');
+
+    var chips = $('qty-portions');
+    chips.innerHTML = '';
+    if (serving) {
+      [[0.5, '½ portion'], [1, '1 portion'], [2, '2 portions']].forEach(function (opt) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        var grams = round1(serving.grams * opt[0]);
+        b.textContent = opt[1];
+        b.setAttribute('aria-label', opt[1] + ' (' + grams + ' grammes)');
+        b.addEventListener('click', function () {
+          $('qty-grams').value = grams;
+          updateQtyNet();
+        });
+        chips.appendChild(b);
+      });
+      chips.style.display = 'flex';
+      // Présélectionne 1 portion : le cas le plus courant au repas
+      $('qty-grams').value = round1(serving.grams);
+    } else {
+      chips.style.display = 'none';
+      $('qty-grams').value = '';
+    }
+    $('qty-edit').style.display = recipe.editable ? 'block' : 'none';
     updateQtyNet();
     openModal('qty-modal', '#qty-grams');
   }
@@ -2111,6 +2227,29 @@
     modalRecipe = null;
   }
   trapModal('qty-modal', closeQtyModal);
+
+  // Fiche produit (scan / photo) : mêmes valeurs, mais corrigeables à la main
+  function openProductModal(product) {
+    product.editable = true;
+    openQtyModal(product);
+  }
+
+  $('qty-edit').addEventListener('click', function () {
+    if (!modalRecipe) return;
+    $('food-name').value = modalRecipe.name;
+    $('carbs').value = round1(modalRecipe.carbs);
+    $('fiber').value = round1(modalRecipe.fiber);
+    $('polyols').value = modalRecipe.polyols ? round1(modalRecipe.polyols) : '';
+    $('polyol-type').value = modalRecipe.polyolType === 'full' ? 'full' : 'half';
+    $('portion-label').value = 100;
+    $('portion-eaten').value = modalRecipe.serving && num(modalRecipe.serving.grams) > 0
+      ? round1(modalRecipe.serving.grams) : '';
+    closeQtyModal();
+    switchTab('meal');
+    scrollToEl($('food-name'));
+    $('carbs').focus();
+    toast('Valeurs reportées dans le formulaire — ajuste-les au besoin');
+  });
 
   function updateQtyNet() {
     var g = parseFloat($('qty-grams').value) || 0;
@@ -2460,29 +2599,43 @@
     if (!code) { scanStatus('Code invalide.'); return; }
     scanStatus('🔎 Recherche du produit ' + code + '…');
     fetch('https://world.openfoodfacts.org/api/v2/product/' + encodeURIComponent(code) +
-          '?fields=product_name,product_name_fr,brands,nutriments')
+          '?fields=product_name,product_name_fr,brands,nutriments,serving_size,serving_quantity')
       .then(function (r) { return r.json(); })
       .then(function (data) {
         var p = data && data.product;
-        if (!p) { scanStatus('Produit ' + code + ' introuvable dans Open Food Facts.'); return; }
+        if (!p) { scanStatus('Produit ' + code + ' introuvable dans Open Food Facts. Essaie plutôt la photo de l’étiquette.'); return; }
         var nut = p.nutriments || {};
-        var carbs = nut.carbohydrates_100g;
-        if (carbs === undefined || carbs === null) {
+        var servingGrams = num(p.serving_quantity) || 0;
+
+        // Valeurs par 100 g; sinon, reconstruites depuis la portion
+        var carbs100 = num(nut.carbohydrates_100g);
+        var fiber100 = num(nut.fiber_100g);
+        var polyols100 = num(nut.polyols_100g);
+        if (!carbs100 && nut.carbohydrates_serving != null && servingGrams > 0) {
+          carbs100 = num(nut.carbohydrates_serving) * 100 / servingGrams;
+          fiber100 = num(nut.fiber_serving) * 100 / servingGrams;
+          polyols100 = num(nut.polyols_serving) * 100 / servingGrams;
+        }
+        if (!carbs100 && !fiber100) {
           scanStatus('Produit trouvé (' + (p.product_name_fr || p.product_name || code) +
-            ') mais sans données de glucides — entre les valeurs de l’étiquette à la main.');
+            ') mais sans données de glucides — prends l’étiquette en photo ou entre les valeurs à la main.');
           return;
         }
+
         var name = p.product_name_fr || p.product_name || 'Produit ' + code;
         if (p.brands) name += ' (' + p.brands.split(',')[0].trim() + ')';
-        $('food-name').value = name;
-        $('carbs').value = round1(carbs);
-        $('fiber').value = round1(nut.fiber_100g || 0);
-        $('polyols').value = nut.polyols_100g ? round1(nut.polyols_100g) : '';
-        $('portion-label').value = 100;
-        $('portion-eaten').value = '';
+        var product = {
+          name: name,
+          carbs: round1(carbs100),
+          fiber: round1(fiber100),
+          polyols: round1(polyols100),
+          polyolType: 'half',
+          serving: servingGrams > 0
+            ? { grams: servingGrams, label: (p.serving_size || servingGrams + ' g') }
+            : null
+        };
         closeScanModal();
-        switchTab('meal');
-        $('portion-eaten').focus();
+        openProductModal(product);
       })
       .catch(function () {
         scanStatus('Erreur réseau — vérifie ta connexion Internet et réessaie.');
@@ -2498,6 +2651,276 @@
   $('barcode-manual').addEventListener('keydown', function (e) {
     if (e.key === 'Enter') lookupBarcode(this.value);
   });
+
+  /* ══════════ Photo des valeurs nutritives (API Claude) ══════════
+     L'utilisateur photographie le tableau de valeur nutritive; Claude
+     (claude-opus-5, sortie structurée JSON) en extrait les glucides,
+     fibres, polyols et la portion. La clé API personnelle reste dans le
+     stockage local de l'appareil; la photo n'est envoyée qu'à Anthropic,
+     uniquement pour cette analyse. Appel HTTP direct depuis le navigateur
+     (en-tête anthropic-dangerous-direct-browser-access) : cette app n'a
+     ni build ni dépendances. */
+  var LABEL_SCHEMA = {
+    type: 'object',
+    properties: {
+      found: { type: 'boolean', description: 'true si un tableau de valeur nutritive lisible est présent' },
+      productName: { type: ['string', 'null'], description: 'Nom du produit si visible, sinon null' },
+      basis: { type: 'string', enum: ['portion', '100g'], description: 'Base des valeurs extraites' },
+      portionGrams: { type: ['number', 'null'], description: 'Poids en grammes de la portion de référence, si indiqué' },
+      portionLabel: { type: ['string', 'null'], description: 'Libellé de la portion, ex. « 30 g (2 biscuits) »' },
+      carbs: { type: ['number', 'null'], description: 'Glucides totaux en g pour la base indiquée' },
+      fiber: { type: ['number', 'null'], description: 'Fibres en g pour la base indiquée' },
+      polyols: { type: ['number', 'null'], description: 'Sucres-alcools (polyols) en g, 0 si absents' },
+      erythritol: { type: 'boolean', description: 'true si le polyol principal est l’érythritol' }
+    },
+    required: ['found', 'productName', 'basis', 'portionGrams', 'portionLabel', 'carbs', 'fiber', 'polyols', 'erythritol'],
+    additionalProperties: false
+  };
+
+  var LABEL_PROMPT = 'Voici la photo de l’étiquette d’un produit alimentaire (tableau de valeur ' +
+    'nutritive canadien ou américain, ou étiquette européenne). Extrais les informations pour le ' +
+    'calcul des glucides : glucides totaux, fibres, sucres-alcools (polyols) en grammes, la portion ' +
+    'de référence (poids en grammes si indiqué, et son libellé), et le nom du produit si visible. ' +
+    'Indique basis="portion" si les valeurs sont par portion, basis="100g" si elles sont par 100 g. ' +
+    'Si aucun tableau de valeur nutritive lisible n’est visible, mets found=false.';
+
+  var lastLabelImage = null;
+
+  function labelClear() { $('label-analysis').innerHTML = ''; }
+
+  function labelSkeleton() {
+    var box = $('label-analysis');
+    box.innerHTML = '<p class="msg">On analyse ta photo, ça prend quelques secondes.</p>';
+    for (var i = 0; i < 3; i++) {
+      var row = document.createElement('div');
+      row.className = 'label-skeleton-row';
+      var a = document.createElement('div');
+      a.className = 'skeleton-bar';
+      a.style.width = '55%';
+      var b = document.createElement('div');
+      b.className = 'skeleton-bar';
+      b.style.width = '18%';
+      row.appendChild(a);
+      row.appendChild(b);
+      box.appendChild(row);
+    }
+  }
+
+  function labelError(message, canRetry) {
+    var box = $('label-analysis');
+    box.innerHTML = '';
+    var msg = document.createElement('p');
+    msg.className = 'msg';
+    msg.textContent = message;
+    box.appendChild(msg);
+    if (canRetry && lastLabelImage) {
+      var retry = document.createElement('button');
+      retry.className = 'btn btn-secondary';
+      retry.type = 'button';
+      retry.textContent = '🔁 Réessayer';
+      retry.addEventListener('click', function () { analyzeLabel(lastLabelImage); });
+      box.appendChild(retry);
+    }
+    var manual = document.createElement('button');
+    manual.className = 'btn btn-secondary';
+    manual.type = 'button';
+    manual.textContent = '✏️ Saisir à la main';
+    manual.style.marginTop = '8px';
+    manual.addEventListener('click', function () {
+      labelClear();
+      scrollToEl($('food-name'));
+      $('food-name').focus();
+    });
+    box.appendChild(manual);
+  }
+
+  /* Clé API : demandée juste-à-temps, stockée localement */
+  var pendingPhotoAfterKey = false;
+
+  function openKeyModal() {
+    $('api-key-input').value = '';
+    $('api-key-input').placeholder = lsGet('gn_api_key')
+      ? 'Une clé est déjà enregistrée — entre-en une nouvelle'
+      : 'sk-ant-…';
+    openModal('key-modal', '#api-key-input');
+  }
+  function closeKeyModal() {
+    pendingPhotoAfterKey = false;
+    closeModal('key-modal');
+  }
+  trapModal('key-modal', closeKeyModal);
+  $('key-cancel').addEventListener('click', closeKeyModal);
+  $('key-modal').addEventListener('click', function (e) {
+    if (e.target === this) closeKeyModal();
+  });
+  $('key-save').addEventListener('click', function () {
+    var key = $('api-key-input').value.trim();
+    if (!key) { $('api-key-input').focus(); return; }
+    if (!lsSet('gn_api_key', key)) {
+      toast('⚠️ Impossible d’enregistrer la clé (stockage indisponible)', { type: 'error' });
+      return;
+    }
+    var launchPhoto = pendingPhotoAfterKey;
+    pendingPhotoAfterKey = false;
+    closeModal('key-modal');
+    toast('✓ Clé enregistrée sur cet appareil');
+    if (launchPhoto) $('label-photo-input').click();
+  });
+  $('api-key-manage').addEventListener('click', openKeyModal);
+
+  $('label-photo-btn').addEventListener('click', function () {
+    if (!navigator.onLine) {
+      toast('📡 L’analyse photo a besoin d’une connexion Internet', { type: 'warn' });
+      return;
+    }
+    if (!lsGet('gn_api_key')) {
+      pendingPhotoAfterKey = true;
+      openKeyModal();
+      return;
+    }
+    $('label-photo-input').click();
+  });
+
+  $('label-photo-input').addEventListener('change', function () {
+    var file = this.files && this.files[0];
+    this.value = '';
+    if (!file) return;
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      var img = new Image();
+      img.onload = function () {
+        // Réduction : 1400 px max — assez net pour lire l'étiquette,
+        // raisonnable en données mobiles et en jetons d'analyse
+        var MAX = 1400;
+        var scale = Math.min(1, MAX / Math.max(img.width, img.height));
+        var canvas = document.createElement('canvas');
+        canvas.width = Math.round(img.width * scale);
+        canvas.height = Math.round(img.height * scale);
+        canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+        var b64 = canvas.toDataURL('image/jpeg', 0.85).split(',')[1];
+        lastLabelImage = b64;
+        analyzeLabel(b64);
+      };
+      img.onerror = function () { labelError('Cette image n’a pas pu être lue — réessaie avec une autre photo.', false); };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  function analyzeLabel(b64) {
+    labelSkeleton();
+    fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': lsGet('gn_api_key') || '',
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-opus-5',
+        max_tokens: 4096,
+        output_config: {
+          effort: 'low',
+          format: { type: 'json_schema', schema: LABEL_SCHEMA }
+        },
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } },
+            { type: 'text', text: LABEL_PROMPT }
+          ]
+        }]
+      })
+    })
+      .then(function (r) {
+        if (r.status === 401) throw { kind: 'auth' };
+        if (r.status === 429) throw { kind: 'rate' };
+        if (!r.ok) throw { kind: 'api' };
+        return r.json();
+      })
+      .then(function (data) {
+        if (data.stop_reason === 'refusal') throw { kind: 'refusal' };
+        var text = (data.content || [])
+          .filter(function (blk) { return blk.type === 'text'; })
+          .map(function (blk) { return blk.text; })
+          .join('');
+        var res;
+        try { res = JSON.parse(text); } catch (e) { throw { kind: 'parse' }; }
+        handleLabelResult(res);
+      })
+      .catch(function (err) {
+        var kind = err && err.kind;
+        if (kind === 'auth') {
+          labelError('Ta clé API a été refusée — vérifie-la avec le bouton 🔑 ci-dessous.', false);
+        } else if (kind === 'rate') {
+          labelError('Trop de demandes d’un coup — attends un instant, puis réessaie.', true);
+        } else if (kind === 'refusal' || kind === 'parse') {
+          labelError('L’analyse n’a pas fonctionné sur cette image — réessaie avec une photo plus proche du tableau.', true);
+        } else {
+          labelError('Erreur réseau ou service indisponible — vérifie ta connexion et réessaie.', true);
+        }
+      });
+  }
+
+  function handleLabelResult(res) {
+    if (!res || !res.found || res.carbs == null) {
+      labelError('Je n’ai pas réussi à lire les valeurs — réessaie avec une photo nette, bien éclairée et cadrée sur le tableau.', true);
+      return;
+    }
+    var name = res.productName || 'Produit (étiquette photographiée)';
+    var portionGrams = num(res.portionGrams);
+    var carbs = num(res.carbs), fiber = num(res.fiber), polyols = num(res.polyols);
+
+    if (res.basis === 'portion' && !(portionGrams > 0)) {
+      // Portion sans poids connu : impossible de normaliser par 100 g —
+      // on reporte les valeurs telles quelles (= 1 portion) dans le formulaire
+      labelClear();
+      $('food-name').value = name;
+      $('carbs').value = round1(carbs);
+      $('fiber').value = round1(fiber);
+      $('polyols').value = polyols ? round1(polyols) : '';
+      $('polyol-type').value = res.erythritol ? 'full' : 'half';
+      $('portion-label').value = '';
+      $('portion-eaten').value = '';
+      scrollToEl($('food-name'));
+      toast('Valeurs lues pour 1 portion (' + (res.portionLabel || 'poids inconnu') + ') — vérifie-les', { duration: 6000 });
+      return;
+    }
+
+    var carbs100, fiber100, polyols100, serving;
+    if (res.basis === 'portion') {
+      carbs100 = carbs * 100 / portionGrams;
+      fiber100 = fiber * 100 / portionGrams;
+      polyols100 = polyols * 100 / portionGrams;
+      serving = { grams: portionGrams, label: res.portionLabel || round1(portionGrams) + ' g' };
+    } else {
+      carbs100 = carbs;
+      fiber100 = fiber;
+      polyols100 = polyols;
+      serving = portionGrams > 0
+        ? { grams: portionGrams, label: res.portionLabel || round1(portionGrams) + ' g' }
+        : null;
+    }
+
+    labelClear();
+    var box = $('label-analysis');
+    var okMsg = document.createElement('p');
+    okMsg.className = 'msg';
+    okMsg.textContent = '✓ Étiquette lue : ' + round1(carbs100) + ' g de glucides / 100 g' +
+      (serving ? ' · portion de ' + round1(serving.grams) + ' g' : '') +
+      '. Ce sont des estimations — vérifie-les sur l’étiquette.';
+    box.appendChild(okMsg);
+
+    openProductModal({
+      name: name,
+      carbs: round1(carbs100),
+      fiber: round1(fiber100),
+      polyols: round1(polyols100),
+      polyolType: res.erythritol ? 'full' : 'half',
+      serving: serving
+    });
+  }
 
   /* ══════════ Recette à partir des ingrédients ══════════ */
   bindDbSearch('ing-search', 'ing-results', function (f) {
