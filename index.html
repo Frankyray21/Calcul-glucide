@@ -1087,7 +1087,7 @@
 
   <div class="offline-badge" id="offline-badge" role="status" aria-live="polite">
     <span aria-hidden="true">📡</span>
-    <span>Hors ligne. La recherche et tes repas fonctionnent. Le scanner et la photo d'étiquette reviennent avec le réseau.</span>
+    <span>Hors ligne. La recherche, tes repas et la lecture d'étiquette (si déjà téléchargée) fonctionnent. Le scan de code-barres revient avec le réseau.</span>
   </div>
 
   <div class="sr-only" id="search-live" role="status" aria-live="polite"></div>
@@ -1108,11 +1108,11 @@
 
     <div class="card">
       <h2>📷 Scanner ou photographier un produit</h2>
-      <p class="hint" style="margin:0 0 10px;">Vise le code-barres <em>ou</em> le tableau de valeur nutritive — l'app s'adapte à ce qu'elle voit : code-barres → Open Food Facts; étiquette → lecture par l'IA Claude. Tu obtiens les glucides par 100 g, par gramme et par portion (connexion Internet requise).</p>
+      <p class="hint" style="margin:0 0 10px;">Vise le code-barres <em>ou</em> le tableau de valeur nutritive — l'app s'adapte à ce qu'elle voit : code-barres → Open Food Facts; étiquette → lecture <strong>directement sur ton appareil</strong>, gratuite et sans compte. Tu obtiens les glucides par portion, par 100 g et par gramme.</p>
       <button class="btn btn-secondary" id="scan-open-btn" type="button">📷 Scanner / photographier</button>
       <input type="file" id="label-photo-input" accept="image/*" capture="environment" style="display:none;">
       <div id="label-analysis" role="status" aria-live="polite"></div>
-      <button class="link-btn" id="api-key-manage" type="button">🔑 Configurer la clé API (lecture d'étiquette)</button>
+      <button class="link-btn" id="api-key-manage" type="button">✨ Lecture IA (optionnelle, pour les photos difficiles)</button>
     </div>
 
     <div class="card">
@@ -1368,7 +1368,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.2.1</span>
+  <br><span id="app-version">Glucides Nets v2.3.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -1440,10 +1440,12 @@
 <!-- Modal : clé API pour l'analyse photo -->
 <div class="modal-overlay" id="key-modal" role="dialog" aria-modal="true" aria-labelledby="key-title">
   <div class="modal">
-    <h3 id="key-title">🔑 Activer l'analyse photo</h3>
+    <h3 id="key-title">✨ Lecture IA (optionnelle)</h3>
     <p class="stats-line">
-      La lecture d'étiquette utilise l'intelligence artificielle Claude (Anthropic).
-      Il te faut une clé API personnelle — à faire une seule fois :
+      La lecture d'étiquette de base se fait <strong>gratuitement sur ton appareil</strong>,
+      sans compte ni clé. Pour les photos difficiles (étiquette froissée, floue, mal
+      éclairée), tu peux ajouter la lecture par l'IA Claude (Anthropic) — il faut alors
+      une clé API personnelle, à configurer une seule fois :
     </p>
     <ul class="install-steps">
       <li><span class="num">1</span><span>Crée un compte sur <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener"><strong>console.anthropic.com</strong></a> (compte développeur, distinct de claude.ai).</span></li>
@@ -2212,8 +2214,16 @@
   }
   function trapModal(id, onClose) {
     var ov = $(id);
+    // Échap au niveau du document : fonctionne même si le focus n'est pas
+    // (encore) dans le modal. Seul le modal ouvert le plus récent réagit.
+    document.addEventListener('keydown', function (e) {
+      if (e.key !== 'Escape' || !ov.classList.contains('open')) return;
+      var opens = document.querySelectorAll('.modal-overlay.open');
+      if (opens[opens.length - 1] !== ov) return;
+      e.preventDefault();
+      onClose();
+    });
     ov.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') { e.preventDefault(); onClose(); return; }
       if (e.key !== 'Tab') return;
       var focusables = Array.prototype.filter.call(
         ov.querySelectorAll('button, input, select, textarea, [tabindex]:not([tabindex="-1"])'),
@@ -2672,8 +2682,8 @@
 
   /* 📸 Capture d'une image fixe depuis la caméra du scanner.
      Adaptation au contenu : un code-barres net sur la photo → recherche
-     Open Food Facts locale; sinon la photo part à l'analyse d'étiquette
-     (où l'IA peut aussi lire les chiffres d'un code-barres). */
+     Open Food Facts locale; sinon la photo part à la lecture d'étiquette
+     (qui sait aussi lire les chiffres imprimés d'un code-barres). */
   $('capture-btn').addEventListener('click', function () {
     var video = $('scan-video');
     if (!scanStream || !video.videoWidth) {
@@ -2689,13 +2699,7 @@
     function analyzeCaptured() {
       var b64 = downscaleToB64(canvas);
       closeScanModal();
-      lastLabelImage = b64;
-      if (!lsGet('gn_api_key')) {
-        pendingAfterKey = 'analyze';
-        openKeyModal();
-        return;
-      }
-      analyzeLabel(b64);
+      analyzeCapture(b64);
     }
 
     if ('BarcodeDetector' in window) {
@@ -2777,14 +2781,103 @@
     if (e.key === 'Enter') lookupBarcode(this.value);
   });
 
-  /* ══════════ Photo des valeurs nutritives (API Claude) ══════════
-     L'utilisateur photographie le tableau de valeur nutritive; Claude
-     (claude-opus-5, sortie structurée JSON) en extrait les glucides,
-     fibres, polyols et la portion. La clé API personnelle reste dans le
-     stockage local de l'appareil; la photo n'est envoyée qu'à Anthropic,
-     uniquement pour cette analyse. Appel HTTP direct depuis le navigateur
-     (en-tête anthropic-dangerous-direct-browser-access) : cette app n'a
-     ni build ni dépendances. */
+  /* ══════════ Photo des valeurs nutritives ══════════
+     Deux moteurs, du gratuit au plus précis :
+     1. OCR LOCAL (par défaut, aucune clé) — Tesseract.js hébergé dans
+        l'app (vendor/tesseract, ~5 Mo chargés à la première analyse puis
+        mis en cache : fonctionne ensuite hors ligne). Le texte reconnu
+        est interprété par règles, le format des tableaux canadiens /
+        américains / européens étant très normé.
+     2. LECTURE IA (optionnelle) — si une clé API Anthropic est
+        configurée, les photos que l'OCR local ne comprend pas partent à
+        Claude (claude-opus-5, sortie structurée JSON, appel direct
+        navigateur). La clé et la photo ne servent qu'à ça. */
+
+  var tessWorkerPromise = null;
+
+  function loadScript(src) {
+    return new Promise(function (resolve, reject) {
+      var s = document.createElement('script');
+      s.src = src;
+      s.onload = resolve;
+      s.onerror = function () { reject(new Error('load ' + src)); };
+      document.head.appendChild(s);
+    });
+  }
+
+  function getTessWorker() {
+    if (tessWorkerPromise) return tessWorkerPromise;
+    var base = new URL('vendor/tesseract/', location.href).href;
+    tessWorkerPromise = loadScript(base + 'tesseract.min.js').then(function () {
+      return Tesseract.createWorker('fra', 1, {
+        workerPath: base + 'worker.min.js',
+        corePath: base,
+        langPath: base + 'lang'
+      });
+    });
+    // Un échec (ex. premier chargement hors ligne) ne doit pas condamner
+    // les tentatives suivantes
+    tessWorkerPromise.catch(function () { tessWorkerPromise = null; });
+    return tessWorkerPromise;
+  }
+
+  /* Interprétation par règles du texte OCR d'un tableau de valeur
+     nutritive (bilingue FR/EN). Retourne un objet au format du schéma
+     d'analyse, ou null si rien d'exploitable. */
+  function parseNutritionText(raw) {
+    if (!raw) return null;
+    var text = raw.replace(/ /g, ' ');
+    var lines = text.split('\n');
+    var res = {
+      found: false, productName: null, basis: 'portion',
+      portionGrams: null, portionLabel: null,
+      carbs: null, fiber: null, polyols: null,
+      erythritol: /[ée]rythritol/i.test(text), barcode: null
+    };
+
+    function firstGrams(line) {
+      var m = line.match(/(\d+(?:[.,]\d+)?)\s*g\b/i);
+      return m ? parseFloat(m[1].replace(',', '.')) : null;
+    }
+
+    for (var i = 0; i < lines.length; i++) {
+      var line = lines[i];
+      var low = line.toLowerCase();
+      if (res.carbs == null && /(glucide|carbohydrate|\bcarbs?\b)/.test(low)) {
+        res.carbs = firstGrams(line);
+      } else if (res.fiber == null && /(fibre|fiber)/.test(low)) {
+        res.fiber = firstGrams(line);
+      } else if (res.polyols == null && /(polyol|sucre[\s-]*alcool|sugar[\s-]*alcohol)/.test(low)) {
+        res.polyols = firstGrams(line);
+      }
+      if (res.portionGrams == null && /(portion|serving|\bpour\b|\bper\b|\bpar\b)/.test(low)) {
+        // « pour 3/4 tasse (30 g) » : privilégier les grammes entre parenthèses
+        var paren = line.match(/\(\s*(\d+(?:[.,]\d+)?)\s*(?:g|ml)\s*\)/i);
+        var flat = paren || line.match(/(\d+(?:[.,]\d+)?)\s*(?:g|ml)\b/i);
+        if (flat) {
+          res.portionGrams = parseFloat(flat[1].replace(',', '.'));
+          res.portionLabel = line.trim().replace(/\s+/g, ' ').slice(0, 40);
+        }
+      }
+    }
+
+    if (/(pour|per|par)\s*100\s*g/i.test(text)) {
+      res.basis = '100g';
+      res.portionGrams = null;
+      res.portionLabel = null;
+    }
+
+    if (res.carbs != null) {
+      res.found = true;
+      res.fiber = res.fiber || 0;
+      res.polyols = res.polyols || 0;
+      return res;
+    }
+    // Pas de tableau lisible : peut-être les chiffres d'un code-barres
+    var bc = text.replace(/[^\d\n]/g, ' ').match(/\b(\d{12,13})\b/);
+    if (bc) { res.barcode = bc[1]; return res; }
+    return null;
+  }
   var LABEL_SCHEMA = {
     type: 'object',
     properties: {
@@ -2816,9 +2909,13 @@
 
   function labelClear() { $('label-analysis').innerHTML = ''; }
 
-  function labelSkeleton() {
+  function labelSkeleton(message) {
     var box = $('label-analysis');
-    box.innerHTML = '<p class="msg">On analyse ta photo, ça prend quelques secondes.</p>';
+    box.innerHTML = '';
+    var msg = document.createElement('p');
+    msg.className = 'msg';
+    msg.textContent = message || 'On analyse ta photo, ça prend quelques secondes.';
+    box.appendChild(msg);
     for (var i = 0; i < 3; i++) {
       var row = document.createElement('div');
       row.className = 'label-skeleton-row';
@@ -2846,7 +2943,7 @@
       retry.className = 'btn btn-secondary';
       retry.type = 'button';
       retry.textContent = '🔁 Réessayer';
-      retry.addEventListener('click', function () { analyzeLabel(lastLabelImage); });
+      retry.addEventListener('click', function () { analyzeCapture(lastLabelImage); });
       box.appendChild(retry);
     }
     var manual = document.createElement('button');
@@ -2899,17 +2996,9 @@
   });
   $('api-key-manage').addEventListener('click', openKeyModal);
 
-  /* Import d'une photo existante (galerie, ou appareil sans caméra web) */
+  /* Import d'une photo existante (galerie, ou appareil sans caméra web).
+     Aucune clé requise : la lecture se fait sur l'appareil. */
   function startLabelPhoto() {
-    if (!navigator.onLine) {
-      toast('📡 L’analyse photo a besoin d’une connexion Internet', { type: 'warn' });
-      return;
-    }
-    if (!lsGet('gn_api_key')) {
-      pendingAfterKey = 'file';
-      openKeyModal();
-      return;
-    }
     $('label-photo-input').click();
   }
 
@@ -2940,9 +3029,7 @@
     reader.onload = function (e) {
       var img = new Image();
       img.onload = function () {
-        var b64 = downscaleToB64(img);
-        lastLabelImage = b64;
-        analyzeLabel(b64);
+        analyzeCapture(downscaleToB64(img));
       };
       img.onerror = function () { labelError('Cette image n’a pas pu être lue — réessaie avec une autre photo.', false); };
       img.src = e.target.result;
@@ -2950,8 +3037,43 @@
     reader.readAsDataURL(file);
   });
 
+  /* Point d'entrée commun de l'analyse photo : OCR local d'abord
+     (gratuit, sur l'appareil), lecture IA en secours si une clé est là. */
+  function analyzeCapture(b64) {
+    lastLabelImage = b64;
+    labelSkeleton('🔍 On lit l’étiquette directement sur ton appareil… (la première fois, un petit téléchargement est nécessaire)');
+    getTessWorker().then(function (worker) {
+      return worker.recognize('data:image/jpeg;base64,' + b64).then(function (out) {
+        var res = parseNutritionText(out && out.data && out.data.text);
+        if (res) handleLabelResult(res);
+        else fallbackOrError();
+      }, fallbackOrError);
+    }, function () {
+      // Échec du chargement du lecteur (probablement hors ligne à la
+      // première utilisation)
+      if (lsGet('gn_api_key') && navigator.onLine) { analyzeLabel(b64); return; }
+      labelError('Le lecteur d’étiquette n’a pas pu se télécharger (≈ 5 Mo, une seule fois) — vérifie ta connexion et réessaie. Ensuite, il fonctionne même hors ligne.', true);
+    });
+  }
+
+  /* L'OCR local n'a rien tiré de la photo : Claude si une clé est
+     configurée, sinon message d'aide avec l'option lecture IA. */
+  function fallbackOrError() {
+    if (lsGet('gn_api_key')) { analyzeLabel(lastLabelImage); return; }
+    labelError('Je n’ai pas réussi à lire cette photo sur l’appareil — rapproche-toi, éclaire bien et cadre le tableau de valeur nutritive (ou le code-barres) bien à plat.', true);
+    var ai = document.createElement('button');
+    ai.className = 'link-btn';
+    ai.type = 'button';
+    ai.textContent = '✨ Activer la lecture IA (photos difficiles)';
+    ai.addEventListener('click', function () {
+      pendingAfterKey = 'analyze';
+      openKeyModal();
+    });
+    $('label-analysis').appendChild(ai);
+  }
+
   function analyzeLabel(b64) {
-    labelSkeleton();
+    labelSkeleton('✨ Lecture IA de ta photo, ça prend quelques secondes…');
     fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {

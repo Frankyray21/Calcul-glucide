@@ -19,7 +19,7 @@ Le site est servi par GitHub Pages depuis la branche `gh-pages`; le workflow `.g
 ## Onglets
 
 ### 🍽️ Repas
-1. **📷 Scanne ou photographie un produit** — un seul bouton, et l'app **s'adapte à ce qu'elle voit** : un code-barres est détecté en direct (ou lu sur la photo, même via ses chiffres imprimés) → recherche **Open Food Facts**; un tableau de valeur nutritive → lecture par l'intelligence artificielle **Claude** (glucides, fibres, polyols, portion). Dans les deux cas s'ouvre une **fiche produit pleine hauteur** avec les glucides nets **par portion (en grand), par 100 g et par gramme**, et les raccourcis « ½ / 1 / 2 portions » — pensée pour évaluer vite les glucides au repas ou à la garderie. Saisie manuelle du code et import d'une photo existante possibles; la lecture d'étiquette nécessite une **clé API Anthropic personnelle** (bouton 🔑; la clé reste sur l'appareil, la photo n'est envoyée qu'à Anthropic pour l'analyse) et ses valeurs sont des **estimations à vérifier**, corrigeables à la main.
+1. **📷 Scanne ou photographie un produit** — un seul bouton, et l'app **s'adapte à ce qu'elle voit** : un code-barres est détecté en direct (ou lu sur la photo, même via ses chiffres imprimés) → recherche **Open Food Facts**; un tableau de valeur nutritive → **lecture directement sur l'appareil** (OCR Tesseract embarqué, gratuit, sans compte ni clé — ~5 Mo téléchargés à la première analyse puis mis en cache, donc utilisable hors ligne ensuite), qui extrait glucides, fibres, polyols et portion des tableaux canadiens/américains/européens. Dans les deux cas s'ouvre une **fiche produit pleine hauteur** avec les glucides nets **par portion (en grand), par 100 g et par gramme**, et les raccourcis « ½ / 1 / 2 portions » — pensée pour évaluer vite les glucides au repas ou à la garderie. Saisie manuelle du code et import d'une photo existante possibles. En option, la **lecture IA Claude** (bouton ✨, clé API Anthropic personnelle) prend le relais pour les photos difficiles. Dans tous les cas les valeurs sont des **estimations à vérifier**, corrigeables à la main.
 2. Ou cherche un aliment dans la **base intégrée** (valeurs par 100 g), ou entre les valeurs de l'étiquette.
 3. Ajuste la portion (règle de trois automatique) et ajoute au repas — le **total à entrer dans la pompe** s'affiche en gros en bas de l'écran.
 4. Coche « Enregistrer dans mes favoris » pour tes aliments fréquents.
@@ -46,7 +46,7 @@ Le site est servi par GitHub Pages depuis la branche `gh-pages`; le workflow `.g
 
 ## Version de l'app
 
-La version courante est **v2.2.1**, affichée dans le pied de page de l'app (`#app-version` dans `index.html`).
+La version courante est **v2.3.0**, affichée dans le pied de page de l'app (`#app-version` dans `index.html`).
 
 **Règle à chaque mise à jour publiée** : incrémenter le numéro aux **deux** endroits, sinon les utilisateurs installés gardent l'ancienne version en cache :
 1. le pied de page d'`index.html` (`Glucides Nets vX.Y.Z`);
@@ -80,7 +80,7 @@ Glucides nets = Glucides totaux − Fibres − (Polyols ÷ 2)
 
 ## Vie privée
 
-Toutes les données (repas, favoris, recettes, photos de recettes, clé API) sont stockées **localement** dans le navigateur (localStorage). Deux fonctions optionnelles font des appels réseau : le scan de code-barres interroge **Open Food Facts** (seul le code-barres est envoyé), et l'analyse photo envoie **la photo de l'étiquette à Anthropic** (avec ta clé API) uniquement au moment de l'analyse. Rien d'autre ne quitte l'appareil.
+Toutes les données (repas, favoris, recettes, photos de recettes, clé API éventuelle) sont stockées **localement** dans le navigateur (localStorage). La lecture d'étiquette par défaut (OCR) se fait **entièrement sur l'appareil** — la photo ne quitte jamais le téléphone. Deux fonctions optionnelles font des appels réseau : le scan de code-barres interroge **Open Food Facts** (seul le code-barres est envoyé), et la lecture IA optionnelle envoie **la photo de l'étiquette à Anthropic** (avec ta clé API) uniquement au moment de l'analyse. Rien d'autre ne quitte l'appareil.
 
 ## ⚠️ Avertissement
 
