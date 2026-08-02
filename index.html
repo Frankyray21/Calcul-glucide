@@ -618,6 +618,38 @@
     white-space: nowrap;
   }
   .ref-val small { font-size: 0.85rem; color: var(--muted); font-weight: 700; }
+  /* Repas analysé par photo : une carte modifiable par aliment estimé */
+  .mp-row {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 12px 14px;
+    margin-bottom: 10px;
+  }
+  .mp-row-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .mp-row-head input { flex: 1; min-width: 0; font-weight: 700; }
+  .mp-del {
+    flex: none;
+    width: 42px;
+    height: 42px;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    background: none;
+    color: var(--danger);
+    font-size: 1rem;
+    cursor: pointer;
+  }
+  .mp-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .mp-net { margin-top: 6px; font-size: 0.85rem; color: var(--muted); font-weight: 600; }
 
   /* En-tête de fiche : photo du produit (Open Food Facts ou recette) + nom */
   .qty-head {
@@ -1336,7 +1368,7 @@
 
     <div class="card">
       <h2>📷 Scanner ou photographier un produit</h2>
-      <p class="hint" style="margin:0 0 10px;">Vise le code-barres <em>ou</em> le tableau de valeur nutritive — l'app s'adapte à ce qu'elle voit : code-barres → Open Food Facts; étiquette → lecture <strong>directement sur ton appareil</strong>, gratuite et sans compte. Tu obtiens les glucides par portion, par 100 grammes et par gramme.</p>
+      <p class="hint" style="margin:0 0 10px;">Vise le code-barres, le tableau de valeur nutritive <em>ou l'assiette</em> — l'app s'adapte à ce qu'elle voit : code-barres → Open Food Facts; étiquette → lecture <strong>directement sur ton appareil</strong>, gratuite et sans compte; repas ou collation en photo → estimation aliment par aliment (lecture IA ✨ requise).</p>
       <button class="btn btn-secondary" id="scan-open-btn" type="button">📷 Scanner / photographier</button>
       <input type="file" id="label-photo-input" accept="image/*" capture="environment" style="display:none;">
       <div id="label-analysis" role="status" aria-live="polite"></div>
@@ -1622,7 +1654,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.6.1</span>
+  <br><span id="app-version">Glucides Nets v2.7.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -1718,6 +1750,31 @@
       <button class="btn" id="qty-add" type="button">Ajouter au repas</button>
     </div>
     <button class="link-btn" id="qty-edit" type="button" style="display:none; width:100%; text-align:center;">✏️ Corriger les valeurs à la main</button>
+  </div>
+</div>
+
+<!-- Modal : repas analysé depuis une photo (estimation IA, modifiable) -->
+<div class="modal-overlay full" id="meal-photo-modal" role="dialog" aria-modal="true" aria-labelledby="mp-title">
+  <div class="modal modal--full">
+    <div class="fiche-topbar">
+      <button class="circle-btn" id="mp-back" type="button" aria-label="Fermer l'analyse du repas">‹</button>
+      <h3 id="mp-title" style="margin:0;">🍽️ Repas analysé</h3>
+      <span style="width:48px;" aria-hidden="true"></span>
+    </div>
+    <p class="hint" style="margin:8px 0 12px;">Estimations de l'IA d'après ta photo — <strong>vérifie et ajuste</strong> chaque aliment (le poids surtout). En cas de doute, pèse : l'estimation visuelle reste approximative.</p>
+    <div id="mp-list"></div>
+    <div class="calc-card">
+      <div class="calc-row">
+        <span class="calc-label hero-label">Glucides estimés</span>
+        <div class="calc-result">
+          <div class="live-net" id="mp-total" role="status" aria-live="polite">0 <small>g</small></div>
+          <div class="hero-sub" id="mp-count"></div>
+        </div>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn" id="mp-add" type="button">Ajouter au repas</button>
+    </div>
   </div>
 </div>
 
@@ -3266,8 +3323,8 @@
     $('cam-primer').style.display = 'none';
     var liveScan = 'BarcodeDetector' in window;
     scanStatus(liveScan
-      ? 'Vise le code-barres (détecté tout seul) ou le tableau de valeur nutritive, puis prends la photo.'
-      : 'Vise le code-barres ou le tableau de valeur nutritive, puis prends la photo.');
+      ? 'Vise le code-barres (détecté tout seul), le tableau de valeur nutritive ou l’assiette, puis prends la photo.'
+      : 'Vise le code-barres, le tableau de valeur nutritive ou l’assiette, puis prends la photo.');
     var session = ++scanSession;
     navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
       .then(function (stream) {
@@ -3516,20 +3573,40 @@
       fiber: { type: ['number', 'null'], description: 'Fibres en g pour la base indiquée' },
       polyols: { type: ['number', 'null'], description: 'Sucres-alcools (polyols) en g, 0 si absents' },
       erythritol: { type: 'boolean', description: 'true si le polyol principal est l’érythritol' },
-      barcode: { type: ['string', 'null'], description: 'Chiffres imprimés sous un code-barres visible (EAN/UPC), sinon null' }
+      barcode: { type: ['string', 'null'], description: 'Chiffres imprimés sous un code-barres visible (EAN/UPC), sinon null' },
+      foods: {
+        type: ['array', 'null'],
+        description: 'Quand la photo montre un plat, une assiette ou une collation sans étiquette : un élément par aliment identifié, sinon null',
+        items: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', description: 'Nom court de l’aliment en français' },
+            grams: { type: 'number', description: 'Poids estimé de la portion visible, en grammes' },
+            carbs: { type: 'number', description: 'Glucides totaux estimés pour cette portion, en grammes' },
+            fiber: { type: 'number', description: 'Fibres estimées pour cette portion, en grammes' }
+          },
+          required: ['name', 'grams', 'carbs', 'fiber'],
+          additionalProperties: false
+        }
+      }
     },
-    required: ['found', 'productName', 'basis', 'portionGrams', 'portionLabel', 'carbs', 'fiber', 'polyols', 'erythritol', 'barcode'],
+    required: ['found', 'productName', 'basis', 'portionGrams', 'portionLabel', 'carbs', 'fiber', 'polyols', 'erythritol', 'barcode', 'foods'],
     additionalProperties: false
   };
 
-  var LABEL_PROMPT = 'Voici la photo d’un produit alimentaire. Adapte-toi à ce qu’elle montre. ' +
+  var LABEL_PROMPT = 'Voici la photo prise par une personne qui doit calculer les glucides de sa nourriture ' +
+    '(diabète de type 1). Adapte-toi à ce qu’elle montre. ' +
     'CAS 1 — un tableau de valeur nutritive lisible (canadien, américain ou européen) : extrais les ' +
     'informations pour le calcul des glucides — glucides totaux, fibres, sucres-alcools (polyols) en ' +
     'grammes, la portion de référence (poids en grammes si indiqué, et son libellé), et le nom du ' +
     'produit si visible. Indique basis="portion" si les valeurs sont par portion, basis="100g" si ' +
-    'elles sont par 100 g. CAS 2 — pas de tableau lisible mais un code-barres avec ses chiffres ' +
-    'imprimés : mets found=false et recopie les chiffres dans barcode. CAS 3 — ni l’un ni l’autre : ' +
-    'found=false et barcode=null.';
+    'elles sont par 100 g. foods=null. CAS 2 — pas de tableau lisible mais un code-barres avec ses chiffres ' +
+    'imprimés : found=false, recopie les chiffres dans barcode, foods=null. ' +
+    'CAS 3 — la photo montre de la nourriture (assiette, plat, collation, boîte à lunch) sans tableau ' +
+    'ni code-barres : found=false, barcode=null, et remplis foods — un élément par aliment visible, ' +
+    'avec un poids en grammes estimé prudemment d’après les proportions de l’image et les glucides ' +
+    'totaux et fibres estimés pour cette portion (bases de référence usuelles type USDA/FCÉN). ' +
+    'CAS 4 — rien de tout ça : found=false, barcode=null, foods=null.';
 
   var lastLabelImage = null;
 
@@ -3686,11 +3763,11 @@
      configurée, sinon message d'aide avec l'option lecture IA. */
   function fallbackOrError() {
     if (lsGet('gn_api_key')) { analyzeLabel(lastLabelImage); return; }
-    labelError('Je n’ai pas réussi à lire cette photo sur l’appareil — rapproche-toi, éclaire bien et cadre le tableau de valeur nutritive (ou le code-barres) bien à plat.', true);
+    labelError('Je n’ai pas réussi à lire cette photo sur l’appareil — rapproche-toi, éclaire bien et cadre le tableau de valeur nutritive (ou le code-barres) bien à plat. Pour analyser une assiette ou un plat en photo, active la lecture IA ci-dessous.', true);
     var ai = document.createElement('button');
     ai.className = 'link-btn';
     ai.type = 'button';
-    ai.textContent = '✨ Activer la lecture IA (photos difficiles)';
+    ai.textContent = '✨ Activer la lecture IA (photos difficiles et repas en photo)';
     ai.addEventListener('click', function () {
       pendingAfterKey = 'analyze';
       openKeyModal();
@@ -3763,11 +3840,155 @@
     box.appendChild(msg);
   }
 
+  /* ── Repas analysé par photo (estimation IA) ──
+     Chaque aliment détecté devient une carte modifiable : le poids et les
+     glucides s'ajustent avant l'ajout. Changer le poids remet à l'échelle
+     les glucides selon la densité estimée; corriger les glucides à la
+     main a toujours le dernier mot. */
+  var mpFoods = [];
+
+  function openMealPhotoModal(foods) {
+    mpFoods = foods.map(function (f) {
+      var grams = Math.max(0, num(f.grams));
+      var carbs = Math.max(0, num(f.carbs));
+      var fiber = Math.max(0, num(f.fiber));
+      return {
+        name: String(f.name || 'Aliment').slice(0, 60),
+        grams: grams, carbs: carbs, fiber: fiber,
+        carbsPerGram: grams > 0 ? carbs / grams : 0,
+        fiberPerGram: grams > 0 ? fiber / grams : 0
+      };
+    });
+    labelClear();
+    renderMpList();
+    openModal('meal-photo-modal', '#mp-add');
+  }
+  function closeMealPhotoModal() { closeModal('meal-photo-modal'); }
+  trapModal('meal-photo-modal', closeMealPhotoModal);
+  $('mp-back').addEventListener('click', closeMealPhotoModal);
+  $('meal-photo-modal').addEventListener('click', function (e) {
+    if (e.target === this) closeMealPhotoModal();
+  });
+
+  function mpNet(f) { return Math.max(0, f.carbs - f.fiber); }
+
+  function updateMpTotal() {
+    var total = 0;
+    mpFoods.forEach(function (f) { total += mpNet(f); });
+    $('mp-total').innerHTML = round1(total) + ' <small>g</small>';
+    $('mp-count').textContent = mpFoods.length + ' aliment' + (mpFoods.length > 1 ? 's' : '') + ' sur la photo';
+    $('mp-add').textContent = mpFoods.length > 0
+      ? 'Ajouter ' + round1(total) + ' g au repas'
+      : 'Rien à ajouter';
+  }
+
+  function renderMpList() {
+    var box = $('mp-list');
+    box.innerHTML = '';
+    mpFoods.forEach(function (f, i) {
+      var row = document.createElement('div');
+      row.className = 'mp-row';
+
+      var head = document.createElement('div');
+      head.className = 'mp-row-head';
+      var nameIn = document.createElement('input');
+      nameIn.type = 'text';
+      nameIn.value = f.name;
+      nameIn.setAttribute('aria-label', 'Nom de l’aliment');
+      nameIn.addEventListener('input', function () { f.name = this.value; });
+      var del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'mp-del';
+      del.textContent = '✕';
+      del.setAttribute('aria-label', 'Retirer ' + f.name);
+      del.addEventListener('click', function () {
+        mpFoods.splice(i, 1);
+        renderMpList();
+      });
+      head.appendChild(nameIn);
+      head.appendChild(del);
+
+      var grid = document.createElement('div');
+      grid.className = 'mp-grid';
+      function field(labelTxt, value, onInput) {
+        var wrap = document.createElement('div');
+        var lab = document.createElement('label');
+        lab.textContent = labelTxt;
+        var inp = document.createElement('input');
+        inp.type = 'number';
+        inp.inputMode = 'decimal';
+        inp.min = '0';
+        inp.step = '0.1';
+        inp.value = round1(value);
+        inp.addEventListener('input', function () { onInput(num(this.value), inp); });
+        wrap.appendChild(lab);
+        wrap.appendChild(inp);
+        grid.appendChild(wrap);
+        return inp;
+      }
+      var carbsInput;
+      field('Poids (grammes)', f.grams, function (v) {
+        f.grams = Math.max(0, v);
+        // le poids remet les glucides à l'échelle de la densité estimée
+        f.carbs = round1(f.grams * f.carbsPerGram);
+        f.fiber = round1(f.grams * f.fiberPerGram);
+        carbsInput.value = f.carbs;
+        netLine.textContent = netText();
+        updateMpTotal();
+      });
+      carbsInput = field('Glucides (grammes)', f.carbs, function (v) {
+        f.carbs = Math.max(0, v);
+        netLine.textContent = netText();
+        updateMpTotal();
+      });
+
+      var netLine = document.createElement('p');
+      netLine.className = 'mp-net';
+      function netText() {
+        return '≈ ' + round1(mpNet(f)) + ' glucides nets' +
+          (f.fiber > 0 ? ' (fibres ' + round1(f.fiber) + ' soustraites)' : '');
+      }
+      netLine.textContent = netText();
+
+      row.appendChild(head);
+      row.appendChild(grid);
+      row.appendChild(netLine);
+      box.appendChild(row);
+    });
+    updateMpTotal();
+  }
+
+  $('mp-add').addEventListener('click', function () {
+    if (mpFoods.length === 0) { closeMealPhotoModal(); return; }
+    var count = mpFoods.length;
+    mpFoods.forEach(function (f) {
+      meal.push({
+        name: (f.name || 'Aliment').trim() + ' (photo)',
+        carbs: f.carbs, fiber: f.fiber,
+        polyols: 0, polyolType: 'half',
+        ratio: 1, grams: f.grams
+      });
+    });
+    touchMeal();
+    save();
+    renderMeal();
+    closeMealPhotoModal();
+    switchTab('meal');
+    toast('✓ ' + count + ' aliment' + (count > 1 ? 's' : '') + ' ajouté' + (count > 1 ? 's' : '') +
+      ' au repas — estimations à vérifier', { duration: 6000 });
+    markEngagement();
+  });
+
   function handleLabelResult(res) {
     // Adaptation au contenu : la photo montrait un code-barres plutôt
     // qu'un tableau → on repart sur la recherche Open Food Facts
     if (res && !res.found && res.barcode && String(res.barcode).replace(/\D/g, '').length >= 8) {
       lookupBarcode(res.barcode, labelMsg);
+      return;
+    }
+    // La photo montrait un plat ou une collation : estimation par aliment
+    if (res && !res.found && Array.isArray(res.foods) && res.foods.length > 0) {
+      openMealPhotoModal(res.foods);
       return;
     }
     if (!res || !res.found || res.carbs == null) {
