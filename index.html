@@ -590,8 +590,58 @@
   }
   .acc[open] summary::after { transform: rotate(180deg); }
   .acc-ico { color: var(--accent-text); }
+  /* Carte vedette « Glucides calculés » : centrée, tout en haut */
+  .hero-card {
+    margin: 14px 0 16px;
+    padding: 16px 16px 14px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    text-align: center;
+  }
+  .hero-card .hero-label {
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    font-size: 0.8rem;
+  }
+  .modal .hero-card .live-net { color: var(--accent-text); margin: 2px 0 0; }
+  .hero-card .hero-sub { font-size: 0.95rem; }
+  .hero-card .hero-badge { margin-top: 10px; background: var(--accent-light); border: none; color: var(--accent-text); }
+  /* Carte de référence compacte : deux colonnes + détails dépliables */
+  .ref-card {
+    margin: 16px 0 4px;
+    padding: 12px 14px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 18px;
+  }
+  .ref-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .ref-head-title { font-weight: 800; font-size: 0.95rem; }
+  .ref-toggle { margin: 0; font-size: 0.85rem; }
+  .ref-cols {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+  }
+  .ref-cols .ref-item {
+    text-align: center;
+    padding: 4px 6px;
+  }
+  .ref-cols .ref-item + .ref-item { border-left: 1px solid var(--border); }
+  .ref-cols .ref-item b {
+    display: block;
+    font-size: 1.35rem;
+    font-variant-numeric: tabular-nums;
+  }
+  .ref-cols .ref-item span { font-size: 0.8rem; color: var(--muted); font-weight: 600; }
   .ref-rows { padding: 0 16px 8px; }
-  .ref-item {
+  .ref-card .ref-rows { padding: 6px 0 0; }
+  .ref-rows .ref-item {
     display: flex;
     align-items: center;
     gap: 12px;
@@ -1157,29 +1207,29 @@
   /* Raccourcis de portions dans la fiche produit (½ / 1 / 2 portions) */
   .qty-portions {
     display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
     margin-top: 12px;
   }
   .qty-portions button {
     min-height: 48px;
-    padding: 8px 10px;
+    padding: 8px 4px;
     border: 1px solid var(--border);
     border-radius: 999px;
     background: var(--card);
     color: var(--text);
     font-family: inherit;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     font-weight: 700;
     cursor: pointer;
+    white-space: nowrap;
     transition: transform 150ms ease-out;
   }
-  .qty-portions button small { color: var(--muted); font-weight: 600; }
-  .qty-portions button .chip-ico { color: var(--accent-text); margin-right: 4px; }
-  /* Raccourci sélectionné : bordure verte + fond légèrement teinté */
+  /* Raccourci sélectionné : rempli, comme la maquette */
   .qty-portions button.sel {
     border-color: var(--accent-text);
-    background: var(--accent-light);
+    background: var(--btn-bg);
+    color: var(--btn-text);
   }
   .qty-portions button:active { transform: scale(0.96); }
 
@@ -1654,7 +1704,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.7.0</span>
+  <br><span id="app-version">Glucides Nets v2.7.1</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -1714,38 +1764,33 @@
       <div class="qty-head-txt">
         <h3 id="qty-title">Recette</h3>
         <p class="qty-brand" id="qty-brand" style="display:none;"></p>
-        <span class="hero-badge">✓ Valeur calculée — vérifie l'étiquette</span>
       </div>
     </div>
-    <!-- Carte principale : quantité en haut, résultat en bas -->
-    <div class="calc-card">
-      <div class="calc-row">
-        <label class="calc-label" for="qty-grams">Quantité consommée</label>
-        <div class="stepper stepper--inline">
-          <button class="step-btn" id="qty-minus" type="button" aria-label="Réduire de 25 grammes">−</button>
-          <input type="number" id="qty-grams" inputmode="decimal" min="0" step="1" placeholder="0">
-          <span class="qty-unit" aria-hidden="true">g</span>
-          <button class="step-btn" id="qty-plus" type="button" aria-label="Augmenter de 25 grammes">+</button>
-        </div>
-      </div>
-      <div class="calc-row calc-row--result">
-        <span class="calc-label hero-label">Glucides calculés</span>
-        <div class="calc-result">
-          <div class="live-net" id="qty-net" role="status" aria-live="polite">0 <small>g</small></div>
-          <div class="hero-sub" id="qty-net-sub">pour 0 gramme consommé</div>
-        </div>
-      </div>
+    <!-- Résultat en vedette, centré, mis à jour en direct -->
+    <div class="hero-card">
+      <div class="hero-label">Glucides calculés</div>
+      <div class="live-net" id="qty-net" role="status" aria-live="polite">0 <small>g</small></div>
+      <div class="hero-sub" id="qty-net-sub">pour 0 gramme consommé</div>
+      <div class="hero-badge">✓ Valeur calculée — vérifie l'étiquette</div>
+    </div>
+    <label for="qty-grams">Quantité consommée (grammes)</label>
+    <!-- Gros boutons − / + espacés : utilisables avec des gants -->
+    <div class="stepper">
+      <button class="step-btn" id="qty-minus" type="button" aria-label="Réduire de 25 grammes">−</button>
+      <input type="number" id="qty-grams" inputmode="decimal" min="0" step="1" placeholder="ex. : 250">
+      <button class="step-btn" id="qty-plus" type="button" aria-label="Augmenter de 25 grammes">+</button>
     </div>
     <!-- Raccourcis quand la portion de l'étiquette est connue -->
     <div class="qty-portions" id="qty-portions" style="display:none;"></div>
-    <details class="acc" id="ref-acc" open>
-      <summary><span class="acc-ico" aria-hidden="true">📊</span>Référence nutritionnelle</summary>
-      <div class="ref-rows" id="qty-stats"></div>
-    </details>
-    <details class="acc" id="calc-acc" open>
-      <summary><span class="acc-ico" aria-hidden="true">🧮</span>Détail du calcul</summary>
-      <div class="ref-rows" id="calc-detail"></div>
-    </details>
+    <!-- Référence compacte; « Voir les détails » déplie le calcul complet -->
+    <div class="ref-card">
+      <div class="ref-head">
+        <span class="ref-head-title"><span class="acc-ico" aria-hidden="true">📊</span> Référence nutritionnelle</span>
+        <button class="link-btn ref-toggle" id="ref-toggle" type="button" aria-expanded="false">Voir les détails ›</button>
+      </div>
+      <div class="ref-cols" id="qty-stats"></div>
+      <div class="ref-rows" id="calc-detail" style="display:none;"></div>
+    </div>
     <div class="actions">
       <button class="btn" id="qty-add" type="button">Ajouter au repas</button>
     </div>
@@ -2868,10 +2913,21 @@
     // Cœur favori : reflète l'état actuel, permet de garder l'aliment
     syncFavHeart();
 
-    // Référence nutritionnelle : portion de l'étiquette (si connue),
-    // 100 grammes, 1 gramme — lignes avec icône, libellé et valeur
+    // Référence compacte : deux colonnes (portion / 100 grammes), le
+    // « par gramme » et la formule vivent dans « Voir les détails »
     var grid = $('qty-stats');
     grid.innerHTML = '';
+    function refCol(value, label) {
+      var col = document.createElement('div');
+      col.className = 'ref-item';
+      var b = document.createElement('b');
+      b.innerHTML = value + ' <small>g</small>';
+      var s = document.createElement('span');
+      s.textContent = label;
+      col.appendChild(b);
+      col.appendChild(s);
+      grid.appendChild(col);
+    }
     if (serving) {
       var servLabel = String(serving.label)
         .replace(/^\s*(pour|per|par)\s+/i, '')
@@ -2879,16 +2935,23 @@
       // « 1 portion (27 g) » se réduit au poids; « 3/4 tasse (30 g) »
       // reste tel quel — jamais de doublon « portion (1 portion… »
       var servSub = /^\s*1?\s*portion\b/i.test(servLabel)
-        ? '(' + round1(serving.grams) + ' grammes)'
-        : '(' + servLabel + ')';
-      grid.appendChild(refItem('🥣', 'Par 1 portion', servSub, round1(n * serving.grams / 100)));
+        ? round1(serving.grams) + ' grammes'
+        : servLabel;
+      refCol(round1(n * serving.grams / 100), 'par portion (' + servSub + ')');
+      refCol(round1(n), 'par 100 grammes');
+    } else {
+      refCol(round1(n), 'par 100 grammes');
+      refCol(round2(n / 100), 'par gramme');
     }
-    grid.appendChild(refItem('⚖️', 'Par 100 grammes', null, round1(n)));
-    grid.appendChild(refItem('🔍', 'Par gramme', null, round2(n / 100)));
 
-    // Détail du calcul : la formule appliquée à CET aliment, transparente
+    // Détails dépliables : par gramme + la formule appliquée à CET aliment
     var detail = $('calc-detail');
     detail.innerHTML = '';
+    detail.style.display = 'none';
+    var tog = $('ref-toggle');
+    tog.textContent = 'Voir les détails ›';
+    tog.setAttribute('aria-expanded', 'false');
+    detail.appendChild(refItem('🔍', 'Par gramme', null, round2(n / 100)));
     detail.appendChild(refItem('🍞', 'Glucides totaux', 'par 100 grammes', round1(recipe.carbs)));
     detail.appendChild(refItem('🌾', '− Fibres', 'non absorbées', round1(recipe.fiber)));
     if (recipe.polyols > 0) {
@@ -2901,24 +2964,23 @@
     var chips = $('qty-portions');
     chips.innerHTML = '';
     if (serving) {
-      [[0.5, '◐', '½ portion'], [1, '●', '1 portion'], [2, '◉', '2 portions']].forEach(function (opt) {
+      [[0.5, '½ portion'], [1, '1 portion'], [2, '2 portions']].forEach(function (opt) {
         var b = document.createElement('button');
         b.type = 'button';
         var grams = round1(serving.grams * opt[0]);
         b.dataset.grams = grams;
-        b.innerHTML = '<span class="chip-ico" aria-hidden="true">' + opt[1] + '</span>' +
-          opt[2] + ' <small>· ' + grams + ' g</small>';
-        b.setAttribute('aria-label', opt[2] + ' (' + grams + ' grammes)');
+        b.textContent = opt[1];
+        b.setAttribute('aria-label', opt[1] + ' (' + grams + ' grammes)');
         b.addEventListener('click', function () {
           $('qty-grams').value = grams;
           updateQtyNet();
         });
         chips.appendChild(b);
       });
-      // « Autre quantité » : ramène au champ pour entrer un poids exact
+      // « Perso. » : ramène au champ pour entrer un poids exact
       var perso = document.createElement('button');
       perso.type = 'button';
-      perso.innerHTML = '<span class="chip-ico" aria-hidden="true">✏️</span>Autre quantité';
+      perso.textContent = 'Perso.';
       perso.setAttribute('aria-label', 'Entrer une autre quantité');
       perso.addEventListener('click', function () {
         var input = $('qty-grams');
@@ -3017,6 +3079,13 @@
 
   $('qty-grams').addEventListener('input', updateQtyNet);
   $('qty-back').addEventListener('click', closeQtyModal);
+  $('ref-toggle').addEventListener('click', function () {
+    var detail = $('calc-detail');
+    var open = detail.style.display === 'none';
+    detail.style.display = open ? 'block' : 'none';
+    this.textContent = open ? 'Masquer les détails ˄' : 'Voir les détails ›';
+    this.setAttribute('aria-expanded', open ? 'true' : 'false');
+  });
   $('qty-modal').addEventListener('click', function (e) {
     if (e.target === this) closeQtyModal();
   });
