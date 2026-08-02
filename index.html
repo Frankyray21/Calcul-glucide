@@ -397,6 +397,51 @@
     width: 100%;
     max-width: 560px;
   }
+  /* Fiche produit pleine hauteur : tout l'écran, actions collées en bas */
+  .modal-overlay.full { align-items: stretch; }
+  .modal--full {
+    border-radius: 0;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding-top: calc(20px + env(safe-area-inset-top));
+  }
+  .modal--full h3 { font-size: 1.35rem; }
+  .modal--full .actions { margin-top: auto; padding-top: 16px; }
+  .modal--full .live-net { font-size: 2.8rem; margin: 20px 0; }
+  .modal--full .live-net small { font-size: 1.1rem; }
+
+  /* Valeurs clés en évidence : tuiles portion / 100 g / gramme */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 14px 0 4px;
+  }
+  .stat {
+    background: var(--accent-light);
+    border-radius: 16px;
+    padding: 14px 10px;
+    text-align: center;
+  }
+  .stat--wide { grid-column: 1 / -1; }
+  .stat .stat-val {
+    display: block;
+    font-size: 1.9rem;
+    font-weight: 800;
+    color: var(--accent-text);
+    line-height: 1.1;
+    font-variant-numeric: tabular-nums;
+  }
+  .stat--wide .stat-val { font-size: 2.4rem; }
+  .stat .stat-unit {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--muted);
+    font-weight: 600;
+    margin-top: 4px;
+  }
   .modal h3 { font-size: 1.05rem; margin-bottom: 4px; }
   .modal .stats-line { font-size: 0.85rem; color: var(--muted); margin-bottom: 14px; }
   .modal .live-net {
@@ -1328,7 +1373,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.1.0</span>
+  <br><span id="app-version">Glucides Nets v2.1.1</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -1368,15 +1413,16 @@
       <input type="text" id="barcode-manual" inputmode="numeric" autocomplete="off" placeholder="ex. : 3017620422003">
       <button class="btn" id="barcode-lookup" type="button">OK</button>
     </div>
+    <button class="btn btn-secondary" id="scan-photo-btn" type="button" style="margin-top:12px;">📸 Pas de code-barres? Photographie l'étiquette</button>
     <button class="btn btn-secondary" id="scan-close" type="button" style="margin-top:12px;">Fermer</button>
   </div>
 </div>
 
-<!-- Modal : quantité consommée -->
-<div class="modal-overlay" id="qty-modal" role="dialog" aria-modal="true" aria-labelledby="qty-title">
-  <div class="modal">
+<!-- Modal : fiche produit / quantité consommée (pleine hauteur) -->
+<div class="modal-overlay full" id="qty-modal" role="dialog" aria-modal="true" aria-labelledby="qty-title">
+  <div class="modal modal--full">
     <h3 id="qty-title">Recette</h3>
-    <p class="stats-line" id="qty-stats"></p>
+    <div class="stat-grid" id="qty-stats"></div>
     <label for="qty-grams">Poids de la portion consommée (g)</label>
     <!-- Gros boutons − / + espacés : utilisables avec des gants -->
     <div class="stepper">
@@ -2185,16 +2231,39 @@
      évaluer les glucides d'un coup d'œil (repas, garderie), la fiche
      montre les nets par 100 g, par gramme et par portion de l'étiquette,
      avec des raccourcis ½ / 1 / 2 portions. */
+  function statTile(value, unit, wide) {
+    var tile = document.createElement('div');
+    tile.className = 'stat' + (wide ? ' stat--wide' : '');
+    var v = document.createElement('span');
+    v.className = 'stat-val';
+    v.textContent = value;
+    var u = document.createElement('span');
+    u.className = 'stat-unit';
+    u.textContent = unit;
+    tile.appendChild(v);
+    tile.appendChild(u);
+    return tile;
+  }
+
   function openQtyModal(recipe) {
     modalRecipe = recipe;
     $('qty-title').textContent = recipe.name;
     var n = net100(recipe);
-    var parts = [round1(n) + ' g nets / 100 g', round2(n / 100) + ' g net par gramme'];
     var serving = recipe.serving && num(recipe.serving.grams) > 0 ? recipe.serving : null;
+
+    // Valeurs clés en évidence : la portion d'abord (le cas du repas),
+    // puis par 100 g et par gramme
+    var grid = $('qty-stats');
+    grid.innerHTML = '';
     if (serving) {
-      parts.push('1 portion (' + serving.label + ') = ' + round1(n * serving.grams / 100) + ' g nets');
+      grid.appendChild(statTile(
+        round1(n * serving.grams / 100),
+        'g nets par portion (' + serving.label + ')',
+        true
+      ));
     }
-    $('qty-stats').textContent = parts.join(' · ');
+    grid.appendChild(statTile(round1(n), 'g nets / 100 g', false));
+    grid.appendChild(statTile(round2(n / 100), 'g net / gramme', false));
 
     var chips = $('qty-portions');
     chips.innerHTML = '';
@@ -2768,7 +2837,10 @@
   });
   $('api-key-manage').addEventListener('click', openKeyModal);
 
-  $('label-photo-btn').addEventListener('click', function () {
+  /* Point d'entrée commun de la photo d'étiquette : depuis la carte du
+     Repas, ou directement depuis le scanner quand il n'y a pas de
+     code-barres */
+  function startLabelPhoto() {
     if (!navigator.onLine) {
       toast('📡 L’analyse photo a besoin d’une connexion Internet', { type: 'warn' });
       return;
@@ -2779,6 +2851,13 @@
       return;
     }
     $('label-photo-input').click();
+  }
+
+  $('label-photo-btn').addEventListener('click', startLabelPhoto);
+
+  $('scan-photo-btn').addEventListener('click', function () {
+    closeScanModal();
+    startLabelPhoto();
   });
 
   $('label-photo-input').addEventListener('change', function () {
