@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" media="(prefers-color-scheme: light)" content="#15803D">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#1D4ED8">
 <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0F172A">
 <meta name="description" content="Calcule les glucides nets de tes repas, même sans réseau — pour pompe à insuline, diabète de type 1">
 <link rel="manifest" href="manifest.webmanifest">
@@ -15,9 +15,9 @@
 <style>
   /* ── Tokens de design ──
      Palette conviviale inspirée de mySugr (chaleureuse, jamais clinique).
-     Contraste vérifié : le vert #16A34A sert au décor et aux gros éléments;
-     les textes colorés et fonds d'action utilisent #15803D (≥ 4.5:1 sur
-     blanc et sur #DCFCE7). Le compteur principal reste en encre neutre
+     Contraste vérifié : le vert #2563EB sert au décor et aux gros éléments;
+     les textes colorés et fonds d'action utilisent #1D4ED8 (≥ 4.5:1 sur
+     blanc et sur #DBEAFE). Le compteur principal reste en encre neutre
      (≥ 7:1, AAA) — la couleur ne porte jamais un avis médical. */
   :root {
     color-scheme: light dark; /* contrôles natifs (select, scrollbars) au bon thème */
@@ -25,11 +25,11 @@
     --card: #FFFFFF;
     --text: #0F172A;
     --muted: #475569;
-    --accent: #16A34A;         /* vert de marque : décor, bordures, gros chiffres */
-    --accent-text: #15803D;    /* vert lisible : petits textes colorés */
-    --accent-deep: #166534;
-    --accent-light: #DCFCE7;
-    --btn-bg: #15803D;
+    --accent: #2563EB;         /* vert de marque : décor, bordures, gros chiffres */
+    --accent-text: #1D4ED8;    /* vert lisible : petits textes colorés */
+    --accent-deep: #1E40AF;
+    --accent-light: #DBEAFE;
+    --btn-bg: #1D4ED8;
     --btn-text: #FFFFFF;
     --warm: #F59E0B;           /* accent convivial (ambre) */
     --warm-soft: #FEF3C7;
@@ -38,11 +38,11 @@
     --info: #2563EB;
     --border: #E2E8F0;
     --radius: 20px;
-    --chart: #16A34A;
-    --chart-soft: rgba(22, 163, 74, 0.14);
+    --chart: #2563EB;
+    --chart-soft: rgba(37, 99, 235, 0.14);
   }
-  /* Mode sombre : bleu nuit profond + vert signal (maquette de référence).
-     Contrastes vérifiés : #35E06F sur #07111F ≈ 9,9:1, #A7B2C5 sur
+  /* Mode sombre : bleu nuit profond + bleu signal (maquette de référence).
+     Contrastes vérifiés : #4D9FFF sur #07111F ≈ 7,4:1, #A7B2C5 sur
      #101D30 ≈ 6,6:1, #F5F7FA sur #101D30 ≈ 13:1. */
   @media (prefers-color-scheme: dark) {
     :root {
@@ -50,19 +50,19 @@
       --card: #101D30;
       --text: #F5F7FA;
       --muted: #A7B2C5;
-      --accent: #35E06F;
-      --accent-text: #35E06F;
-      --accent-deep: #1B7A44;
-      --accent-light: rgba(53, 224, 111, 0.13);
-      --btn-bg: #35E06F;
-      --btn-text: #06220F;
+      --accent: #4D9FFF;
+      --accent-text: #4D9FFF;
+      --accent-deep: #1D5FB0;
+      --accent-light: rgba(77, 159, 255, 0.13);
+      --btn-bg: #4D9FFF;
+      --btn-text: #06192E;
       --warm-soft: rgba(245, 158, 11, 0.16);
       --warm-text: #FCD34D;
       --danger: #F87171;
       --info: #60A5FA;
       --border: #28384D;
-      --chart: #35E06F;
-      --chart-soft: rgba(53, 224, 111, 0.16);
+      --chart: #4D9FFF;
+      --chart-soft: rgba(77, 159, 255, 0.16);
     }
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -87,16 +87,16 @@
       transition-duration: 0.01ms !important;
     }
   }
-  /* En-tête assombri (#15803D→#14532D) : blanc ≥ 5:1 sur toute la surface,
+  /* En-tête assombri (#1D4ED8→#1E3A8A) : blanc ≥ 5:1 sur toute la surface,
      onglets inactifs ≥ 4.5:1 — l'actif se distingue par le soulignement,
      jamais par la couleur seule */
   header {
-    background: linear-gradient(150deg, #15803D, #14532D);
+    background: linear-gradient(150deg, #1D4ED8, #1E3A8A);
     color: #fff;
     padding: 16px 16px 0;
     text-align: center;
   }
-  /* Thème bleu nuit : l'en-tête suit le fond, le vert reste un signal */
+  /* Thème bleu nuit : l'en-tête suit le fond, le bleu reste un signal */
   @media (prefers-color-scheme: dark) {
     header {
       background: linear-gradient(150deg, #0B1828, #07111F);
@@ -910,7 +910,7 @@
     font-weight: 700;
     border: none;
     border-radius: 14px;
-    background: linear-gradient(135deg, #15803D, #166534);
+    background: linear-gradient(135deg, #1D4ED8, #1E40AF);
     color: #fff;
     cursor: pointer;
     box-shadow: 0 4px 14px rgba(21, 128, 61, 0.35);
@@ -1056,7 +1056,7 @@
   .ob-progress-fill {
     height: 100%;
     width: 0%;
-    background: linear-gradient(90deg, #16A34A, #22C55E);
+    background: linear-gradient(90deg, #2563EB, #3B82F6);
     border-radius: 999px;
     transition: width 300ms ease-out;
   }
@@ -1622,7 +1622,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.6.0</span>
+  <br><span id="app-version">Glucides Nets v2.6.1</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -1710,7 +1710,7 @@
       <summary><span class="acc-ico" aria-hidden="true">📊</span>Référence nutritionnelle</summary>
       <div class="ref-rows" id="qty-stats"></div>
     </details>
-    <details class="acc" id="calc-acc">
+    <details class="acc" id="calc-acc" open>
       <summary><span class="acc-ico" aria-hidden="true">🧮</span>Détail du calcul</summary>
       <div class="ref-rows" id="calc-detail"></div>
     </details>

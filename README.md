@@ -55,7 +55,7 @@ Barre du bas à cinq destinations — **Accueil**, **Favoris**, **➕ Calculer**
 
 ## Version de l'app
 
-La version courante est **v2.6.0**, affichée dans le pied de page de l'app (`#app-version` dans `index.html`).
+La version courante est **v2.6.1**, affichée dans le pied de page de l'app (`#app-version` dans `index.html`).
 
 **Règle à chaque mise à jour publiée** : incrémenter le numéro aux **deux** endroits, sinon les utilisateurs installés gardent l'ancienne version en cache :
 1. le pied de page d'`index.html` (`Glucides Nets vX.Y.Z`);
@@ -63,7 +63,7 @@ La version courante est **v2.6.0**, affichée dans le pied de page de l'app (`#a
 
 ## Design et onboarding
 
-- **Direction artistique** : style coloré et convivial (inspiré de mySugr), jamais clinique. Vert de marque `#16A34A` pour le décor et les gros éléments; `#15803D` pour les textes colorés et boutons (contraste WCAG AA vérifié); accent chaud ambre pour le bandeau hors ligne. Le compteur principal reste en **encre neutre à fort contraste (AAA)** — la couleur ne porte jamais un avis médical.
+- **Direction artistique** : style coloré et convivial (inspiré de mySugr), jamais clinique. Bleu de marque `#2563EB` pour le décor et les gros éléments; `#1D4ED8` pour les textes colorés et boutons (contraste WCAG AA vérifié); mode sombre en bleu nuit (`#07111F`) avec bleu signal `#4D9FFF`; accent chaud ambre pour le bandeau hors ligne. Le compteur principal reste en **encre neutre à fort contraste (AAA)** — la couleur ne porte jamais un avis médical.
 - **Ton** : français québécois, chaleureux et direct, tutoiement partout.
 - **Onboarding** (premier lancement) : 4 écrans en moins de 90 s — bienvenue, comment ça marche, **avertissement médical obligatoire et bloquant** (case à cocher + « J'ai compris », stocké localement, jamais réaffiché), puis préparation hors ligne avec barre de progression déterminée. Les écrans de présentation se sautent; l'avertissement, non.
 - **Permission caméra juste-à-temps** : jamais demandée au démarrage — un écran d'amorce explique le bénéfice au moment du premier scan de code-barres.
