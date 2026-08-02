@@ -76,6 +76,7 @@
     outline: 3px solid var(--accent);
     outline-offset: 2px;
   }
+  a { color: var(--accent-text); font-weight: 600; }
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after {
       animation-duration: 0.01ms !important;
@@ -1367,7 +1368,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.2.0</span>
+  <br><span id="app-version">Glucides Nets v2.2.1</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -1442,10 +1443,14 @@
     <h3 id="key-title">🔑 Activer l'analyse photo</h3>
     <p class="stats-line">
       La lecture d'étiquette utilise l'intelligence artificielle Claude (Anthropic).
-      Il te faut une clé API personnelle — crée-la sur console.anthropic.com.
-      Ta clé reste sur cet appareil et n'est envoyée qu'à Anthropic; la photo
-      de l'étiquette est envoyée à Anthropic uniquement pour l'analyse.
+      Il te faut une clé API personnelle — à faire une seule fois :
     </p>
+    <ul class="install-steps">
+      <li><span class="num">1</span><span>Crée un compte sur <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener"><strong>console.anthropic.com</strong></a> (compte développeur, distinct de claude.ai).</span></li>
+      <li><span class="num">2</span><span>Ajoute un petit crédit dans <strong>Billing</strong> (≈ 5 $ US — chaque étiquette coûte 1 à 3 ¢).</span></li>
+      <li><span class="num">3</span><span>Dans <strong>API Keys</strong>, touche « Create Key » et copie la clé <strong>sk-ant-…</strong></span></li>
+      <li><span class="num">4</span><span>Colle-la ci-dessous. Elle reste sur ton appareil; la photo n'est envoyée qu'à Anthropic pour l'analyse.</span></li>
+    </ul>
     <label for="api-key-input">Ta clé API Anthropic</label>
     <input type="password" id="api-key-input" autocomplete="off" placeholder="sk-ant-…">
     <div class="actions" style="margin-top:12px;">
