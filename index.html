@@ -725,6 +725,20 @@
     gap: 10px;
   }
   .mp-net { margin-top: 6px; font-size: 0.85rem; color: var(--muted); font-weight: 600; }
+  /* Nombre d'unités compté sur la photo : mis en évidence, car c'est la
+     donnée la plus facile à vérifier d'un coup d'œil (« 2 biscuits ») */
+  .mp-count-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-bottom: 10px;
+    padding: 7px 14px;
+    border-radius: 999px;
+    background: var(--accent-light);
+    color: var(--accent-text);
+    font-size: 1rem;
+    font-weight: 800;
+  }
   /* Repère d'échelle de l'analyse photo : sur quoi l'estimation s'appuie */
   .mp-scale {
     margin: 0 0 12px;
@@ -1740,7 +1754,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.8.4</span>
+  <br><span id="app-version">Glucides Nets v2.8.5</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -4124,6 +4138,20 @@
 
   function mpNet(f) { return Math.max(0, f.carbs - f.fiber); }
 
+  /* Une mesure en volume (« ¾ tasse ») reste dans la petite ligne de
+     détail; un NOMBRE d'unités (« 2 biscuits ») mérite d'être bien en
+     vue — c'est ce qu'on vérifie d'un coup d'œil sur la photo. */
+  function isVolumeUnit(unit) {
+    return /tasse|cuill|c\.\s*à|\bml\b|verre|bol|litre|\boz\b/i.test(unit);
+  }
+  function mpCountText(f) {
+    if (!f.measure || isVolumeUnit(f.measure.unit)) return '';
+    var qty = f.origGrams > 0 && f.grams > 0
+      ? f.measure.qty * f.grams / f.origGrams
+      : f.measure.qty;
+    return fmtMeasureQty(qty) + ' ' + f.measure.unit;
+  }
+
   function updateMpTotal() {
     var total = 0;
     mpFoods.forEach(function (f) { total += mpNet(f); });
@@ -4160,6 +4188,17 @@
       head.appendChild(nameIn);
       head.appendChild(del);
 
+      // Badge « 🔢 2 biscuits » : le nombre d'unités compté sur la photo,
+      // remis à l'échelle si le poids est corrigé
+      var countBadge = document.createElement('div');
+      countBadge.className = 'mp-count-badge';
+      function syncCountBadge() {
+        var txt = mpCountText(f);
+        countBadge.textContent = txt ? '🔢 ' + txt + ' sur la photo' : '';
+        countBadge.style.display = txt ? 'inline-flex' : 'none';
+      }
+      syncCountBadge();
+
       var grid = document.createElement('div');
       grid.className = 'mp-grid';
       function field(labelTxt, value, onInput) {
@@ -4186,6 +4225,7 @@
         f.fiber = round1(f.grams * f.fiberPerGram);
         carbsInput.value = f.carbs;
         netLine.textContent = netText();
+        syncCountBadge();
         updateMpTotal();
       });
       carbsInput = field('Glucides (grammes)', f.carbs, function (v) {
@@ -4197,9 +4237,10 @@
       var netLine = document.createElement('p');
       netLine.className = 'mp-net';
       function netText() {
-        // Volume estimé, remis à l'échelle si le poids change
+        // Volume estimé, remis à l'échelle si le poids change. Un nombre
+        // d'unités a son badge dédié au-dessus : pas de doublon ici.
         var vol = '';
-        if (f.measure && f.origGrams > 0 && f.grams > 0) {
+        if (f.measure && isVolumeUnit(f.measure.unit) && f.origGrams > 0 && f.grams > 0) {
           vol = ' · ' + fmtMeasureQty(f.measure.qty * f.grams / f.origGrams) + ' ' + f.measure.unit;
         }
         return '≈ ' + round1(mpNet(f)) + ' glucides nets' + vol +
@@ -4208,6 +4249,7 @@
       netLine.textContent = netText();
 
       row.appendChild(head);
+      row.appendChild(countBadge);
       row.appendChild(grid);
       row.appendChild(netLine);
       box.appendChild(row);
