@@ -410,19 +410,36 @@
   }
   .modal--full h3 { font-size: 1.35rem; }
   .modal--full .actions { margin-top: auto; padding-top: 16px; }
-  .modal--full .live-net { font-size: 2.8rem; margin: 4px 0 20px; }
+  .modal--full .live-net { font-size: 2.8rem; margin: 2px 0 0; }
   .modal--full .live-net small { font-size: 1.1rem; }
+  /* Bandeau du résultat : LE nombre de la fiche, encadré pour se
+     distinguer des tuiles d'information au-dessus */
+  .result-band {
+    margin-top: 16px;
+    padding: 12px 16px 14px;
+    border: 2px solid var(--accent-text);
+    border-radius: 18px;
+    text-align: center;
+  }
   /* Étiquette du résultat vivant : dit sans ambiguïté que le gros nombre
      correspond au poids entré juste au-dessus */
   .live-net-label {
-    text-align: center;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: 700;
     color: var(--muted);
-    margin-top: 16px;
     text-transform: uppercase;
     letter-spacing: 0.04em;
   }
+  /* Repères secondaires (100 grammes / 1 gramme) : une ligne discrète
+     sous la grande tuile, qui ne concurrence pas les vrais nombres */
+  .qty-refs {
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--muted);
+    margin: 10px 0 14px;
+    line-height: 1.5;
+  }
+  .qty-refs b { color: var(--text); font-variant-numeric: tabular-nums; }
 
   /* En-tête de fiche : photo du produit (Open Food Facts ou recette) + nom */
   .qty-head {
@@ -1398,7 +1415,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.4.2</span>
+  <br><span id="app-version">Glucides Nets v2.4.3</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -1452,6 +1469,7 @@
       <h3 id="qty-title">Recette</h3>
     </div>
     <div class="stat-grid" id="qty-stats"></div>
+    <div class="qty-refs" id="qty-refs"></div>
     <label for="qty-grams">Poids de la portion consommée (grammes)</label>
     <!-- Gros boutons − / + espacés : utilisables avec des gants -->
     <div class="stepper">
@@ -1461,8 +1479,10 @@
     </div>
     <!-- Raccourcis quand la portion de l'étiquette est connue -->
     <div class="qty-portions" id="qty-portions" style="display:none;"></div>
-    <div class="live-net-label">Glucides pour le poids entré ↑</div>
-    <div class="live-net" id="qty-net" role="status" aria-live="polite">0 <small>glucides</small></div>
+    <div class="result-band">
+      <div class="live-net-label">Glucides pour le poids entré ↑</div>
+      <div class="live-net" id="qty-net" role="status" aria-live="polite">0 <small>glucides</small></div>
+    </div>
     <div class="actions">
       <button class="btn btn-secondary" id="qty-cancel" type="button">Annuler</button>
       <button class="btn" id="qty-add" type="button">Ajouter au repas</button>
@@ -2343,12 +2363,13 @@
     var n = net100(recipe);
     var serving = recipe.serving && num(recipe.serving.grams) > 0 ? recipe.serving : null;
 
-    // Valeurs clés en évidence : la portion d'abord (le cas du repas),
-    // puis les références par 100 g et par gramme. Chaque libellé dit
-    // « pour <quantité> » — pas d'abréviations ambiguës ni de doublons
-    // du genre « par portion (1 portion (27 g)) ».
+    // Une seule valeur en vedette (la portion de l'étiquette, ou à défaut
+    // les 100 grammes); les autres deviennent des repères discrets qui ne
+    // concurrencent pas le résultat. Chaque libellé dit « pour
+    // <quantité> » — jamais d'abréviations ambiguës.
     var grid = $('qty-stats');
     grid.innerHTML = '';
+    var refs = [];
     if (serving) {
       // « 1 portion (27 g) » ou « 30 g » ou « 3/4 tasse (30 g) » : le
       // libellé de l'étiquette se lit tel quel après « pour » (sans
@@ -2362,9 +2383,21 @@
         'glucides pour ' + servLabel,
         true
       ));
+      refs.push([round1(n), ' glucides pour 100 grammes']);
+    } else {
+      grid.appendChild(statTile(round1(n), 'glucides pour 100 grammes', true));
     }
-    grid.appendChild(statTile(round1(n), 'glucides pour 100 grammes', false));
-    grid.appendChild(statTile(round2(n / 100), 'glucide pour 1 gramme', false));
+    refs.push([round2(n / 100), ' glucide pour 1 gramme']);
+    var refsBox = $('qty-refs');
+    refsBox.innerHTML = '';
+    refs.forEach(function (ref) {
+      var line = document.createElement('div');
+      var b = document.createElement('b');
+      b.textContent = ref[0];
+      line.appendChild(b);
+      line.appendChild(document.createTextNode(ref[1]));
+      refsBox.appendChild(line);
+    });
 
     var chips = $('qty-portions');
     chips.innerHTML = '';

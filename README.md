@@ -47,7 +47,7 @@ Le site est servi par GitHub Pages depuis la branche `gh-pages`; le workflow `.g
 
 ## Version de l'app
 
-La version courante est **v2.4.2**, affichée dans le pied de page de l'app (`#app-version` dans `index.html`).
+La version courante est **v2.4.3**, affichée dans le pied de page de l'app (`#app-version` dans `index.html`).
 
 **Règle à chaque mise à jour publiée** : incrémenter le numéro aux **deux** endroits, sinon les utilisateurs installés gardent l'ancienne version en cache :
 1. le pied de page d'`index.html` (`Glucides Nets vX.Y.Z`);
