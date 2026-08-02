@@ -69,7 +69,7 @@
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
-    padding-bottom: 160px;
+    padding-bottom: 230px;
     line-height: 1.5;
   }
   :focus-visible {
@@ -96,30 +96,58 @@
   header h1 { font-size: 1.25rem; font-weight: 800; }
   header p { font-size: 0.85rem; margin-top: 2px; }
 
-  .tabs {
+  /* Barre de navigation du bas (maquette) : 5 destinations, bouton
+     central « + Calculer » en vedette, cibles d'au moins 48 px */
+  .bottomnav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
     display: flex;
-    max-width: 560px;
-    margin: 12px auto 0;
+    align-items: stretch;
+    box-sizing: border-box;
+    height: calc(68px + env(safe-area-inset-bottom));
+    background: var(--card);
+    border-top: 1px solid var(--border);
+    padding: 6px 4px calc(4px + env(safe-area-inset-bottom));
+    z-index: 50;
   }
   .tab-btn {
     flex: 1;
-    min-height: 48px;
-    padding: 12px 2px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 2px;
+    min-height: 52px;
+    padding: 4px 2px;
     background: none;
     border: none;
-    color: rgba(255,255,255,0.95);
+    color: var(--muted);
     font-family: inherit;
-    font-size: clamp(0.8rem, 4.2vw, 0.94rem);
+    font-size: 0.68rem;
     font-weight: 700;
     cursor: pointer;
-    border-bottom: 3px solid transparent;
-    white-space: nowrap;
-    transition: color 150ms ease-out;
   }
-  .tab-btn.active {
-    color: #fff;
-    border-bottom-color: #fff;
+  .tab-btn .tb-ico { font-size: 1.35rem; line-height: 1.2; }
+  .tab-btn.active { color: var(--accent-text); }
+  .tab-btn--cta { overflow: visible; }
+  .tab-btn--cta .tb-plus {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 54px;
+    height: 54px;
+    margin-top: -26px;
+    border-radius: 50%;
+    background: var(--btn-bg);
+    color: var(--btn-text);
+    font-size: 2rem;
+    font-weight: 700;
+    line-height: 1;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.28);
   }
+  .tab-btn--cta.active .tb-plus { outline: 3px solid var(--accent-light); }
 
   /* Bandeau hors ligne : couleur + icône + libellé (jamais la couleur seule) */
   .offline-badge {
@@ -388,7 +416,8 @@
     display: none;
     align-items: flex-end;
     justify-content: center;
-    z-index: 50;
+    /* au-dessus de la barre de navigation du bas et de la barre de total */
+    z-index: 60;
   }
   .modal-overlay.open { display: flex; }
   .modal {
@@ -410,36 +439,85 @@
   }
   .modal--full h3 { font-size: 1.35rem; }
   .modal--full .actions { margin-top: auto; padding-top: 16px; }
-  .modal--full .live-net { font-size: 2.8rem; margin: 2px 0 0; }
-  .modal--full .live-net small { font-size: 1.1rem; }
-  /* Bandeau du résultat : LE nombre de la fiche, encadré pour se
-     distinguer des tuiles d'information au-dessus */
-  .result-band {
-    margin-top: 16px;
-    padding: 12px 16px 14px;
-    border: 2px solid var(--accent-text);
+  .modal--full .live-net { font-size: 3rem; margin: 2px 0 0; }
+  .modal--full .live-net small { font-size: 1.3rem; }
+  /* Carte vedette « Glucides calculés » : LE résultat, tout en haut,
+     mis à jour en direct avec la quantité (inspirée de la maquette) */
+  .hero-card {
+    margin: 14px 0 16px;
+    padding: 16px 16px 14px;
+    background: var(--accent-light);
     border-radius: 18px;
     text-align: center;
   }
-  /* Étiquette du résultat vivant : dit sans ambiguïté que le gros nombre
-     correspond au poids entré juste au-dessus */
-  .live-net-label {
+  .hero-label {
     font-size: 0.8rem;
+    font-weight: 800;
+    color: var(--accent-text);
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+  .modal .hero-card .live-net { color: var(--accent-text); }
+  .hero-sub {
+    font-size: 0.95rem;
+    color: var(--text);
+    font-weight: 600;
+    margin-top: 2px;
+  }
+  .hero-badge {
+    display: inline-block;
+    margin-top: 10px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    background: var(--card);
+    color: var(--muted);
+    font-size: 0.78rem;
     font-weight: 700;
+  }
+  /* Cœur favori dans l'en-tête de fiche */
+  .fav-heart {
+    margin-left: auto;
+    flex: none;
+    width: 48px;
+    height: 48px;
+    border: none;
+    border-radius: 50%;
+    background: var(--accent-light);
+    color: var(--accent-text);
+    font-size: 1.4rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+  .fav-heart[aria-pressed="true"] { background: var(--accent-text); color: #fff; }
+  /* Carte des références (portion / 100 grammes / gramme) : information
+     de contexte, volontairement discrète */
+  .ref-card {
+    margin: 16px 0 4px;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+  }
+  .ref-title {
+    font-size: 0.78rem;
+    font-weight: 800;
     color: var(--muted);
     text-transform: uppercase;
-    letter-spacing: 0.04em;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
   }
-  /* Repères secondaires (100 grammes / 1 gramme) : une ligne discrète
-     sous la grande tuile, qui ne concurrence pas les vrais nombres */
-  .qty-refs {
-    text-align: center;
-    font-size: 0.9rem;
-    color: var(--muted);
-    margin: 10px 0 14px;
-    line-height: 1.5;
+  .ref-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 12px;
   }
-  .qty-refs b { color: var(--text); font-variant-numeric: tabular-nums; }
+  .ref-item b {
+    display: block;
+    font-size: 1.15rem;
+    color: var(--text);
+    font-variant-numeric: tabular-nums;
+  }
+  .ref-item span { font-size: 0.8rem; color: var(--muted); font-weight: 600; }
+  .ref-item--wide { grid-column: 1 / -1; }
 
   /* En-tête de fiche : photo du produit (Open Food Facts ou recette) + nom */
   .qty-head {
@@ -457,39 +535,6 @@
     background: var(--accent-light);
   }
 
-  /* Valeurs clés en évidence : tuiles portion / 100 g / gramme */
-  .stat-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-    margin: 14px 0 4px;
-  }
-  .stat {
-    background: var(--accent-light);
-    border-radius: 16px;
-    padding: 14px 10px;
-    text-align: center;
-  }
-  .stat--wide { grid-column: 1 / -1; }
-  /* Hiérarchie visuelle : la portion de l'étiquette domine (tuile large),
-     les valeurs de référence (100 g / 1 g) restent plus discrètes pour ne
-     pas concurrencer le nombre qui compte */
-  .stat .stat-val {
-    display: block;
-    font-size: 1.5rem;
-    font-weight: 800;
-    color: var(--accent-text);
-    line-height: 1.1;
-    font-variant-numeric: tabular-nums;
-  }
-  .stat--wide .stat-val { font-size: 2.4rem; }
-  .stat .stat-unit {
-    display: block;
-    font-size: 0.85rem;
-    color: var(--muted);
-    font-weight: 600;
-    margin-top: 4px;
-  }
   .modal h3 { font-size: 1.05rem; margin-bottom: 4px; }
   .modal .stats-line { font-size: 0.85rem; color: var(--muted); margin-bottom: 14px; }
   .modal .live-net {
@@ -530,12 +575,12 @@
   /* Barre de total fixe en bas */
   .total-bar {
     position: fixed;
-    bottom: 0;
+    bottom: calc(67px + env(safe-area-inset-bottom));
     left: 0;
     right: 0;
     background: var(--card);
     border-top: 2px solid var(--accent);
-    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+    padding: 10px 16px;
     box-shadow: 0 -4px 16px rgba(0,0,0,0.12);
     z-index: 40;
   }
@@ -1117,12 +1162,6 @@
 <header>
   <h1>🧮 Glucides Nets</h1>
   <p>Calculateur de repas pour pompe à insuline</p>
-  <nav class="tabs">
-    <button class="tab-btn active" data-tab="meal" aria-current="true">🍽️ Repas</button>
-    <button class="tab-btn" data-tab="recipes">📖 Recettes</button>
-    <button class="tab-btn" data-tab="tool">📈 Outil</button>
-    <button class="tab-btn" data-tab="journal">📅 Journal</button>
-  </nav>
 </header>
 
 <div class="install-banner" id="install-banner">
@@ -1138,6 +1177,36 @@
   </div>
 
   <div class="sr-only" id="search-live" role="status" aria-live="polite"></div>
+
+  <!-- ═══════════ ONGLET ACCUEIL ═══════════ -->
+  <section class="tab-panel" id="panel-home">
+
+    <div class="card">
+      <h2 id="home-hello">👋 Bonjour!</h2>
+      <p class="hint" style="margin:0 0 8px;">Profil actif — touche un nom pour changer :</p>
+      <div class="favorites-list" id="home-profiles"></div>
+      <p class="hint" id="home-allergies" style="display:none; margin-top:8px;"></p>
+    </div>
+
+    <div class="card">
+      <h2>🍽️ Repas en cours</h2>
+      <p class="stats-line" id="home-meal-line" style="margin-bottom:10px;">Aucun aliment pour l'instant.</p>
+      <div class="btn-row">
+        <button class="btn" id="home-continue" type="button">➕ Continuer le repas</button>
+        <button class="btn btn-secondary" id="home-share" type="button">📤 Partager le repas</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>⚡ Actions rapides</h2>
+      <div class="btn-row">
+        <button class="btn btn-secondary" id="home-scan" type="button">📷 Scanner</button>
+        <button class="btn btn-secondary" id="home-search" type="button">🔍 Chercher</button>
+        <button class="btn btn-secondary" id="home-favs" type="button">⭐ Favoris</button>
+      </div>
+    </div>
+
+  </section>
 
   <!-- ═══════════ ONGLET REPAS ═══════════ -->
   <section class="tab-panel active" id="panel-meal">
@@ -1216,11 +1285,6 @@
       <button class="btn" id="add-btn">Ajouter au repas</button>
     </div>
 
-    <div class="card" id="favorites-card" style="display:none;">
-      <h2>⭐ Mes favoris</h2>
-      <div class="favorites-list" id="favorites-list"></div>
-    </div>
-
     <div class="card">
       <h2>🍽️ Repas en cours</h2>
       <div id="meal-list"><p class="empty"><span class="illus" aria-hidden="true">🍽️</span>Ton repas est vide. Ajoute ton premier aliment ci-dessus!</p></div>
@@ -1234,6 +1298,12 @@
 
   <!-- ═══════════ ONGLET RECETTES ═══════════ -->
   <section class="tab-panel" id="panel-recipes">
+
+    <div class="card" id="favorites-card" style="display:none;">
+      <h2>⭐ Mes favoris</h2>
+      <div class="favorites-list" id="favorites-list"></div>
+    </div>
+
 
     <div class="card">
       <h2>🧑‍🍳 Calculer à partir des ingrédients</h2>
@@ -1333,7 +1403,52 @@
   </section>
 
   <!-- ═══════════ ONGLET OUTIL INTERACTIF ═══════════ -->
-  <section class="tab-panel" id="panel-tool">
+
+  <!-- ═══════════ ONGLET JOURNAL ═══════════ -->
+  <section class="tab-panel" id="panel-journal">
+
+    <div class="card">
+      <h2>📊 7 derniers jours</h2>
+      <p class="hint" style="margin:0 0 8px;" id="week-summary">Enregistre un premier repas pour voir ta semaine ici.</p>
+      <svg class="week-chart" id="week-chart" viewBox="0 0 340 130" role="img"
+           aria-label="Glucides nets par jour, 7 derniers jours"></svg>
+    </div>
+
+    <div class="card">
+      <h2>📅 Repas enregistrés</h2>
+      <p class="hint" style="margin:0 0 8px;">Termine un repas avec « ✅ Enregistrer au journal » dans l'onglet Repas. Touche ↻ pour recharger un repas passé.</p>
+      <div id="journal-list"><p class="empty"><span class="illus" aria-hidden="true">📅</span>Ton journal est vide. Enregistre ton premier repas pour le retrouver ici!</p></div>
+    </div>
+
+    <div class="card">
+      <h2>💾 Sauvegarde et partage</h2>
+      <p class="hint" style="margin:0 0 10px;">Tes données restent sur cet appareil. Exporte un fichier pour les sauvegarder ou les transférer sur un autre appareil.</p>
+      <div class="btn-row">
+        <button class="btn btn-secondary" id="export-btn" type="button">⬇️ Exporter</button>
+        <button class="btn btn-secondary" id="import-btn" type="button">⬆️ Importer</button>
+      </div>
+      <input type="file" id="import-input" accept="application/json,.json" style="display:none;">
+      <p class="hint" id="backup-status" role="status" aria-live="polite" style="margin-top:10px;"></p>
+    </div>
+
+  </section>
+
+  <!-- ═══════════ ONGLET PLUS ═══════════ -->
+  <section class="tab-panel" id="panel-plus">
+
+    <div class="card">
+      <h2>👥 Profils</h2>
+      <p class="hint" style="margin:0 0 10px;">Un profil par personne (ton enfant, toi…). Chaque profil garde ses propres repas, favoris, recettes et journal sur cet appareil.</p>
+      <div id="profiles-list"></div>
+      <div class="scan-row" style="margin-top:10px;">
+        <input type="text" id="profile-new-name" placeholder="Prénom ou surnom" autocomplete="off" maxlength="30">
+        <button class="btn" id="profile-add" type="button">Ajouter</button>
+      </div>
+    </div>
+
+    <details class="help">
+      <summary>📈 Outil interactif : glucides ↔ grammes</summary>
+      <div>
 
     <div class="card">
       <h2>📈 Relation glucides ↔ grammes</h2>
@@ -1379,43 +1494,23 @@
       <p class="hint" style="margin-top:10px;">Pratique pour peser une portion qui correspond exactement au bolus voulu.</p>
     </div>
 
-  </section>
-
-  <!-- ═══════════ ONGLET JOURNAL ═══════════ -->
-  <section class="tab-panel" id="panel-journal">
-
-    <div class="card">
-      <h2>📊 7 derniers jours</h2>
-      <p class="hint" style="margin:0 0 8px;" id="week-summary">Enregistre un premier repas pour voir ta semaine ici.</p>
-      <svg class="week-chart" id="week-chart" viewBox="0 0 340 130" role="img"
-           aria-label="Glucides nets par jour, 7 derniers jours"></svg>
-    </div>
-
-    <div class="card">
-      <h2>📅 Repas enregistrés</h2>
-      <p class="hint" style="margin:0 0 8px;">Termine un repas avec « ✅ Enregistrer au journal » dans l'onglet Repas. Touche ↻ pour recharger un repas passé.</p>
-      <div id="journal-list"><p class="empty"><span class="illus" aria-hidden="true">📅</span>Ton journal est vide. Enregistre ton premier repas pour le retrouver ici!</p></div>
-    </div>
-
-    <div class="card">
-      <h2>💾 Sauvegarde et partage</h2>
-      <p class="hint" style="margin:0 0 10px;">Tes données restent sur cet appareil. Exporte un fichier pour les sauvegarder ou les transférer sur un autre appareil.</p>
-      <div class="btn-row">
-        <button class="btn btn-secondary" id="export-btn" type="button">⬇️ Exporter</button>
-        <button class="btn btn-secondary" id="import-btn" type="button">⬆️ Importer</button>
       </div>
-      <input type="file" id="import-input" accept="application/json,.json" style="display:none;">
-      <p class="hint" id="backup-status" role="status" aria-live="polite" style="margin-top:10px;"></p>
+    </details>
+
+    <div class="card">
+      <h2>ℹ️ À propos</h2>
+      <p class="hint">Glucides Nets est une <strong>aide au calcul des glucides seulement</strong>. Elle ne recommande jamais de dose d'insuline, ne calcule pas de bolus et ne remplace pas ton équipe de soins en diabète. Toutes tes données restent sur cet appareil — sauvegarde et transfert dans l'onglet Journal.</p>
     </div>
 
   </section>
+
 
 </main>
 
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.4.3</span>
+  <br><span id="app-version">Glucides Nets v2.5.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -1461,16 +1556,23 @@
   </div>
 </div>
 
-<!-- Modal : fiche produit / quantité consommée (pleine hauteur) -->
+<!-- Modal : fiche produit / quantité consommée (pleine hauteur).
+     Structure inspirée de la maquette : le résultat calculé en vedette
+     tout en haut, la quantité dessous, les références en carte discrète. -->
 <div class="modal-overlay full" id="qty-modal" role="dialog" aria-modal="true" aria-labelledby="qty-title">
   <div class="modal modal--full">
     <div class="qty-head">
       <img id="qty-photo" alt="" style="display:none;">
       <h3 id="qty-title">Recette</h3>
+      <button class="fav-heart" id="qty-fav" type="button" aria-label="Garder dans mes favoris" aria-pressed="false">♡</button>
     </div>
-    <div class="stat-grid" id="qty-stats"></div>
-    <div class="qty-refs" id="qty-refs"></div>
-    <label for="qty-grams">Poids de la portion consommée (grammes)</label>
+    <div class="hero-card">
+      <div class="hero-label">Glucides calculés</div>
+      <div class="live-net" id="qty-net" role="status" aria-live="polite">0 <small>g</small></div>
+      <div class="hero-sub" id="qty-net-sub">pour 0 gramme consommé</div>
+      <div class="hero-badge">✓ Valeur calculée — vérifie l'étiquette</div>
+    </div>
+    <label for="qty-grams">Quantité consommée (grammes)</label>
     <!-- Gros boutons − / + espacés : utilisables avec des gants -->
     <div class="stepper">
       <button class="step-btn" id="qty-minus" type="button" aria-label="Réduire de 25 grammes">−</button>
@@ -1479,9 +1581,9 @@
     </div>
     <!-- Raccourcis quand la portion de l'étiquette est connue -->
     <div class="qty-portions" id="qty-portions" style="display:none;"></div>
-    <div class="result-band">
-      <div class="live-net-label">Glucides pour le poids entré ↑</div>
-      <div class="live-net" id="qty-net" role="status" aria-live="polite">0 <small>glucides</small></div>
+    <div class="ref-card">
+      <div class="ref-title">Référence nutritionnelle</div>
+      <div class="ref-grid" id="qty-stats"></div>
     </div>
     <div class="actions">
       <button class="btn btn-secondary" id="qty-cancel" type="button">Annuler</button>
@@ -1515,6 +1617,14 @@
     </div>
   </div>
 </div>
+
+<nav class="bottomnav" aria-label="Navigation principale">
+  <button class="tab-btn" data-tab="home"><span class="tb-ico" aria-hidden="true">🏠</span><span>Accueil</span></button>
+  <button class="tab-btn" data-tab="recipes"><span class="tb-ico" aria-hidden="true">⭐</span><span>Favoris</span></button>
+  <button class="tab-btn tab-btn--cta active" data-tab="meal" aria-current="true"><span class="tb-plus" aria-hidden="true">+</span><span>Calculer</span></button>
+  <button class="tab-btn" data-tab="journal"><span class="tb-ico" aria-hidden="true">📅</span><span>Journal</span></button>
+  <button class="tab-btn" data-tab="plus"><span class="tb-ico" aria-hidden="true">⚙️</span><span>Plus</span></button>
+</nav>
 
 <div class="total-bar" role="status" aria-live="polite">
   <div class="inner">
@@ -1666,10 +1776,37 @@
     return (Array.isArray(raw) ? raw : []).map(sanitize).filter(Boolean);
   }
 
-  meal = loadList('gn_meal', sanitizeItem);
-  favorites = loadList('gn_favorites', sanitizeItem);
-  recipes = loadList('gn_recipes', sanitizeRecipe);
-  history = loadList('gn_history', sanitizeEntry);
+  /* ── Profils ──
+     Un compte peut gérer plusieurs personnes (enfant, parent…). Chaque
+     profil a ses propres repas, favoris, recettes et journal, isolés par
+     un suffixe de clé de stockage. Le premier profil (p1) garde les clés
+     historiques : les données existantes lui appartiennent sans
+     migration. Changer de profil recharge l'app (état propre garanti). */
+  var PROFILES;
+  try { PROFILES = JSON.parse(lsGet('gn_profiles') || ''); } catch (e) { PROFILES = null; }
+  if (!Array.isArray(PROFILES) || PROFILES.length === 0) {
+    PROFILES = [{ id: 'p1', name: 'Profil 1', allergies: '' }];
+  }
+  PROFILES = PROFILES.filter(function (p) { return p && p.id && p.name; });
+  var activeProfileId = lsGet('gn_active_profile') || 'p1';
+  if (!PROFILES.some(function (p) { return p.id === activeProfileId; })) {
+    activeProfileId = PROFILES[0].id;
+  }
+  function activeProfile() {
+    for (var i = 0; i < PROFILES.length; i++) {
+      if (PROFILES[i].id === activeProfileId) return PROFILES[i];
+    }
+    return PROFILES[0];
+  }
+  function pk(base) {
+    return activeProfileId === 'p1' ? base : base + '__' + activeProfileId;
+  }
+  function saveProfiles() { lsSet('gn_profiles', JSON.stringify(PROFILES)); }
+
+  meal = loadList(pk('gn_meal'), sanitizeItem);
+  favorites = loadList(pk('gn_favorites'), sanitizeItem);
+  recipes = loadList(pk('gn_recipes'), sanitizeRecipe);
+  history = loadList(pk('gn_history'), sanitizeEntry);
 
   var $ = function (id) { return document.getElementById(id); };
 
@@ -1736,7 +1873,7 @@
      et le total pompe se désynchronise du repas en mémoire). */
   function save() {
     var failed = false;
-    [['gn_meal', meal], ['gn_favorites', favorites], ['gn_history', history], ['gn_recipes', recipes]]
+    [[pk('gn_meal'), meal], [pk('gn_favorites'), favorites], [pk('gn_history'), history], [pk('gn_recipes'), recipes]]
       .forEach(function (pair) {
         if (!lsSet(pair[0], JSON.stringify(pair[1]))) failed = true;
       });
@@ -1752,10 +1889,10 @@
      nouvel ajout, il est vidé automatiquement à l'ouverture ou au retour
      dans l'app — avec un toast annulable, jamais de perte silencieuse. */
   var MEAL_TTL = 3 * 60 * 60 * 1000;
-  function touchMeal() { lsSet('gn_meal_ts', String(Date.now())); }
+  function touchMeal() { lsSet(pk('gn_meal_ts'), String(Date.now())); }
   function expireStaleMeal() {
     if (meal.length === 0) return;
-    var ts = num(lsGet('gn_meal_ts'));
+    var ts = num(lsGet(pk('gn_meal_ts')));
     if (!ts) { touchMeal(); return; } // repas hérité d'une version sans horodatage
     if (Date.now() - ts <= MEAL_TTL) return;
     var backup = meal.slice();
@@ -1984,7 +2121,168 @@
       actions.style.display = 'flex';
     }
     renderTotal();
+    renderHome();
   }
+
+  /* ── Accueil : profil actif, repas en cours, actions rapides ── */
+  function renderHome() {
+    var p = activeProfile();
+    $('home-hello').textContent = '👋 Bonjour ' + p.name + '!';
+    var chips = $('home-profiles');
+    chips.innerHTML = '';
+    PROFILES.forEach(function (prof) {
+      var chip = document.createElement('div');
+      chip.className = 'fav-chip';
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'fav-add';
+      b.textContent = (prof.id === activeProfileId ? '✓ ' : '') + prof.name;
+      b.setAttribute('aria-pressed', prof.id === activeProfileId ? 'true' : 'false');
+      b.addEventListener('click', function () { switchProfile(prof.id); });
+      chip.appendChild(b);
+      chips.appendChild(chip);
+    });
+    var al = $('home-allergies');
+    if (p.allergies) {
+      al.textContent = '⚠️ Allergies et intolérances de ' + p.name + ' : ' + p.allergies;
+      al.style.display = 'block';
+    } else {
+      al.style.display = 'none';
+    }
+    var totNet = 0;
+    meal.forEach(function (item) { totNet += netCarbs(item); });
+    $('home-meal-line').textContent = meal.length === 0
+      ? 'Aucun aliment pour l’instant. Touche « Continuer le repas » pour commencer.'
+      : meal.length + ' aliment' + (meal.length > 1 ? 's' : '') + ' — total actuel : ' +
+        round1(totNet) + ' glucides.';
+  }
+
+  function switchProfile(id) {
+    if (id === activeProfileId) return;
+    if (!lsSet('gn_active_profile', id)) {
+      toast('⚠️ Impossible de changer de profil (stockage indisponible)', { type: 'error' });
+      return;
+    }
+    location.reload();
+  }
+
+  /* ── Partage du repas en cours (proche autorisé, garderie, école) ── */
+  function mealSummaryText() {
+    var p = activeProfile();
+    var when = new Intl.DateTimeFormat('fr-CA', {
+      weekday: 'long', hour: '2-digit', minute: '2-digit'
+    }).format(new Date());
+    var lines = ['🍽️ Repas de ' + p.name + ' — ' + when];
+    var totNet = 0;
+    meal.forEach(function (item) {
+      var net = netCarbs(item);
+      totNet += net;
+      lines.push('• ' + item.name + (item.grams ? ' (' + round1(item.grams) + ' grammes)' : '') +
+        ' : ' + round1(net) + ' glucides');
+    });
+    lines.push('TOTAL : ' + round1(totNet) + ' glucides');
+    lines.push('Calculé avec Glucides Nets — valeurs à vérifier.');
+    return lines.join('\n');
+  }
+  function shareMeal() {
+    if (meal.length === 0) {
+      toast('Le repas est vide — rien à partager pour l’instant', { type: 'warn' });
+      return;
+    }
+    var text = mealSummaryText();
+    if (navigator.share) {
+      navigator.share({ title: 'Repas — glucides', text: text }).catch(function () { /* annulé */ });
+    } else if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(function () {
+        toast('✓ Résumé du repas copié — colle-le dans un texto ou un courriel');
+      });
+    } else {
+      alert(text);
+    }
+  }
+  $('home-share').addEventListener('click', shareMeal);
+  $('home-continue').addEventListener('click', function () { switchTab('meal'); });
+  $('home-scan').addEventListener('click', function () {
+    switchTab('meal');
+    startScanner();
+  });
+  $('home-search').addEventListener('click', function () {
+    switchTab('meal');
+    scrollToEl($('db-search'));
+    $('db-search').focus();
+  });
+  $('home-favs').addEventListener('click', function () { switchTab('recipes'); });
+
+  /* ── Gestion des profils (onglet Plus) ── */
+  function renderProfiles() {
+    var box = $('profiles-list');
+    box.innerHTML = '';
+    PROFILES.forEach(function (prof) {
+      var chip = document.createElement('div');
+      chip.className = 'fav-chip';
+      var open = document.createElement('button');
+      open.type = 'button';
+      open.className = 'fav-add';
+      open.textContent = (prof.id === activeProfileId ? '✓ ' : '') + prof.name +
+        (prof.allergies ? ' · ⚠️' : '');
+      open.setAttribute('aria-label', 'Activer le profil ' + prof.name);
+      open.addEventListener('click', function () { switchProfile(prof.id); });
+      var edit = document.createElement('button');
+      edit.type = 'button';
+      edit.className = 'fav-del';
+      edit.textContent = '✏️';
+      edit.setAttribute('aria-label', 'Modifier le profil ' + prof.name);
+      edit.addEventListener('click', function () {
+        var name = prompt('Prénom ou surnom :', prof.name);
+        if (name && name.trim()) prof.name = name.trim().slice(0, 30);
+        var alg = prompt('Allergies et intolérances (laisser vide si aucune) :', prof.allergies || '');
+        if (alg !== null) prof.allergies = alg.trim().slice(0, 120);
+        saveProfiles();
+        renderProfiles();
+        renderHome();
+      });
+      var del = document.createElement('button');
+      del.type = 'button';
+      del.className = 'fav-del';
+      del.textContent = '✕';
+      del.setAttribute('aria-label', 'Supprimer le profil ' + prof.name);
+      del.addEventListener('click', function () {
+        if (PROFILES.length === 1) {
+          toast('Impossible de supprimer le dernier profil', { type: 'warn' });
+          return;
+        }
+        if (!confirm('Supprimer le profil « ' + prof.name + ' » et toutes ses données (repas, favoris, recettes, journal)?')) return;
+        ['gn_meal', 'gn_favorites', 'gn_recipes', 'gn_history', 'gn_meal_ts'].forEach(function (base) {
+          var key = prof.id === 'p1' ? base : base + '__' + prof.id;
+          try { localStorage.removeItem(key); } catch (e) { /* stockage indisponible */ }
+        });
+        PROFILES = PROFILES.filter(function (x) { return x.id !== prof.id; });
+        saveProfiles();
+        if (prof.id === activeProfileId) {
+          lsSet('gn_active_profile', PROFILES[0].id);
+          location.reload();
+          return;
+        }
+        renderProfiles();
+        renderHome();
+      });
+      chip.appendChild(open);
+      chip.appendChild(edit);
+      chip.appendChild(del);
+      box.appendChild(chip);
+    });
+  }
+  $('profile-add').addEventListener('click', function () {
+    var name = $('profile-new-name').value.trim().slice(0, 30);
+    if (!name) { $('profile-new-name').focus(); return; }
+    var id = 'p' + Date.now().toString(36);
+    PROFILES.push({ id: id, name: name, allergies: '' });
+    saveProfiles();
+    $('profile-new-name').value = '';
+    renderProfiles();
+    renderHome();
+    toast('✓ Profil « ' + name + ' » créé — touche son nom pour l’activer');
+  });
 
   function renderTotal() {
     var totalNet = 0, totalCarbs = 0, totalFiber = 0, totalPolyols = 0;
@@ -2328,22 +2626,21 @@
   }
 
   /* ── Modal quantité / fiche produit ──
-     Sert aux recettes ET aux produits scannés ou photographiés. Pour
-     évaluer les glucides d'un coup d'œil (repas, garderie), la fiche
-     montre les nets par 100 g, par gramme et par portion de l'étiquette,
-     avec des raccourcis ½ / 1 / 2 portions. */
-  function statTile(value, unit, wide) {
-    var tile = document.createElement('div');
-    tile.className = 'stat' + (wide ? ' stat--wide' : '');
-    var v = document.createElement('span');
-    v.className = 'stat-val';
-    v.textContent = value;
-    var u = document.createElement('span');
-    u.className = 'stat-unit';
-    u.textContent = unit;
-    tile.appendChild(v);
-    tile.appendChild(u);
-    return tile;
+     Sert aux recettes ET aux produits scannés ou photographiés. Structure
+     inspirée de la maquette : le résultat calculé (carte « Glucides
+     calculés ») en vedette tout en haut, mis à jour en direct, puis la
+     quantité avec raccourcis ½ / 1 / 2 portions, puis la carte de
+     référence (portion / 100 grammes / gramme). */
+  function refItem(value, label, wide) {
+    var item = document.createElement('div');
+    item.className = 'ref-item' + (wide ? ' ref-item--wide' : '');
+    var b = document.createElement('b');
+    b.textContent = value;
+    var s = document.createElement('span');
+    s.textContent = label;
+    item.appendChild(b);
+    item.appendChild(s);
+    return item;
   }
 
   function openQtyModal(recipe) {
@@ -2363,41 +2660,24 @@
     var n = net100(recipe);
     var serving = recipe.serving && num(recipe.serving.grams) > 0 ? recipe.serving : null;
 
-    // Une seule valeur en vedette (la portion de l'étiquette, ou à défaut
-    // les 100 grammes); les autres deviennent des repères discrets qui ne
-    // concurrencent pas le résultat. Chaque libellé dit « pour
-    // <quantité> » — jamais d'abréviations ambiguës.
+    // Cœur favori : reflète l'état actuel, permet de garder l'aliment
+    syncFavHeart();
+
+    // Carte de référence : portion de l'étiquette (si connue), 100
+    // grammes, 1 gramme. Les « g » de poids sont écrits « grammes ».
     var grid = $('qty-stats');
     grid.innerHTML = '';
-    var refs = [];
     if (serving) {
-      // « 1 portion (27 g) » ou « 30 g » ou « 3/4 tasse (30 g) » : le
-      // libellé de l'étiquette se lit tel quel après « pour » (sans
-      // répéter un « pour/par » déjà présent dans le texte OCR), et les
-      // « g » de poids sont écrits « grammes » au long
       var servLabel = String(serving.label)
         .replace(/^\s*(pour|per|par)\s+/i, '')
         .replace(/(\d(?:[.,]\d+)?)\s*g\b/gi, '$1 grammes');
-      grid.appendChild(statTile(
-        round1(n * serving.grams / 100),
-        'glucides pour ' + servLabel,
-        true
-      ));
-      refs.push([round1(n), ' glucides pour 100 grammes']);
+      grid.appendChild(refItem(round1(n * serving.grams / 100) + ' g', 'par ' + servLabel, false));
+      grid.appendChild(refItem(round1(n) + ' g', 'par 100 grammes', false));
+      grid.appendChild(refItem(round2(n / 100) + ' g', 'par gramme', true));
     } else {
-      grid.appendChild(statTile(round1(n), 'glucides pour 100 grammes', true));
+      grid.appendChild(refItem(round1(n) + ' g', 'par 100 grammes', false));
+      grid.appendChild(refItem(round2(n / 100) + ' g', 'par gramme', false));
     }
-    refs.push([round2(n / 100), ' glucide pour 1 gramme']);
-    var refsBox = $('qty-refs');
-    refsBox.innerHTML = '';
-    refs.forEach(function (ref) {
-      var line = document.createElement('div');
-      var b = document.createElement('b');
-      b.textContent = ref[0];
-      line.appendChild(b);
-      line.appendChild(document.createTextNode(ref[1]));
-      refsBox.appendChild(line);
-    });
 
     var chips = $('qty-portions');
     chips.innerHTML = '';
@@ -2414,6 +2694,17 @@
         });
         chips.appendChild(b);
       });
+      // « Perso. » : ramène au champ pour entrer un poids exact
+      var perso = document.createElement('button');
+      perso.type = 'button';
+      perso.textContent = 'Perso.';
+      perso.setAttribute('aria-label', 'Entrer un poids personnalisé');
+      perso.addEventListener('click', function () {
+        var input = $('qty-grams');
+        input.focus();
+        input.select();
+      });
+      chips.appendChild(perso);
       chips.style.display = 'flex';
       // Présélectionne 1 portion : le cas le plus courant au repas
       $('qty-grams').value = round1(serving.grams);
@@ -2457,8 +2748,43 @@
   function updateQtyNet() {
     var g = parseFloat($('qty-grams').value) || 0;
     var net = modalRecipe ? net100(modalRecipe) * g / 100 : 0;
-    $('qty-net').innerHTML = round1(net) + ' <small>glucides</small>';
+    $('qty-net').innerHTML = round1(net) + ' <small>g</small>';
+    $('qty-net-sub').textContent = g > 0
+      ? 'pour ' + round1(g) + ' grammes consommés'
+      : 'entre la quantité consommée ci-dessous';
   }
+
+  /* Cœur favori de la fiche : garde (ou retire) l'aliment affiché dans
+     les favoris du profil — valeurs par 100 grammes, réutilisables. */
+  function favIndexOf(name) {
+    for (var i = 0; i < favorites.length; i++) {
+      if (favorites[i].name === name) return i;
+    }
+    return -1;
+  }
+  function syncFavHeart() {
+    var on = modalRecipe && favIndexOf(modalRecipe.name) !== -1;
+    var heart = $('qty-fav');
+    heart.setAttribute('aria-pressed', on ? 'true' : 'false');
+    heart.textContent = on ? '♥' : '♡';
+  }
+  $('qty-fav').addEventListener('click', function () {
+    if (!modalRecipe) return;
+    var idx = favIndexOf(modalRecipe.name);
+    if (idx === -1) {
+      favorites.push({
+        name: modalRecipe.name, carbs: modalRecipe.carbs, fiber: modalRecipe.fiber,
+        polyols: modalRecipe.polyols, polyolType: modalRecipe.polyolType
+      });
+      toast('♥ ' + modalRecipe.name + ' gardé dans tes favoris');
+    } else {
+      favorites.splice(idx, 1);
+      toast('Retiré des favoris');
+    }
+    save();
+    renderFavorites();
+    syncFavHeart();
+  });
 
   $('qty-grams').addEventListener('input', updateQtyNet);
   $('qty-cancel').addEventListener('click', closeQtyModal);
@@ -3874,6 +4200,7 @@
   renderFavorites();
   renderRecipes();
   renderBuiltinRecipes();
+  renderProfiles();
   buildToolOptions();
   drawToolChart();
   renderJournal();
