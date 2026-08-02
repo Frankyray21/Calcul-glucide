@@ -1740,7 +1740,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.8.3</span>
+  <br><span id="app-version">Glucides Nets v2.8.4</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -3768,7 +3768,7 @@
           properties: {
             name: { type: 'string', description: 'Nom court de l’aliment en français' },
             grams: { type: 'number', description: 'Poids estimé de la portion visible, en grammes' },
-            measure: { type: ['string', 'null'], description: 'Mesure maison équivalente quand c’est logique, en français : « ¾ tasse », « 2 c. à soupe », « 1 tranche », « 1 unité moyenne »… sinon null' },
+            measure: { type: ['string', 'null'], description: 'Aliment dénombrable : le NOMBRE d’unités visibles (« 4 biscuits », « 2 tranches », « 6 fraises »). Sinon la mesure maison équivalente quand c’est logique (« ¾ tasse », « 2 c. à soupe »). Sinon null' },
             carbs: { type: 'number', description: 'Glucides totaux estimés pour cette portion, en grammes' },
             fiber: { type: 'number', description: 'Fibres estimées pour cette portion, en grammes' }
           },
@@ -3798,9 +3798,11 @@
     'main. Indique le repère utilisé dans scaleRef et ta confiance dans confidence (bonne si un ' +
     'repère net est présent, moyenne si tu te fies à la vaisselle, faible sans repère ou angle ' +
     'difficile — dans ce cas, estime PRUDEMMENT, plutôt moins que plus). Pour chaque aliment : ' +
-    'poids en grammes estimé d’après le repère et les proportions, la mesure maison équivalente ' +
-    'quand elle est parlante (measure : « ¾ tasse », « 2 c. à soupe », « 1 tranche », ' +
-    '« 1 unité moyenne »; tasse canadienne de 250 ml; sinon null) et les glucides ' +
+    'poids en grammes estimé d’après le repère et les proportions, puis measure : si l’aliment est ' +
+    'DÉNOMBRABLE (biscuits, craquelins, tranches, fraises, raisins, quartiers, boulettes, sushis…), ' +
+    'COMPTE les unités visibles et indique leur nombre (« 4 biscuits », « 2 tranches », ' +
+    '« 6 fraises »); sinon la mesure maison équivalente quand elle est parlante (« ¾ tasse », ' +
+    '« 2 c. à soupe »; tasse canadienne de 250 ml); sinon null. Ajoute enfin les glucides ' +
     'totaux et fibres estimés pour cette portion (bases de référence usuelles type USDA/FCÉN). ' +
     'CAS 4 — rien de tout ça : found=false, barcode=null, foods=null, scaleRef=null, confidence=null.';
 
