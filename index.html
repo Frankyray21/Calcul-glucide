@@ -1138,7 +1138,7 @@
 
     <div class="card">
       <h2>📷 Scanner ou photographier un produit</h2>
-      <p class="hint" style="margin:0 0 10px;">Vise le code-barres <em>ou</em> le tableau de valeur nutritive — l'app s'adapte à ce qu'elle voit : code-barres → Open Food Facts; étiquette → lecture <strong>directement sur ton appareil</strong>, gratuite et sans compte. Tu obtiens les glucides par portion, par 100 g et par gramme.</p>
+      <p class="hint" style="margin:0 0 10px;">Vise le code-barres <em>ou</em> le tableau de valeur nutritive — l'app s'adapte à ce qu'elle voit : code-barres → Open Food Facts; étiquette → lecture <strong>directement sur ton appareil</strong>, gratuite et sans compte. Tu obtiens les glucides par portion, par 100 grammes et par gramme.</p>
       <button class="btn btn-secondary" id="scan-open-btn" type="button">📷 Scanner / photographier</button>
       <input type="file" id="label-photo-input" accept="image/*" capture="environment" style="display:none;">
       <div id="label-analysis" role="status" aria-live="polite"></div>
@@ -1160,17 +1160,17 @@
       </div>
       <div class="row">
         <div>
-          <label for="carbs">Glucides (g)</label>
+          <label for="carbs">Glucides (grammes)</label>
           <input type="number" id="carbs" inputmode="decimal" min="0" step="0.1" placeholder="0">
         </div>
         <div>
-          <label for="fiber">Fibres (g)</label>
+          <label for="fiber">Fibres (grammes)</label>
           <input type="number" id="fiber" inputmode="decimal" min="0" step="0.1" placeholder="0">
         </div>
       </div>
       <div class="row">
         <div>
-          <label for="polyols">Polyols (g)</label>
+          <label for="polyols">Polyols (grammes)</label>
           <input type="number" id="polyols" inputmode="decimal" min="0" step="0.1" placeholder="0">
         </div>
         <div>
@@ -1229,17 +1229,17 @@
           <input type="text" id="ing-name" placeholder="ex. : Farine" autocomplete="off">
         </div>
         <div>
-          <label for="ing-weight">Poids (g)</label>
+          <label for="ing-weight">Poids (grammes)</label>
           <input type="number" id="ing-weight" inputmode="decimal" min="0" step="1" placeholder="0">
         </div>
       </div>
       <div class="row">
         <div>
-          <label for="ing-carbs">Glucides / 100 g</label>
+          <label for="ing-carbs">Glucides / 100 grammes</label>
           <input type="number" id="ing-carbs" inputmode="decimal" min="0" step="0.1" placeholder="0">
         </div>
         <div>
-          <label for="ing-fiber">Fibres / 100 g</label>
+          <label for="ing-fiber">Fibres / 100 grammes</label>
           <input type="number" id="ing-fiber" inputmode="decimal" min="0" step="0.1" placeholder="0">
         </div>
       </div>
@@ -1249,7 +1249,7 @@
         <p class="ing-total" id="ing-totals" role="status" aria-live="polite"></p>
         <div class="row">
           <div>
-            <label for="ing-cooked-weight">Poids final du plat cuit (g)</label>
+            <label for="ing-cooked-weight">Poids final du plat cuit (grammes)</label>
             <input type="number" id="ing-cooked-weight" inputmode="decimal" min="0" step="1" placeholder="pèse le plat fini">
           </div>
         </div>
@@ -1271,17 +1271,17 @@
       </div>
       <div class="row">
         <div>
-          <label for="recipe-carbs">Glucides / 100 g</label>
+          <label for="recipe-carbs">Glucides / 100 grammes</label>
           <input type="number" id="recipe-carbs" inputmode="decimal" min="0" step="0.1" placeholder="0">
         </div>
         <div>
-          <label for="recipe-fiber">Fibres / 100 g</label>
+          <label for="recipe-fiber">Fibres / 100 grammes</label>
           <input type="number" id="recipe-fiber" inputmode="decimal" min="0" step="0.1" placeholder="0">
         </div>
       </div>
       <div class="row">
         <div>
-          <label for="recipe-polyols">Polyols / 100 g</label>
+          <label for="recipe-polyols">Polyols / 100 grammes</label>
           <input type="number" id="recipe-polyols" inputmode="decimal" min="0" step="0.1" placeholder="0">
         </div>
         <div>
@@ -1326,7 +1326,7 @@
       <select id="tool-select"></select>
 
       <div class="chart-readout" id="tool-readout">
-        <span id="tool-grams-label">100 g</span> → <b id="tool-net-label">0 g</b> de glucides nets
+        <span id="tool-grams-label">100 grammes</span> → <b id="tool-net-label">0 glucides</b>
       </div>
 
       <div class="chart-wrap">
@@ -1354,7 +1354,7 @@
 
       <div class="inverse-box">
         <div style="flex:1;">
-          <label for="inverse-target">🎯 Cible (g nets)</label>
+          <label for="inverse-target">🎯 Cible (glucides)</label>
           <input type="number" id="inverse-target" inputmode="decimal" min="0" step="1" placeholder="ex. : 30">
         </div>
         <div class="result" id="inverse-result" role="status" aria-live="polite">Entre une cible pour connaître le poids à servir.</div>
@@ -1398,7 +1398,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.4.1</span>
+  <br><span id="app-version">Glucides Nets v2.4.2</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -1452,7 +1452,7 @@
       <h3 id="qty-title">Recette</h3>
     </div>
     <div class="stat-grid" id="qty-stats"></div>
-    <label for="qty-grams">Poids de la portion consommée (g)</label>
+    <label for="qty-grams">Poids de la portion consommée (grammes)</label>
     <!-- Gros boutons − / + espacés : utilisables avec des gants -->
     <div class="stepper">
       <button class="step-btn" id="qty-minus" type="button" aria-label="Réduire de 25 grammes">−</button>
@@ -1461,8 +1461,8 @@
     </div>
     <!-- Raccourcis quand la portion de l'étiquette est connue -->
     <div class="qty-portions" id="qty-portions" style="display:none;"></div>
-    <div class="live-net-label">Glucides nets pour le poids entré ↑</div>
-    <div class="live-net" id="qty-net" role="status" aria-live="polite">0 <small>g nets</small></div>
+    <div class="live-net-label">Glucides pour le poids entré ↑</div>
+    <div class="live-net" id="qty-net" role="status" aria-live="polite">0 <small>glucides</small></div>
     <div class="actions">
       <button class="btn btn-secondary" id="qty-cancel" type="button">Annuler</button>
       <button class="btn" id="qty-add" type="button">Ajouter au repas</button>
@@ -1500,9 +1500,9 @@
   <div class="inner">
     <div>
       <div class="label">TOTAL À ENTRER DANS LA POMPE</div>
-      <div class="sub" id="total-detail">Glucides : 0 g · Fibres : 0 g · Polyols : 0 g</div>
+      <div class="sub" id="total-detail">Glucides : 0 · Fibres : 0 · Polyols : 0</div>
     </div>
-    <div class="value" id="total-net">0<small> g</small></div>
+    <div class="value" id="total-net">0<small> glucides</small></div>
   </div>
 </div>
 
@@ -1848,7 +1848,7 @@
         name.textContent = f.n;
         var val = document.createElement('span');
         val.className = 'val';
-        val.textContent = f.c + ' g / 100 g';
+        val.textContent = f.c + ' glucides / 100 grammes';
         b.appendChild(name);
         b.appendChild(val);
         b.addEventListener('click', function () {
@@ -1933,10 +1933,10 @@
         nameEl.textContent = item.name;
         var detail = document.createElement('div');
         detail.className = 'detail';
-        var parts = ['Gluc. ' + round1(item.carbs * item.ratio) + ' g',
-                     'Fibres ' + round1(item.fiber * item.ratio) + ' g'];
-        if (item.polyols > 0) parts.push('Polyols ' + round1(item.polyols * item.ratio) + ' g');
-        if (item.grams) parts.push(item.grams + ' g');
+        var parts = ['Gluc. ' + round1(item.carbs * item.ratio),
+                     'Fibres ' + round1(item.fiber * item.ratio)];
+        if (item.polyols > 0) parts.push('Polyols ' + round1(item.polyols * item.ratio));
+        if (item.grams) parts.push(item.grams + ' grammes');
         else if (item.ratio !== 1) parts.push('portion ×' + round2(item.ratio));
         detail.textContent = parts.join(' · ');
         info.appendChild(nameEl);
@@ -1944,7 +1944,7 @@
 
         var netEl = document.createElement('div');
         netEl.className = 'net';
-        netEl.textContent = net + ' g';
+        netEl.textContent = net + ' glucides';
 
         var removeBtn = document.createElement('button');
         removeBtn.className = 'remove';
@@ -1974,10 +1974,10 @@
       totalFiber += item.fiber * item.ratio;
       totalPolyols += item.polyols * item.ratio;
     });
-    $('total-net').innerHTML = round1(totalNet) + '<small> g</small>';
+    $('total-net').innerHTML = round1(totalNet) + '<small> glucides</small>';
     $('total-detail').textContent =
-      'Glucides : ' + round1(totalCarbs) + ' g · Fibres : ' + round1(totalFiber) +
-      ' g · Polyols : ' + round1(totalPolyols) + ' g';
+      'Glucides : ' + round1(totalCarbs) + ' · Fibres : ' + round1(totalFiber) +
+      ' · Polyols : ' + round1(totalPolyols);
   }
 
   /* ── Favoris ── */
@@ -1996,7 +1996,7 @@
       var add = document.createElement('button');
       add.type = 'button';
       add.className = 'fav-add';
-      add.textContent = fav.name + ' (' + round1(net100(fav)) + ' g)';
+      add.textContent = fav.name + ' (' + round1(net100(fav)) + ' glucides)';
       add.setAttribute('aria-label', 'Ajouter ' + fav.name + ' au repas');
       add.addEventListener('click', function () {
         meal.push({
@@ -2172,9 +2172,9 @@
       var stats = document.createElement('div');
       stats.className = 'stats';
       var n100 = net100(r);
-      stats.innerHTML = '<b>' + round1(n100) + ' g nets / 100 g</b><br>' +
-        round1(r.carbs) + ' g gluc. · ' + round1(r.fiber) + ' g fibres<br>' +
-        round2(n100 / 100) + ' g net / g';
+      stats.innerHTML = '<b>' + round1(n100) + ' glucides / 100 grammes</b><br>' +
+        round1(r.carbs) + ' glucides totaux · ' + round1(r.fiber) + ' fibres<br>' +
+        round2(n100 / 100) + ' glucide / gramme';
       body.appendChild(nameEl);
       body.appendChild(stats);
 
@@ -2243,9 +2243,9 @@
       var stats = document.createElement('div');
       stats.className = 'stats';
       var n100 = net100(r);
-      stats.innerHTML = '<b>' + round1(n100) + ' g nets / 100 g</b><br>' +
-        round1(b.c) + ' g gluc. · ' + round1(b.f) + ' g fibres<br>' +
-        round2(n100 / 100) + ' g net / g';
+      stats.innerHTML = '<b>' + round1(n100) + ' glucides / 100 grammes</b><br>' +
+        round1(b.c) + ' glucides totaux · ' + round1(b.f) + ' fibres<br>' +
+        round2(n100 / 100) + ' glucide / gramme';
       body.appendChild(nameEl);
       body.appendChild(stats);
 
@@ -2352,16 +2352,19 @@
     if (serving) {
       // « 1 portion (27 g) » ou « 30 g » ou « 3/4 tasse (30 g) » : le
       // libellé de l'étiquette se lit tel quel après « pour » (sans
-      // répéter un « pour/par » déjà présent dans le texte OCR)
-      var servLabel = String(serving.label).replace(/^\s*(pour|per|par)\s+/i, '');
+      // répéter un « pour/par » déjà présent dans le texte OCR), et les
+      // « g » de poids sont écrits « grammes » au long
+      var servLabel = String(serving.label)
+        .replace(/^\s*(pour|per|par)\s+/i, '')
+        .replace(/(\d(?:[.,]\d+)?)\s*g\b/gi, '$1 grammes');
       grid.appendChild(statTile(
         round1(n * serving.grams / 100),
-        'g nets pour ' + servLabel,
+        'glucides pour ' + servLabel,
         true
       ));
     }
-    grid.appendChild(statTile(round1(n), 'g nets pour 100 g', false));
-    grid.appendChild(statTile(round2(n / 100), 'g nets pour 1 g', false));
+    grid.appendChild(statTile(round1(n), 'glucides pour 100 grammes', false));
+    grid.appendChild(statTile(round2(n / 100), 'glucide pour 1 gramme', false));
 
     var chips = $('qty-portions');
     chips.innerHTML = '';
@@ -2421,7 +2424,7 @@
   function updateQtyNet() {
     var g = parseFloat($('qty-grams').value) || 0;
     var net = modalRecipe ? net100(modalRecipe) * g / 100 : 0;
-    $('qty-net').innerHTML = round1(net) + ' <small>g nets</small>';
+    $('qty-net').innerHTML = round1(net) + ' <small>glucides</small>';
   }
 
   $('qty-grams').addEventListener('input', updateQtyNet);
@@ -2491,7 +2494,7 @@
     recipes.forEach(function (r, i) {
       var o = document.createElement('option');
       o.value = 'r' + i;
-      o.textContent = r.name + ' (' + round1(net100(r)) + ' g nets/100 g)';
+      o.textContent = r.name + ' (' + round1(net100(r)) + ' glucides/100 grammes)';
       ogR.appendChild(o);
     });
     if (recipes.length > 0) sel.appendChild(ogR);
@@ -2500,7 +2503,7 @@
     BUILTIN_RECIPES.forEach(function (b, i) {
       var o = document.createElement('option');
       o.value = 'b' + i;
-      o.textContent = b.n + ' (' + round1(Math.max(0, b.c - b.f)) + ' g nets/100 g)';
+      o.textContent = b.n + ' (' + round1(Math.max(0, b.c - b.f)) + ' glucides/100 grammes)';
       ogB.appendChild(o);
     });
     sel.appendChild(ogB);
@@ -2509,7 +2512,7 @@
     FOOD_DB.forEach(function (f, i) {
       var o = document.createElement('option');
       o.value = 'f' + i;
-      o.textContent = f.n + ' (' + round1(f.c - f.f) + ' g nets/100 g)';
+      o.textContent = f.n + ' (' + round1(f.c - f.f) + ' glucides/100 grammes)';
       ogF.appendChild(o);
     });
     sel.appendChild(ogF);
@@ -2562,10 +2565,10 @@
     }
     // Titres d'axes
     var ty = svgEl('text', { x: TOOL.padL - 5, y: TOOL.padT - 2, 'text-anchor': 'end' });
-    ty.textContent = 'g nets';
+    ty.textContent = 'glucides';
     axis.appendChild(ty);
     var txl = svgEl('text', { x: TOOL.W - TOOL.padR, y: TOOL.H - TOOL.padB + 16, 'text-anchor': 'end' });
-    txl.textContent = 'poids (g)';
+    txl.textContent = 'poids (grammes)';
     axis.appendChild(txl);
 
     // Droite y = pente × x (relation linéaire, passe par l'origine)
@@ -2590,8 +2593,8 @@
     $('cross-v').setAttribute('y1', y); $('cross-v').setAttribute('y2', gy(0));
     $('cross-h').setAttribute('x1', TOOL.padL); $('cross-h').setAttribute('x2', x);
     $('cross-h').setAttribute('y1', y); $('cross-h').setAttribute('y2', y);
-    $('tool-grams-label').textContent = TOOL.grams + ' g de « ' + TOOL.item.name + ' »';
-    $('tool-net-label').textContent = round1(net) + ' g';
+    $('tool-grams-label').textContent = TOOL.grams + ' grammes de « ' + TOOL.item.name + ' »';
+    $('tool-net-label').textContent = round1(net) + ' glucides';
     $('tool-slider').value = TOOL.grams;
     renderToolTable();
   }
@@ -2605,11 +2608,13 @@
     portions.forEach(function (p) {
       var tr = document.createElement('tr');
       if (p === snapped) tr.className = 'current';
+      // L'en-tête nomme déjà chaque colonne : les nombres seuls suffisent,
+      // seul le poids garde son unité écrite au long
       var cells = [
-        p + ' g',
-        round1(TOOL.item.net100 * p / 100) + ' g',
-        round1(TOOL.item.carbs100 * p / 100) + ' g',
-        round1(TOOL.item.fiber100 * p / 100) + ' g'
+        p + ' grammes',
+        round1(TOOL.item.net100 * p / 100),
+        round1(TOOL.item.carbs100 * p / 100),
+        round1(TOOL.item.fiber100 * p / 100)
       ];
       cells.forEach(function (c) {
         var td = document.createElement('td');
@@ -2634,10 +2639,10 @@
     var grams = target / TOOL.item.net100 * 100;
     box.innerHTML = '';
     var b = document.createElement('b');
-    b.textContent = Math.round(grams) + ' g';
+    b.textContent = Math.round(grams) + ' grammes';
     box.appendChild(document.createTextNode('Sers-toi '));
     box.appendChild(b);
-    box.appendChild(document.createTextNode(' de « ' + TOOL.item.name + ' » pour ' + target + ' g nets.'));
+    box.appendChild(document.createTextNode(' de « ' + TOOL.item.name + ' » pour ' + target + ' glucides.'));
   }
 
   $('tool-select').addEventListener('change', function () {
@@ -3277,8 +3282,8 @@
     var box = $('label-analysis');
     var okMsg = document.createElement('p');
     okMsg.className = 'msg';
-    okMsg.textContent = '✓ Étiquette lue : ' + round1(carbs100) + ' g de glucides / 100 g' +
-      (serving ? ' · portion de ' + round1(serving.grams) + ' g' : '') +
+    okMsg.textContent = '✓ Étiquette lue : ' + round1(carbs100) + ' glucides pour 100 grammes' +
+      (serving ? ' · portion de ' + round1(serving.grams) + ' grammes' : '') +
       '. Ce sont des estimations — vérifie-les sur l’étiquette.';
     box.appendChild(okMsg);
 
@@ -3318,7 +3323,7 @@
       div.className = 'ing-item';
       var left = document.createElement('div');
       var nm = document.createElement('div');
-      nm.textContent = ing.name + ' — ' + ing.w + ' g';
+      nm.textContent = ing.name + ' — ' + ing.w + ' grammes';
       var dt = document.createElement('div');
       dt.className = 'detail';
       dt.textContent = round1(c) + ' g gluc. · ' + round1(f) + ' g fibres';
@@ -3435,7 +3440,7 @@
         dateEl.textContent = fmtDay.format(new Date(entry.ts));
         var totEl = document.createElement('span');
         totEl.className = 'day-total';
-        totEl.textContent = round1(dayTotal) + ' g nets';
+        totEl.textContent = round1(dayTotal) + ' glucides';
         head.appendChild(dateEl);
         head.appendChild(totEl);
         list.appendChild(head);
@@ -3450,7 +3455,7 @@
       foods.textContent = entry.items.map(function (it) { return it.name; }).join(', ');
       var net = document.createElement('span');
       net.className = 'net';
-      net.textContent = entry.net + ' g';
+      net.textContent = entry.net + ' glucides';
       var reload = document.createElement('button');
       reload.className = 'icon-btn';
       reload.textContent = '↻';
@@ -3508,7 +3513,7 @@
     $('week-summary').textContent = mealsCount === 0
       ? 'Enregistre un premier repas pour voir ta semaine ici.'
       : mealsCount + ' repas cette semaine · moyenne ' +
-        round1(weekTotal / Math.max(1, activeDays)) + ' g nets par jour actif';
+        round1(weekTotal / Math.max(1, activeDays)) + ' glucides par jour actif';
 
     var W = 340, H = 130, padB = 20, padT = 18;
     var maxV = Math.max(10, Math.ceil(Math.max.apply(null, days.map(function (d) { return d.total; })) / 10) * 10);
@@ -3524,7 +3529,7 @@
       if (d.total > 0) {
         var bar = svgEl('rect', { x: x, y: y, width: barW, height: h, rx: 4, 'class': 'bar' });
         var title = svgEl('title', {});
-        title.textContent = fmtDay.format(d.date) + ' : ' + round1(d.total) + ' g nets';
+        title.textContent = fmtDay.format(d.date) + ' : ' + round1(d.total) + ' glucides';
         bar.appendChild(title);
         svg.appendChild(bar);
       }
