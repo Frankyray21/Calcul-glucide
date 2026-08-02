@@ -1729,7 +1729,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.8.0</span>
+  <br><span id="app-version">Glucides Nets v2.8.1</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -3746,10 +3746,11 @@
           properties: {
             name: { type: 'string', description: 'Nom court de l’aliment en français' },
             grams: { type: 'number', description: 'Poids estimé de la portion visible, en grammes' },
+            measure: { type: ['string', 'null'], description: 'Mesure maison équivalente quand c’est logique, en français : « ¾ tasse », « 2 c. à soupe », « 1 tranche », « 1 unité moyenne »… sinon null' },
             carbs: { type: 'number', description: 'Glucides totaux estimés pour cette portion, en grammes' },
             fiber: { type: 'number', description: 'Fibres estimées pour cette portion, en grammes' }
           },
-          required: ['name', 'grams', 'carbs', 'fiber'],
+          required: ['name', 'grams', 'measure', 'carbs', 'fiber'],
           additionalProperties: false
         }
       }
@@ -3768,7 +3769,9 @@
     'imprimés : found=false, recopie les chiffres dans barcode, foods=null. ' +
     'CAS 3 — la photo montre de la nourriture (assiette, plat, collation, boîte à lunch) sans tableau ' +
     'ni code-barres : found=false, barcode=null, et remplis foods — un élément par aliment visible, ' +
-    'avec un poids en grammes estimé prudemment d’après les proportions de l’image et les glucides ' +
+    'avec un poids en grammes estimé prudemment d’après les proportions de l’image, la mesure maison ' +
+    'équivalente quand elle est parlante (measure : « ¾ tasse », « 2 c. à soupe », « 1 tranche », ' +
+    '« 1 unité moyenne »; tasse canadienne de 250 ml; sinon null) et les glucides ' +
     'totaux et fibres estimés pour cette portion (bases de référence usuelles type USDA/FCÉN). ' +
     'CAS 4 — rien de tout ça : found=false, barcode=null, foods=null.';
 
@@ -4011,6 +4014,34 @@
      main a toujours le dernier mot. */
   var mpFoods = [];
 
+  /* Mesure maison estimée (« ¾ tasse », « 2 c. à soupe ») : décomposée en
+     quantité + unité pour suivre les changements de poids. */
+  var FRACTIONS = [[0.25, '¼'], [0.333, '⅓'], [0.5, '½'], [0.667, '⅔'], [0.75, '¾']];
+  function parseMeasure(str) {
+    if (!str) return null;
+    var s = String(str).trim();
+    var m = s.match(/^(\d+(?:[.,]\d+)?)?\s*([¼⅓½⅔¾⅛])?\s*(.+)$/);
+    if (!m || !m[3]) return null;
+    var qty = m[1] ? parseFloat(m[1].replace(',', '.')) : 0;
+    if (m[2]) {
+      var symbols = { '¼': 0.25, '⅓': 0.333, '½': 0.5, '⅔': 0.667, '¾': 0.75, '⅛': 0.125 };
+      qty += symbols[m[2]] || 0;
+    }
+    if (!(qty > 0)) return null;
+    return { qty: qty, unit: m[3].trim() };
+  }
+  function fmtMeasureQty(q) {
+    var whole = Math.floor(q + 1e-6);
+    var rest = q - whole;
+    if (rest < 0.08) return String(whole || round1(q)).replace('.', ',');
+    for (var i = 0; i < FRACTIONS.length; i++) {
+      if (Math.abs(rest - FRACTIONS[i][0]) < 0.08) {
+        return (whole > 0 ? whole + ' ' : '') + FRACTIONS[i][1];
+      }
+    }
+    return String(round1(q)).replace('.', ',');
+  }
+
   function openMealPhotoModal(foods) {
     mpFoods = foods.map(function (f) {
       var grams = Math.max(0, num(f.grams));
@@ -4020,7 +4051,9 @@
         name: String(f.name || 'Aliment').slice(0, 60),
         grams: grams, carbs: carbs, fiber: fiber,
         carbsPerGram: grams > 0 ? carbs / grams : 0,
-        fiberPerGram: grams > 0 ? fiber / grams : 0
+        fiberPerGram: grams > 0 ? fiber / grams : 0,
+        measure: parseMeasure(f.measure),
+        origGrams: grams
       };
     });
     labelClear();
@@ -4109,7 +4142,12 @@
       var netLine = document.createElement('p');
       netLine.className = 'mp-net';
       function netText() {
-        return '≈ ' + round1(mpNet(f)) + ' glucides nets' +
+        // Volume estimé, remis à l'échelle si le poids change
+        var vol = '';
+        if (f.measure && f.origGrams > 0 && f.grams > 0) {
+          vol = ' · ' + fmtMeasureQty(f.measure.qty * f.grams / f.origGrams) + ' ' + f.measure.unit;
+        }
+        return '≈ ' + round1(mpNet(f)) + ' glucides nets' + vol +
           (f.fiber > 0 ? ' (fibres ' + round1(f.fiber) + ' soustraites)' : '');
       }
       netLine.textContent = netText();
