@@ -725,6 +725,17 @@
     gap: 10px;
   }
   .mp-net { margin-top: 6px; font-size: 0.85rem; color: var(--muted); font-weight: 600; }
+  /* Repère d'échelle de l'analyse photo : sur quoi l'estimation s'appuie */
+  .mp-scale {
+    margin: 0 0 12px;
+    padding: 8px 12px;
+    border-radius: 12px;
+    background: var(--accent-light);
+    color: var(--accent-text);
+    font-size: 0.82rem;
+    font-weight: 700;
+  }
+  .mp-scale--warn { background: var(--warm-soft); color: var(--warm-text); }
 
   /* En-tête de fiche : photo du produit (Open Food Facts ou recette) + nom */
   .qty-head {
@@ -1729,7 +1740,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.8.1</span>
+  <br><span id="app-version">Glucides Nets v2.8.2</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -1842,7 +1853,8 @@
       <h3 id="mp-title" style="margin:0;">🍽️ Repas analysé</h3>
       <span style="width:48px;" aria-hidden="true"></span>
     </div>
-    <p class="hint" style="margin:8px 0 12px;">Estimations de l'IA d'après ta photo — <strong>vérifie et ajuste</strong> chaque aliment (le poids surtout). En cas de doute, pèse : l'estimation visuelle reste approximative.</p>
+    <p class="hint" style="margin:8px 0 8px;">Estimations de l'IA d'après ta photo — <strong>vérifie et ajuste</strong> chaque aliment (le poids surtout). En cas de doute, pèse : l'estimation visuelle reste approximative.</p>
+    <p class="mp-scale" id="mp-scale" style="display:none;"></p>
     <div id="mp-list"></div>
     <div class="calc-card">
       <div class="calc-row">
@@ -3487,8 +3499,8 @@
     $('cam-primer').style.display = 'none';
     var liveScan = 'BarcodeDetector' in window;
     scanStatus(liveScan
-      ? 'Vise le code-barres (détecté tout seul), le tableau de valeur nutritive ou l’assiette, puis prends la photo.'
-      : 'Vise le code-barres, le tableau de valeur nutritive ou l’assiette, puis prends la photo.');
+      ? 'Vise le code-barres (détecté tout seul), le tableau de valeur nutritive ou l’assiette, puis prends la photo. Pour une assiette : place une cuillère ou une fourchette à côté — ça calibre les portions.'
+      : 'Vise le code-barres, le tableau de valeur nutritive ou l’assiette, puis prends la photo. Pour une assiette : place une cuillère ou une fourchette à côté — ça calibre les portions.');
     var session = ++scanSession;
     navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } })
       .then(function (stream) {
@@ -3738,6 +3750,8 @@
       polyols: { type: ['number', 'null'], description: 'Sucres-alcools (polyols) en g, 0 si absents' },
       erythritol: { type: 'boolean', description: 'true si le polyol principal est l’érythritol' },
       barcode: { type: ['string', 'null'], description: 'Chiffres imprimés sous un code-barres visible (EAN/UPC), sinon null' },
+      scaleRef: { type: ['string', 'null'], description: 'Objet de taille connue utilisé pour calibrer les portions (ex. « cuillère à soupe », « fourchette », « assiette standard de 27 cm », « main d’enfant »), sinon null' },
+      confidence: { type: ['string', 'null'], enum: ['bonne', 'moyenne', 'faible', null], description: 'Confiance dans l’estimation des poids : bonne (repère de taille clair), moyenne, faible (aucun repère, angle difficile)' },
       foods: {
         type: ['array', 'null'],
         description: 'Quand la photo montre un plat, une assiette ou une collation sans étiquette : un élément par aliment identifié, sinon null',
@@ -3755,7 +3769,7 @@
         }
       }
     },
-    required: ['found', 'productName', 'basis', 'portionGrams', 'portionLabel', 'carbs', 'fiber', 'polyols', 'erythritol', 'barcode', 'foods'],
+    required: ['found', 'productName', 'basis', 'portionGrams', 'portionLabel', 'carbs', 'fiber', 'polyols', 'erythritol', 'barcode', 'scaleRef', 'confidence', 'foods'],
     additionalProperties: false
   };
 
@@ -3768,12 +3782,19 @@
     'elles sont par 100 g. foods=null. CAS 2 — pas de tableau lisible mais un code-barres avec ses chiffres ' +
     'imprimés : found=false, recopie les chiffres dans barcode, foods=null. ' +
     'CAS 3 — la photo montre de la nourriture (assiette, plat, collation, boîte à lunch) sans tableau ' +
-    'ni code-barres : found=false, barcode=null, et remplis foods — un élément par aliment visible, ' +
-    'avec un poids en grammes estimé prudemment d’après les proportions de l’image, la mesure maison ' +
-    'équivalente quand elle est parlante (measure : « ¾ tasse », « 2 c. à soupe », « 1 tranche », ' +
+    'ni code-barres : found=false, barcode=null, et remplis foods — un élément par aliment visible. ' +
+    'MISE À L’ÉCHELLE : cherche d’abord un objet de taille connue dans l’image pour calibrer les ' +
+    'portions — cuillère à soupe (~15 g de capacité, ~18 cm de long), cuillère à thé (~13 cm), ' +
+    'fourchette ou couteau de table (~19 cm), assiette standard (~27 cm de diamètre), petite ' +
+    'assiette (~19 cm), verre (~250 ml), bol (~500 ml), carte bancaire (8,6 cm), pièce de monnaie, ' +
+    'main. Indique le repère utilisé dans scaleRef et ta confiance dans confidence (bonne si un ' +
+    'repère net est présent, moyenne si tu te fies à la vaisselle, faible sans repère ou angle ' +
+    'difficile — dans ce cas, estime PRUDEMMENT, plutôt moins que plus). Pour chaque aliment : ' +
+    'poids en grammes estimé d’après le repère et les proportions, la mesure maison équivalente ' +
+    'quand elle est parlante (measure : « ¾ tasse », « 2 c. à soupe », « 1 tranche », ' +
     '« 1 unité moyenne »; tasse canadienne de 250 ml; sinon null) et les glucides ' +
     'totaux et fibres estimés pour cette portion (bases de référence usuelles type USDA/FCÉN). ' +
-    'CAS 4 — rien de tout ça : found=false, barcode=null, foods=null.';
+    'CAS 4 — rien de tout ça : found=false, barcode=null, foods=null, scaleRef=null, confidence=null.';
 
   var lastLabelImage = null;
 
@@ -4042,7 +4063,22 @@
     return String(round1(q)).replace('.', ',');
   }
 
-  function openMealPhotoModal(foods) {
+  function openMealPhotoModal(foods, scaleRef, confidence) {
+    // Repère de mise à l'échelle : dire sur quoi l'estimation s'appuie
+    var scaleBox = $('mp-scale');
+    if (scaleRef) {
+      scaleBox.textContent = '📏 Échelle calibrée sur : ' + scaleRef +
+        (confidence ? ' · confiance ' + confidence : '') + '.';
+      scaleBox.className = 'mp-scale' + (confidence === 'faible' ? ' mp-scale--warn' : '');
+      scaleBox.style.display = 'block';
+    } else if (confidence === 'faible') {
+      scaleBox.textContent = '📏 Aucun repère de taille sur la photo — estimation prudente. ' +
+        'Astuce : place une cuillère ou une fourchette à côté de l’assiette et reprends la photo.';
+      scaleBox.className = 'mp-scale mp-scale--warn';
+      scaleBox.style.display = 'block';
+    } else {
+      scaleBox.style.display = 'none';
+    }
     mpFoods = foods.map(function (f) {
       var grams = Math.max(0, num(f.grams));
       var carbs = Math.max(0, num(f.carbs));
@@ -4190,7 +4226,7 @@
     }
     // La photo montrait un plat ou une collation : estimation par aliment
     if (res && !res.found && Array.isArray(res.foods) && res.foods.length > 0) {
-      openMealPhotoModal(res.foods);
+      openMealPhotoModal(res.foods, res.scaleRef, res.confidence);
       return;
     }
     if (!res || !res.found || res.carbs == null) {
