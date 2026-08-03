@@ -1478,35 +1478,26 @@
   <!-- ═══════════ ONGLET REPAS ═══════════ -->
   <section class="tab-panel active" id="panel-meal">
 
-    <details class="help">
-      <summary>ℹ️ Comment sont calculés les glucides nets?</summary>
-      <div class="card">
-        <p><strong>Glucides nets = Glucides totaux − Fibres − (Polyols ÷ 2)</strong></p>
-        <p>Au Canada et aux États-Unis, les fibres sont incluses dans les glucides totaux sur l'étiquette nutritionnelle. Comme les fibres ne font pas monter la glycémie, on les soustrait.</p>
-        <p>Les polyols (sucres-alcools : maltitol, sorbitol, xylitol…) sont absorbés à environ 50 %, on soustrait donc la moitié. Exception : l'érythritol n'est pas absorbé du tout — choisis « Érythritol » pour le soustraire à 100 %. Ces règles correspondent aux recommandations usuelles de Diabète Canada et de l'American Diabetes Association pour le calcul des glucides à la pompe.</p>
-        <p>Certaines équipes de soins recommandent de ne soustraire les fibres que lorsqu'elles dépassent 5 g par portion — suis la méthode enseignée par la tienne.</p>
-        <p>Entre le total affiché en bas dans ta pompe pour le calcul du bolus.</p>
-      </div>
-    </details>
-
+    <!-- Épuré : l'action principale d'abord, les explications longues
+         vivent dans les accordéons ou les écrans contextuels -->
     <div class="card">
-      <h2>📷 Scanner ou photographier un produit</h2>
-      <p class="hint" style="margin:0 0 10px;">Vise le code-barres, le tableau de valeur nutritive <em>ou l'assiette</em> — l'app s'adapte à ce qu'elle voit : code-barres → Open Food Facts; étiquette → lecture <strong>directement sur ton appareil</strong>, gratuite et sans compte; repas ou collation en photo → estimation aliment par aliment (lecture IA ✨ requise).</p>
-      <button class="btn btn-secondary" id="scan-open-btn" type="button">📷 Scanner / photographier</button>
+      <button class="btn" id="scan-open-btn" type="button">📷 Scanner / photographier</button>
+      <p class="hint" style="margin:10px 0 0; text-align:center;">Code-barres, étiquette ou assiette — l'app reconnaît toute seule.</p>
       <input type="file" id="label-photo-input" accept="image/*" capture="environment" style="display:none;">
       <div id="label-analysis" role="status" aria-live="polite"></div>
-      <button class="link-btn" id="api-key-manage" type="button">✨ Lecture IA (optionnelle, pour les photos difficiles)</button>
+      <button class="link-btn" id="api-key-manage" type="button" style="width:100%; text-align:center;">✨ Lecture IA (optionnelle)</button>
     </div>
 
     <div class="card">
-      <h2>🔍 Base d'aliments courants</h2>
+      <h2>🔍 Chercher un aliment</h2>
       <input type="search" id="db-search" placeholder="Chercher… (ex. : riz, pomme, pain)" autocomplete="off">
       <div class="search-results" id="db-results"></div>
-      <p class="hint" style="margin-top:8px;">Valeurs par 100 g — source : USDA FoodData Central (cohérent avec le Fichier canadien sur les éléments nutritifs). Pour un produit emballé, fie-toi d'abord à son étiquette. Choisis un aliment, puis indique le poids consommé.</p>
+      <p class="hint" style="margin-top:8px;">Valeurs par 100 g (USDA/FCÉN) — pour un produit emballé, son étiquette a priorité.</p>
     </div>
 
-    <div class="card">
-      <h2>➕ Ajouter un aliment</h2>
+    <details class="help" id="manual-details">
+      <summary>✏️ Entrer les valeurs à la main</summary>
+      <div class="card">
       <div style="margin-bottom:12px;">
         <label for="food-name">Nom de l'aliment</label>
         <input type="text" id="food-name" placeholder="ex. : Pain multigrain" autocomplete="off">
@@ -1550,7 +1541,8 @@
         <label for="save-fav">Enregistrer dans mes favoris</label>
       </div>
       <button class="btn" id="add-btn">Ajouter au repas</button>
-    </div>
+      </div>
+    </details>
 
     <div class="card">
       <h2>🍽️ Repas en cours</h2>
@@ -1560,6 +1552,17 @@
         <button class="btn" id="finish-btn">✅ Enregistrer au journal</button>
       </div>
     </div>
+
+    <details class="help">
+      <summary>ℹ️ Comment sont calculés les glucides nets?</summary>
+      <div class="card">
+        <p><strong>Glucides nets = Glucides totaux − Fibres − (Polyols ÷ 2)</strong></p>
+        <p>Au Canada et aux États-Unis, les fibres sont incluses dans les glucides totaux sur l'étiquette nutritionnelle. Comme les fibres ne font pas monter la glycémie, on les soustrait.</p>
+        <p>Les polyols (sucres-alcools : maltitol, sorbitol, xylitol…) sont absorbés à environ 50 %, on soustrait donc la moitié. Exception : l'érythritol n'est pas absorbé du tout — choisis « Érythritol » pour le soustraire à 100 %. Ces règles correspondent aux recommandations usuelles de Diabète Canada et de l'American Diabetes Association pour le calcul des glucides à la pompe.</p>
+        <p>Certaines équipes de soins recommandent de ne soustraire les fibres que lorsqu'elles dépassent 5 g par portion — suis la méthode enseignée par la tienne.</p>
+        <p>Entre le total affiché en bas dans ta pompe pour le calcul du bolus.</p>
+      </div>
+    </details>
 
   </section>
 
@@ -1777,7 +1780,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.9.0</span>
+  <br><span id="app-version">Glucides Nets v2.9.1</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -2348,7 +2351,15 @@
     }
   }
 
+  /* Le formulaire manuel vit replié (épure de l'écran Calculer) : tout
+     flux qui y dépose des valeurs doit d'abord l'ouvrir. */
+  function openManualCard() {
+    var d = $('manual-details');
+    if (d && !d.open) d.open = true;
+  }
+
   bindDbSearch('db-search', 'db-results', function (f) {
+    openManualCard();
     $('food-name').value = f.n;
     $('carbs').value = f.c;
     $('fiber').value = f.f;
@@ -2356,7 +2367,9 @@
     $('portion-label').value = 100;
     $('portion-eaten').value = '';
     $('portion-eaten').focus();
+    scrollToEl($('food-name'));
   }, function (query) {
+    openManualCard();
     $('food-name').value = query;
     $('carbs').focus();
     scrollToEl($('food-name'));
@@ -3111,6 +3124,7 @@
 
   $('qty-edit').addEventListener('click', function () {
     if (!modalRecipe) return;
+    openManualCard();
     $('food-name').value = modalRecipe.name;
     $('carbs').value = round1(modalRecipe.carbs);
     $('fiber').value = round1(modalRecipe.fiber);
@@ -3916,6 +3930,7 @@
     manual.style.marginTop = '8px';
     manual.addEventListener('click', function () {
       labelClear();
+      openManualCard();
       scrollToEl($('food-name'));
       $('food-name').focus();
     });
@@ -4614,6 +4629,7 @@
       // Portion sans poids connu : impossible de normaliser par 100 g —
       // on reporte les valeurs telles quelles (= 1 portion) dans le formulaire
       labelClear();
+      openManualCard();
       $('food-name').value = name;
       $('carbs').value = round1(carbs);
       $('fiber').value = round1(fiber);
