@@ -750,6 +750,29 @@
     font-weight: 700;
   }
   .mp-scale--warn { background: var(--warm-soft); color: var(--warm-text); }
+  /* Question de clarification de l'IA (une seule, quand ça compte) */
+  .mp-question {
+    margin: 0 0 12px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: var(--warm-soft);
+    color: var(--warm-text);
+    font-size: 0.88rem;
+    font-weight: 700;
+  }
+  .mp-question-row { display: flex; gap: 8px; margin-top: 8px; }
+  .mp-question-row input { flex: 1; min-width: 0; }
+  .mp-question-row .btn { flex: none; width: auto; padding: 10px 16px; }
+  /* Estimation qui sort de la plausibilité (base USDA/FCÉN) */
+  .mp-warn {
+    margin-top: 8px;
+    padding: 8px 10px;
+    border-radius: 10px;
+    background: var(--warm-soft);
+    color: var(--warm-text);
+    font-size: 0.82rem;
+    font-weight: 700;
+  }
 
   /* En-tête de fiche : photo du produit (Open Food Facts ou recette) + nom */
   .qty-head {
@@ -1754,7 +1777,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.8.5</span>
+  <br><span id="app-version">Glucides Nets v2.9.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -1869,12 +1892,22 @@
     </div>
     <p class="hint" style="margin:8px 0 8px;">Estimations de l'IA d'après ta photo — <strong>vérifie et ajuste</strong> chaque aliment (le poids surtout). En cas de doute, pèse : l'estimation visuelle reste approximative.</p>
     <p class="mp-scale" id="mp-scale" style="display:none;"></p>
+    <!-- Question de clarification : posée par l'IA quand une seule précision
+         changerait beaucoup l'estimation (« Riz ou couscous ? ») -->
+    <div class="mp-question" id="mp-question" style="display:none;">
+      <p id="mp-question-text" style="margin:0;"></p>
+      <div class="mp-question-row">
+        <input type="text" id="mp-question-input" placeholder="Ta réponse…" aria-labelledby="mp-question-text">
+        <button class="btn btn-secondary" id="mp-question-send" type="button">Préciser</button>
+      </div>
+    </div>
     <div id="mp-list"></div>
     <div class="calc-card">
       <div class="calc-row">
         <span class="calc-label hero-label">Glucides estimés</span>
         <div class="calc-result">
           <div class="live-net" id="mp-total" role="status" aria-live="polite">0 <small>g</small></div>
+          <div class="hero-sub" id="mp-range"></div>
           <div class="hero-sub" id="mp-count"></div>
         </div>
       </div>
@@ -1882,6 +1915,9 @@
     <div class="actions">
       <button class="btn" id="mp-add" type="button">Ajouter au repas</button>
     </div>
+    <button class="link-btn" id="mp-angle" type="button" style="width:100%; text-align:center;">📐 Ajouter une photo sous un autre angle (précise l'estimation)</button>
+    <button class="link-btn" id="mp-leftover" type="button" style="width:100%; text-align:center;">🍽️ Repas terminé ? Photographie les restes pour les soustraire</button>
+    <input type="file" id="mp-file" accept="image/*" hidden>
   </div>
 </div>
 
@@ -3783,15 +3819,18 @@
             name: { type: 'string', description: 'Nom court de l’aliment en français' },
             grams: { type: 'number', description: 'Poids estimé de la portion visible, en grammes' },
             measure: { type: ['string', 'null'], description: 'Aliment dénombrable : le NOMBRE d’unités visibles (« 4 biscuits », « 2 tranches », « 6 fraises »). Sinon la mesure maison équivalente quand c’est logique (« ¾ tasse », « 2 c. à soupe »). Sinon null' },
-            carbs: { type: 'number', description: 'Glucides totaux estimés pour cette portion, en grammes' },
+            carbs: { type: 'number', description: 'Glucides totaux estimés pour cette portion, en grammes (estimation centrale)' },
+            carbsMin: { type: ['number', 'null'], description: 'Bas de la fourchette réaliste de glucides pour cette portion, en grammes' },
+            carbsMax: { type: ['number', 'null'], description: 'Haut de la fourchette réaliste de glucides pour cette portion, en grammes' },
             fiber: { type: 'number', description: 'Fibres estimées pour cette portion, en grammes' }
           },
-          required: ['name', 'grams', 'measure', 'carbs', 'fiber'],
+          required: ['name', 'grams', 'measure', 'carbs', 'carbsMin', 'carbsMax', 'fiber'],
           additionalProperties: false
         }
-      }
+      },
+      question: { type: ['string', 'null'], description: 'UNE question courte à poser à l’utilisateur seulement si la réponse changerait beaucoup l’estimation (ex. « Riz ou couscous ? »), sinon null' }
     },
-    required: ['found', 'productName', 'basis', 'portionGrams', 'portionLabel', 'carbs', 'fiber', 'polyols', 'erythritol', 'barcode', 'scaleRef', 'confidence', 'foods'],
+    required: ['found', 'productName', 'basis', 'portionGrams', 'portionLabel', 'carbs', 'fiber', 'polyols', 'erythritol', 'barcode', 'scaleRef', 'confidence', 'foods', 'question'],
     additionalProperties: false
   };
 
@@ -3817,8 +3856,17 @@
     'COMPTE les unités visibles et indique leur nombre (« 4 biscuits », « 2 tranches », ' +
     '« 6 fraises »); sinon la mesure maison équivalente quand elle est parlante (« ¾ tasse », ' +
     '« 2 c. à soupe »; tasse canadienne de 250 ml); sinon null. Ajoute enfin les glucides ' +
-    'totaux et fibres estimés pour cette portion (bases de référence usuelles type USDA/FCÉN). ' +
-    'CAS 4 — rien de tout ça : found=false, barcode=null, foods=null, scaleRef=null, confidence=null.';
+    'totaux et fibres estimés pour cette portion (bases de référence usuelles type USDA/FCÉN), ' +
+    'et dans carbsMin/carbsMax une FOURCHETTE réaliste des glucides (l’intervalle où tu es ' +
+    'raisonnablement sûr que la vraie valeur se trouve — étroit si l’aliment est standard, ' +
+    'large si le plat est composé ou la portion incertaine). ' +
+    'S’il y a PLUSIEURS photos, elles montrent le MÊME repas sous des angles différents : ' +
+    'combine-les (la vue de côté renseigne la hauteur des portions) pour préciser poids et volumes. ' +
+    'QUESTION : si (et seulement si) une seule précision de l’utilisateur changerait beaucoup ' +
+    'l’estimation (aliments ambigus : « Riz ou couscous ? », « La sauce est-elle sucrée ? », ' +
+    '« Boisson sucrée ou eau ? »), pose cette unique question courte dans question; sinon question=null. ' +
+    'CAS 4 — rien de tout ça : found=false, barcode=null, foods=null, scaleRef=null, confidence=null. ' +
+    'Dans les CAS 1, 2 et 4 : question=null (et carbsMin/carbsMax=null au CAS 1).';
 
   var lastLabelImage = null;
 
@@ -3987,8 +4035,26 @@
     $('label-analysis').appendChild(ai);
   }
 
-  function analyzeLabel(b64) {
-    labelSkeleton('✨ Lecture IA de ta photo, ça prend quelques secondes…');
+  /* Photos de la dernière analyse de repas : gardées pour pouvoir ajouter
+     un 2e angle ou répondre à une question de clarification sans reprendre
+     la photo initiale. */
+  var lastAnalyzedImages = [];
+
+  /* images : un b64 seul ou un tableau (angles multiples du même repas).
+     extraNote : contexte ajouté au prompt (réponse de l'utilisateur…).
+     onError : remplace l'affichage d'erreur standard (relances depuis le
+     modal « Repas analysé », où #label-analysis n'est pas visible). */
+  function analyzeLabel(images, extraNote, onError) {
+    var list = Array.isArray(images) ? images : [images];
+    lastAnalyzedImages = list.slice();
+    if (!onError) labelSkeleton('✨ Lecture IA de ta photo, ça prend quelques secondes…');
+    var content = list.map(function (b64) {
+      return { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } };
+    });
+    content.push({
+      type: 'text',
+      text: LABEL_PROMPT + (extraNote ? '\n\nCONTEXTE SUPPLÉMENTAIRE : ' + extraNote : '')
+    });
     fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
       headers: {
@@ -4004,13 +4070,7 @@
           effort: 'low',
           format: { type: 'json_schema', schema: LABEL_SCHEMA }
         },
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } },
-            { type: 'text', text: LABEL_PROMPT }
-          ]
-        }]
+        messages: [{ role: 'user', content: content }]
       })
     })
       .then(function (r) {
@@ -4037,18 +4097,22 @@
       })
       .catch(function (err) {
         var kind = err && err.kind;
+        var msg, retry = true;
         if (kind === 'auth') {
-          labelError('Ta clé API a été refusée — vérifie-la avec le bouton 🔑 ci-dessous.', false);
+          msg = 'Ta clé API a été refusée — vérifie-la avec le bouton 🔑 ci-dessous.';
+          retry = false;
         } else if (kind === 'rate') {
-          labelError('Trop de demandes d’un coup — attends un instant, puis réessaie.', true);
+          msg = 'Trop de demandes d’un coup — attends un instant, puis réessaie.';
         } else if (kind === 'refusal' || kind === 'parse') {
-          labelError('L’analyse n’a pas fonctionné sur cette image — réessaie avec une photo plus proche du tableau.', true);
+          msg = 'L’analyse n’a pas fonctionné sur cette image — réessaie avec une photo plus proche du tableau.';
         } else if (kind === 'api') {
-          labelError('Le service IA a refusé la demande (erreur ' + (err.status || '?') + ')' +
-            (err.message ? ' : ' + err.message : '') + ' — réessaie, et si ça persiste, signale le problème.', true);
+          msg = 'Le service IA a refusé la demande (erreur ' + (err.status || '?') + ')' +
+            (err.message ? ' : ' + err.message : '') + ' — réessaie, et si ça persiste, signale le problème.';
         } else {
-          labelError('Erreur réseau ou service indisponible — vérifie ta connexion et réessaie.', true);
+          msg = 'Erreur réseau ou service indisponible — vérifie ta connexion et réessaie.';
         }
+        if (onError) onError(msg);
+        else labelError(msg, retry);
       });
   }
 
@@ -4067,6 +4131,7 @@
      les glucides selon la densité estimée; corriger les glucides à la
      main a toujours le dernier mot. */
   var mpFoods = [];
+  var mpQuestion = null;
 
   /* Mesure maison estimée (« ¾ tasse », « 2 c. à soupe ») : décomposée en
      quantité + unité pour suivre les changements de poids. */
@@ -4096,7 +4161,8 @@
     return String(round1(q)).replace('.', ',');
   }
 
-  function openMealPhotoModal(foods, scaleRef, confidence) {
+  function openMealPhotoModal(foods, scaleRef, confidence, question) {
+    mpSetBusy(false); // ré-active les boutons après une ré-analyse réussie
     // Repère de mise à l'échelle : dire sur quoi l'estimation s'appuie
     var scaleBox = $('mp-scale');
     if (scaleRef) {
@@ -4112,15 +4178,27 @@
     } else {
       scaleBox.style.display = 'none';
     }
+    // Question de clarification : une seule, seulement quand ça compte
+    mpQuestion = question ? String(question).slice(0, 200) : null;
+    $('mp-question').style.display = mpQuestion ? 'block' : 'none';
+    if (mpQuestion) {
+      $('mp-question-text').textContent = '🤔 ' + mpQuestion;
+      $('mp-question-input').value = '';
+    }
     mpFoods = foods.map(function (f) {
       var grams = Math.max(0, num(f.grams));
       var carbs = Math.max(0, num(f.carbs));
       var fiber = Math.max(0, num(f.fiber));
+      // Fourchette : bornée à l'estimation centrale, ignorée si incohérente
+      var cMin = f.carbsMin == null ? null : Math.min(Math.max(0, num(f.carbsMin)), carbs);
+      var cMax = f.carbsMax == null ? null : Math.max(Math.max(0, num(f.carbsMax)), carbs);
       return {
         name: String(f.name || 'Aliment').slice(0, 60),
         grams: grams, carbs: carbs, fiber: fiber,
         carbsPerGram: grams > 0 ? carbs / grams : 0,
         fiberPerGram: grams > 0 ? fiber / grams : 0,
+        minPerGram: grams > 0 && cMin != null ? cMin / grams : null,
+        maxPerGram: grams > 0 && cMax != null ? cMax / grams : null,
         measure: parseMeasure(f.measure),
         origGrams: grams
       };
@@ -4129,12 +4207,183 @@
     renderMpList();
     openModal('meal-photo-modal', '#mp-add');
   }
-  function closeMealPhotoModal() { closeModal('meal-photo-modal'); }
+  function closeMealPhotoModal() { mpSetBusy(false); closeModal('meal-photo-modal'); }
   trapModal('meal-photo-modal', closeMealPhotoModal);
   $('mp-back').addEventListener('click', closeMealPhotoModal);
   $('meal-photo-modal').addEventListener('click', function (e) {
     if (e.target === this) closeMealPhotoModal();
   });
+
+  /* ── Affiner l'analyse sans refermer le modal ──
+     Trois leviers : répondre à la question de l'IA, ajouter un 2e angle,
+     ou photographier les restes du repas pour soustraire le non-mangé. */
+  function mpSetBusy(busy, msg) {
+    ['mp-add', 'mp-angle', 'mp-leftover', 'mp-question-send'].forEach(function (id) {
+      $(id).disabled = busy;
+    });
+    if (busy) {
+      var scale = $('mp-scale');
+      scale.textContent = msg;
+      scale.className = 'mp-scale';
+      scale.style.display = 'block';
+    }
+  }
+
+  function mpReanalyze(extraNote, busyMsg) {
+    var scale = $('mp-scale');
+    var prev = { text: scale.textContent, cls: scale.className, disp: scale.style.display };
+    mpSetBusy(true, busyMsg);
+    analyzeLabel(lastAnalyzedImages, extraNote, function (msg) {
+      mpSetBusy(false);
+      scale.textContent = prev.text;
+      scale.className = prev.cls;
+      scale.style.display = prev.disp;
+      toast('⚠️ ' + msg, { type: 'error', duration: 6000 });
+    });
+  }
+
+  $('mp-question-send').addEventListener('click', function () {
+    var ans = $('mp-question-input').value.trim();
+    if (!ans || !mpQuestion) { $('mp-question-input').focus(); return; }
+    mpReanalyze('Tu avais posé la question : « ' + mpQuestion + ' ». Réponse de l’utilisateur : « ' +
+      ans + ' ». Refais l’estimation du même repas en tenant compte de cette réponse, et remets question=null.',
+      '🤔 On refait l’estimation avec ta réponse…');
+  });
+
+  var mpFileMode = null;
+  $('mp-angle').addEventListener('click', function () { mpFileMode = 'angle'; $('mp-file').click(); });
+  $('mp-leftover').addEventListener('click', function () { mpFileMode = 'leftover'; $('mp-file').click(); });
+  $('mp-file').addEventListener('change', function () {
+    var file = this.files && this.files[0];
+    this.value = '';
+    if (!file) return;
+    var mode = mpFileMode;
+    var reader = new FileReader();
+    reader.onload = function (e) {
+      var img = new Image();
+      img.onload = function () {
+        var b64 = downscaleToB64(img);
+        if (mode === 'angle') {
+          lastAnalyzedImages.push(b64);
+          mpReanalyze('Ces ' + lastAnalyzedImages.length + ' photos montrent le MÊME repas sous des angles ' +
+            'différents — combine-les (la vue de côté renseigne la hauteur des portions) pour préciser ' +
+            'poids, volumes et fourchettes.',
+            '📐 On combine les deux angles pour préciser l’estimation…');
+        } else {
+          analyzeLeftovers(b64);
+        }
+      };
+      img.onerror = function () { toast('⚠️ Cette image n’a pas pu être lue — réessaie.', { type: 'error' }); };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+
+  /* Photo des restes : l'estimation la plus juste du plat servi reste
+     fausse si la moitié reste dans l'assiette. On estime le poids restant
+     de chaque aliment déjà listé, et les poids deviennent « mangé ». */
+  var LEFTOVER_SCHEMA = {
+    type: 'object',
+    properties: {
+      foods: {
+        type: 'array',
+        items: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', description: 'Nom repris exactement de la liste fournie' },
+            gramsRemaining: { type: 'number', description: 'Poids restant estimé sur la photo, en grammes (0 si tout est mangé)' }
+          },
+          required: ['name', 'gramsRemaining'],
+          additionalProperties: false
+        }
+      }
+    },
+    required: ['foods'],
+    additionalProperties: false
+  };
+
+  function analyzeLeftovers(b64) {
+    if (mpFoods.length === 0) return;
+    var scale = $('mp-scale');
+    var prev = { text: scale.textContent, cls: scale.className, disp: scale.style.display };
+    mpSetBusy(true, '🍽️ On estime ce qui reste dans l’assiette…');
+    var served = mpFoods.map(function (f) {
+      return '« ' + f.name + ' » (' + round1(f.grams) + ' g servis)';
+    }).join('; ');
+    fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': lsGet('gn_api_key') || '',
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-opus-5',
+        max_tokens: 2048,
+        output_config: {
+          effort: 'low',
+          format: { type: 'json_schema', schema: LEFTOVER_SCHEMA }
+        },
+        messages: [{
+          role: 'user',
+          content: [
+            { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } },
+            {
+              type: 'text',
+              text: 'Voici la photo des RESTES d’un repas terminé. Le repas servi contenait : ' + served +
+                '. Pour CHAQUE aliment de cette liste, estime le poids RESTANT en grammes visible sur la ' +
+                'photo — 0 si entièrement mangé, le poids servi si non touché. Reprends exactement les noms ' +
+                'fournis et n’ajoute aucun autre aliment.'
+            }
+          ]
+        }]
+      })
+    })
+      .then(function (r) {
+        if (r.status === 401) throw { msg: 'Ta clé API a été refusée — vérifie-la avec le bouton 🔑.' };
+        if (!r.ok) {
+          return r.json().then(function (e) {
+            throw { msg: 'Le service IA a refusé la demande' + (e && e.error && e.error.message ? ' : ' + e.error.message : '') + '.' };
+          }, function () { throw { msg: 'Le service IA a refusé la demande (erreur ' + r.status + ').' }; });
+        }
+        return r.json();
+      })
+      .then(function (data) {
+        var text = (data.content || [])
+          .filter(function (blk) { return blk.type === 'text'; })
+          .map(function (blk) { return blk.text; })
+          .join('');
+        var res = JSON.parse(text);
+        var eatenSomething = false;
+        (res.foods || []).forEach(function (r) {
+          var rn = normalize(String(r.name || ''));
+          mpFoods.forEach(function (f) {
+            if (normalize(f.name) !== rn) return;
+            var remaining = Math.min(Math.max(0, num(r.gramsRemaining)), f.grams);
+            f.grams = round1(f.grams - remaining);
+            f.carbs = round1(f.grams * f.carbsPerGram);
+            f.fiber = round1(f.grams * f.fiberPerGram);
+            eatenSomething = true;
+          });
+        });
+        mpSetBusy(false);
+        if (!eatenSomething) {
+          scale.textContent = prev.text; scale.className = prev.cls; scale.style.display = prev.disp;
+          toast('⚠️ Impossible d’associer les restes aux aliments listés — ajuste les poids à la main.', { type: 'error', duration: 6000 });
+          return;
+        }
+        scale.textContent = '🍽️ Restes soustraits — les poids affichés correspondent à ce qui a été MANGÉ. Vérifie avant d’ajouter.';
+        scale.className = 'mp-scale';
+        scale.style.display = 'block';
+        renderMpList();
+      })
+      .catch(function (err) {
+        mpSetBusy(false);
+        scale.textContent = prev.text; scale.className = prev.cls; scale.style.display = prev.disp;
+        toast('⚠️ ' + ((err && err.msg) || 'Erreur réseau ou service indisponible — réessaie.'), { type: 'error', duration: 6000 });
+      });
+  }
 
   function mpNet(f) { return Math.max(0, f.carbs - f.fiber); }
 
@@ -4152,9 +4401,55 @@
     return fmtMeasureQty(qty) + ' ' + f.measure.unit;
   }
 
+  /* Fourchette de l'aliment aux poids courants (null si l'IA n'en a pas donné) */
+  function mpRange(f) {
+    if (f.minPerGram == null || f.maxPerGram == null || !(f.grams > 0)) return null;
+    var lo = Math.max(0, f.minPerGram * f.grams - f.fiber);
+    var hi = Math.max(0, f.maxPerGram * f.grams - f.fiber);
+    if (hi - lo < 0.5) return null; // fourchette trop étroite pour être utile
+    return [lo, hi];
+  }
+
+  /* Garde-fou de plausibilité : recoupe l'estimation de l'IA avec la base
+     USDA/FCÉN intégrée. Signale (sans corriger : l'humain tranche) quand la
+     densité estimée s'écarte fort de la référence, ou est impossible. */
+  function mpPlausibility(f) {
+    if (!(f.grams > 0) || !(f.carbs >= 0)) return null;
+    var per100 = f.carbs * 100 / f.grams;
+    if (per100 > 100) {
+      return '⚠️ Impossible : ' + round1(per100) + ' g de glucides pour 100 g. Corrige le poids ou les glucides.';
+    }
+    var q = normalize(f.name);
+    if (q.length < 4) return null;
+    var best = null, bestLen = 0;
+    FOOD_DB.forEach(function (d) {
+      var base = normalize(d.n.split(',')[0]).trim();
+      if (base.length >= 4 && (q.indexOf(base) !== -1 || base.indexOf(q) !== -1) && base.length > bestLen) {
+        best = d; bestLen = base.length;
+      }
+    });
+    if (!best || best.c < 3) return null;
+    var ratio = per100 / best.c;
+    if (ratio > 1.8 || ratio < 0.45) {
+      return '⚠️ À vérifier : la base USDA/FCÉN donne ~' + round1(best.c) + ' g de glucides pour 100 g de « ' +
+        best.n + ' » — ici l’estimation revient à ' + round1(per100) + ' g/100 g.';
+    }
+    return null;
+  }
+
   function updateMpTotal() {
-    var total = 0;
-    mpFoods.forEach(function (f) { total += mpNet(f); });
+    var total = 0, lo = 0, hi = 0, hasRange = false;
+    mpFoods.forEach(function (f) {
+      var net = mpNet(f);
+      total += net;
+      var r = mpRange(f);
+      if (r) { lo += r[0]; hi += r[1]; hasRange = true; }
+      else { lo += net; hi += net; }
+    });
+    // Fourchette honnête : un chiffre sec a l'air précis mais ne l'est pas
+    $('mp-range').textContent = hasRange && hi - lo >= 1
+      ? 'fourchette : ' + Math.round(lo) + ' à ' + Math.round(hi) + ' g'
+      : '';
     $('mp-total').innerHTML = round1(total) + ' <small>g</small>';
     $('mp-count').textContent = mpFoods.length + ' aliment' + (mpFoods.length > 1 ? 's' : '') + ' sur la photo';
     $('mp-add').textContent = mpFoods.length > 0
@@ -4226,11 +4521,15 @@
         carbsInput.value = f.carbs;
         netLine.textContent = netText();
         syncCountBadge();
+        syncWarn();
         updateMpTotal();
       });
       carbsInput = field('Glucides (grammes)', f.carbs, function (v) {
         f.carbs = Math.max(0, v);
+        // Correction manuelle des glucides : la fourchette auto n'a plus de sens
+        f.minPerGram = f.maxPerGram = null;
         netLine.textContent = netText();
+        syncWarn();
         updateMpTotal();
       });
 
@@ -4243,15 +4542,28 @@
         if (f.measure && isVolumeUnit(f.measure.unit) && f.origGrams > 0 && f.grams > 0) {
           vol = ' · ' + fmtMeasureQty(f.measure.qty * f.grams / f.origGrams) + ' ' + f.measure.unit;
         }
-        return '≈ ' + round1(mpNet(f)) + ' glucides nets' + vol +
+        var r = mpRange(f);
+        var rng = r ? ' · entre ' + Math.round(r[0]) + ' et ' + Math.round(r[1]) + ' g' : '';
+        return '≈ ' + round1(mpNet(f)) + ' glucides nets' + vol + rng +
           (f.fiber > 0 ? ' (fibres ' + round1(f.fiber) + ' soustraites)' : '');
       }
       netLine.textContent = netText();
+
+      // Garde-fou : estimation qui contredit la base USDA/FCÉN intégrée
+      var warnEl = document.createElement('p');
+      warnEl.className = 'mp-warn';
+      function syncWarn() {
+        var msg = mpPlausibility(f);
+        warnEl.textContent = msg || '';
+        warnEl.style.display = msg ? 'block' : 'none';
+      }
+      syncWarn();
 
       row.appendChild(head);
       row.appendChild(countBadge);
       row.appendChild(grid);
       row.appendChild(netLine);
+      row.appendChild(warnEl);
       box.appendChild(row);
     });
     updateMpTotal();
@@ -4287,7 +4599,7 @@
     }
     // La photo montrait un plat ou une collation : estimation par aliment
     if (res && !res.found && Array.isArray(res.foods) && res.foods.length > 0) {
-      openMealPhotoModal(res.foods, res.scaleRef, res.confidence);
+      openMealPhotoModal(res.foods, res.scaleRef, res.confidence, res.question);
       return;
     }
     if (!res || !res.found || res.carbs == null) {
