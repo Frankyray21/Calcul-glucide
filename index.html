@@ -40,6 +40,11 @@
     --radius: 20px;
     --chart: #2563EB;
     --chart-soft: rgba(37, 99, 235, 0.14);
+    --carb: #7C3AED;         /* violet : uniquement les nombres de glucides */
+    --carb-strong: #6D28D9;
+    --carb-soft: rgba(124, 58, 237, 0.12);
+    --action: #15803D;       /* vert : uniquement les actions positives */
+    --action-pressed: #14532D;
   }
   /* Mode sombre : bleu nuit profond + bleu signal (maquette de référence).
      Contrastes vérifiés : #4D9FFF sur #07111F ≈ 7,4:1, #A7B2C5 sur
@@ -47,22 +52,27 @@
   @media (prefers-color-scheme: dark) {
     :root {
       --bg: #07111F;
-      --card: #101D30;
+      --card: #142235;
       --text: #F5F7FA;
-      --muted: #A7B2C5;
-      --accent: #4D9FFF;
-      --accent-text: #4D9FFF;
-      --accent-deep: #1D5FB0;
-      --accent-light: rgba(77, 159, 255, 0.13);
-      --btn-bg: #4D9FFF;
-      --btn-text: #06192E;
+      --muted: #9EABBD;
+      --accent: #3B82F6;
+      --accent-text: #60A5FA;
+      --accent-deep: #2E6FD8;
+      --accent-light: rgba(59, 130, 246, 0.14);
+      --btn-bg: #3B82F6;
+      --btn-text: #FFFFFF;
       --warm-soft: rgba(245, 158, 11, 0.16);
       --warm-text: #FCD34D;
       --danger: #F87171;
       --info: #60A5FA;
-      --border: #28384D;
-      --chart: #4D9FFF;
-      --chart-soft: rgba(77, 159, 255, 0.16);
+      --border: rgba(148, 163, 184, 0.22);
+      --chart: #3B82F6;
+      --chart-soft: rgba(59, 130, 246, 0.14);
+      --carb: #C49AFF;
+      --carb-strong: #A76CF5;
+      --carb-soft: rgba(167, 108, 245, 0.18);
+      --action: #65B958;
+      --action-pressed: #4E9D45;
     }
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -238,6 +248,8 @@
   }
   .btn:active { transform: scale(0.98); opacity: 0.9; }
   .btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+  .btn--action { background: var(--action); color: #FFFFFF; }
+  .btn--action:active { background: var(--action-pressed); }
   .btn-secondary { background: var(--accent-light); color: var(--accent-text); }
 
   /* Recherche base d'aliments */
@@ -270,8 +282,8 @@
   .search-results button:last-child { border-bottom: none; }
   .search-results button:active { background: var(--accent-light); }
   .search-results .val {
-    background: var(--accent-light);
-    color: var(--accent-text);
+    background: var(--carb-soft);
+    color: var(--carb-strong);
     border-radius: 999px;
     padding: 4px 10px;
     font-weight: 700;
@@ -314,6 +326,7 @@
   .food-item .name { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .food-item .detail { font-size: 0.9rem; color: var(--muted); margin-top: 2px; }
   .food-item .net {
+    color: var(--carb-strong);
     font-weight: 800;
     white-space: nowrap;
     font-size: 1.25rem;
@@ -344,19 +357,20 @@
   .duo-ico { color: var(--accent-text); font-size: 1.05rem; }
   .duo-lbl { font-size: 0.85rem; font-weight: 700; color: var(--muted); margin-top: 2px; }
   .duo-val { font-size: 1.5rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .duo-val--carb { color: var(--carb-strong); }
   .duo-val small { font-size: 0.95rem; font-weight: 700; }
   /* Encadré « À entrer dans la pompe » : bordure accent, gros total.
      Le chiffre reste en encre neutre à fort contraste (AAA). */
   .pump-box {
     margin-top: 12px;
-    border: 2px solid var(--accent-text);
+    border: 1px solid var(--accent);
     border-radius: 16px;
     padding: 12px 12px 10px;
     text-align: center;
   }
   .pump-lbl { color: var(--accent-text); font-weight: 700; font-size: 0.95rem; }
   .pump-val { font-size: 2.6rem; font-weight: 800; line-height: 1.15; font-variant-numeric: tabular-nums; }
-  .pump-val small { font-size: 1.3rem; font-weight: 700; }
+  .pump-val small { font-size: 1.3rem; font-weight: 700; color: var(--carb); }
   .food-item .remove {
     background: none;
     border: none;
@@ -614,7 +628,7 @@
   }
   .qty-unit { color: var(--muted); font-weight: 700; }
   .calc-result { text-align: right; }
-  .modal .calc-result .live-net { color: var(--accent-text); text-align: right; margin: 0; }
+  .modal .calc-result .live-net { color: var(--carb-strong); text-align: right; margin: 0; }
   .hero-sub {
     font-size: 0.85rem;
     color: var(--muted);
@@ -662,7 +676,7 @@
     letter-spacing: 0.06em;
     font-size: 0.8rem;
   }
-  .modal .hero-card .live-net { color: var(--accent-text); margin: 2px 0 0; }
+  .modal .hero-card .live-net { color: var(--carb-strong); margin: 2px 0 0; }
   .hero-card .hero-sub { font-size: 0.95rem; }
   .hero-card .hero-badge { margin-top: 10px; background: var(--accent-light); border: none; color: var(--accent-text); }
   /* Carte de référence compacte : deux colonnes + détails dépliables */
@@ -695,6 +709,7 @@
     display: block;
     font-size: 1.35rem;
     font-variant-numeric: tabular-nums;
+    color: var(--carb-strong);
   }
   .ref-cols .ref-item span { font-size: 0.8rem; color: var(--muted); font-weight: 600; }
   /* Mesures maison : sélecteur de texture + boutons de mesures */
@@ -904,6 +919,8 @@
   }
   .total-bar .label { font-size: 0.85rem; color: var(--muted); font-weight: 700; }
   .total-bar .sub { font-size: 0.94rem; color: var(--muted); margin-top: 2px; font-variant-numeric: tabular-nums; }
+  .total-bar .sub b { font-weight: 700; color: var(--text); }
+  .total-bar .sub b.tb-carb { color: var(--carb-strong); }
   /* Compteur principal : encre neutre à fort contraste (AAA), très gros
      chiffres tabulaires — lisible en plein soleil, aucune couleur d'avis */
   .total-bar .value {
@@ -996,7 +1013,7 @@
     font-size: 1.05rem;
     margin: 10px 0 4px;
   }
-  .chart-readout b { color: var(--accent-text); font-size: 1.35rem; font-variant-numeric: tabular-nums; }
+  .chart-readout b { color: var(--carb-strong); font-size: 1.35rem; font-variant-numeric: tabular-nums; }
   input[type="range"] {
     width: 100%;
     margin: 10px 0 4px;
@@ -1019,7 +1036,7 @@
   }
   .inverse-box input { flex: 1; }
   .inverse-box .result { flex: 1.4; font-size: 0.94rem; }
-  .inverse-box .result b { color: var(--accent-text); font-size: 1.15rem; }
+  .inverse-box .result b { color: var(--carb-strong); font-size: 1.15rem; }
 
   /* Scanner de code-barres */
   #scan-video {
@@ -1045,7 +1062,7 @@
     margin-top: 8px;
   }
   .day-header .date { font-weight: 700; font-size: 0.94rem; text-transform: capitalize; }
-  .day-header .day-total { font-size: 0.94rem; color: var(--accent-text); font-weight: 700; font-variant-numeric: tabular-nums; }
+  .day-header .day-total { font-size: 0.94rem; color: var(--carb-strong); font-weight: 700; font-variant-numeric: tabular-nums; }
   .journal-meal {
     display: flex;
     align-items: center;
@@ -1062,7 +1079,7 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .journal-meal .net { font-weight: 700; color: var(--accent-text); white-space: nowrap; font-variant-numeric: tabular-nums; }
+  .journal-meal .net { font-weight: 700; color: var(--carb-strong); white-space: nowrap; font-variant-numeric: tabular-nums; }
   .journal-meal .icon-btn {
     background: none;
     border: none;
@@ -1293,7 +1310,7 @@
     background: var(--card);
     color: var(--text);
     border: 1px solid var(--border);
-    border-left: 4px solid var(--accent);
+    border-left: 4px solid var(--action);
     border-radius: 14px;
     padding: 12px 16px;
     font-size: 0.94rem;
@@ -1595,7 +1612,7 @@
         <input type="checkbox" id="save-fav">
         <label for="save-fav">Enregistrer dans mes favoris</label>
       </div>
-      <button class="btn" id="add-btn">Ajouter au repas</button>
+      <button class="btn btn--action" id="add-btn">Ajouter au repas</button>
       </div>
     </details>
 
@@ -1608,7 +1625,7 @@
         <div class="duo-cell">
           <div class="duo-ico" aria-hidden="true">🌾</div>
           <div class="duo-lbl">Glucides</div>
-          <div class="duo-val" id="duo-carbs">0 <small>g</small></div>
+          <div class="duo-val duo-val--carb" id="duo-carbs">0 <small>g</small></div>
         </div>
         <div class="duo-cell">
           <div class="duo-ico" aria-hidden="true">🍃</div>
@@ -1623,7 +1640,7 @@
       </div>
       <div class="btn-row" style="margin-top:12px; display:none;" id="meal-actions">
         <button class="btn btn-secondary" id="clear-btn">Vider</button>
-        <button class="btn" id="finish-btn">✅ Confirmer le repas</button>
+        <button class="btn btn--action" id="finish-btn">Confirmer le repas</button>
       </div>
     </div>
 
@@ -1760,7 +1777,7 @@
 
     <div class="card">
       <h2>📅 Repas enregistrés</h2>
-      <p class="hint" style="margin:0 0 8px;">Termine un repas avec « ✅ Enregistrer au journal » dans l'onglet Repas. Touche ↻ pour recharger un repas passé.</p>
+      <p class="hint" style="margin:0 0 8px;">Termine un repas avec « Confirmer le repas » dans l'onglet Calculer. Touche ↻ pour recharger un repas passé.</p>
       <div id="journal-list"><p class="empty"><span class="illus" aria-hidden="true">📅</span>Ton journal est vide. Enregistre ton premier repas pour le retrouver ici!</p></div>
     </div>
 
@@ -1854,7 +1871,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.9.2</span>
+  <br><span id="app-version">Glucides Nets v2.10.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -1953,7 +1970,7 @@
       <div class="ref-rows" id="calc-detail" style="display:none;"></div>
     </div>
     <div class="actions">
-      <button class="btn" id="qty-add" type="button">Ajouter au repas</button>
+      <button class="btn btn--action" id="qty-add" type="button">Ajouter au repas</button>
     </div>
     <button class="link-btn" id="qty-edit" type="button" style="display:none; width:100%; text-align:center;">✏️ Corriger les valeurs à la main</button>
   </div>
@@ -1990,7 +2007,7 @@
       </div>
     </div>
     <div class="actions">
-      <button class="btn" id="mp-add" type="button">Ajouter au repas</button>
+      <button class="btn btn--action" id="mp-add" type="button">Ajouter au repas</button>
     </div>
     <button class="link-btn" id="mp-angle" type="button" style="width:100%; text-align:center;">📐 Ajouter une photo sous un autre angle (précise l'estimation)</button>
     <button class="link-btn" id="mp-leftover" type="button" style="width:100%; text-align:center;">🍽️ Repas terminé ? Photographie les restes pour les soustraire</button>
@@ -2035,7 +2052,7 @@
   <div class="inner">
     <div>
       <div class="label">TOTAL À ENTRER DANS LA POMPE</div>
-      <div class="sub" id="total-detail">Glucides : 0 · Fibres : 0 · Polyols : 0</div>
+      <div class="sub" id="total-detail">Glucides : <b class="tb-carb">0</b> · Fibres : <b>0</b></div>
     </div>
     <div class="value" id="total-net">0<small> glucides</small></div>
   </div>
@@ -2749,9 +2766,9 @@
       totalPolyols += item.polyols * item.ratio;
     });
     $('total-net').innerHTML = round1(totalNet) + '<small> glucides</small>';
-    $('total-detail').textContent =
-      'Glucides : ' + round1(totalCarbs) + ' · Fibres : ' + round1(totalFiber) +
-      ' · Polyols : ' + round1(totalPolyols);
+    $('total-detail').innerHTML =
+      'Glucides : <b class="tb-carb">' + round1(totalCarbs) + '</b> · Fibres : <b>' +
+      round1(totalFiber) + '</b>';
     // Carte « Repas actuel » : duo de stats + encadré pompe
     $('duo-carbs').innerHTML = round1(totalCarbs) + ' <small>g</small>';
     $('duo-fiber').innerHTML = round1(totalFiber) + ' <small>g</small>';
@@ -3168,9 +3185,9 @@
       // « 1 portion (27 g) » se réduit au poids; « 3/4 tasse (30 g) »
       // reste tel quel — jamais de doublon « portion (1 portion… »
       var servSub = /^\s*1?\s*portion\b/i.test(servLabel)
-        ? round1(serving.grams) + ' grammes'
-        : servLabel;
-      refCol(round1(n * serving.grams / 100), 'par portion (' + servSub + ')');
+        ? 'de ' + round1(serving.grams) + ' grammes'
+        : '(' + servLabel + ')';
+      refCol(round1(n * serving.grams / 100), 'par portion ' + servSub);
       refCol(round1(n), 'par 100 grammes');
     } else {
       refCol(round1(n), 'par 100 grammes');
