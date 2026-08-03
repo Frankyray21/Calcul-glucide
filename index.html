@@ -288,20 +288,75 @@
   }
   .search-empty .btn { margin-top: 10px; }
 
-  /* Liste des aliments du repas */
+  /* Liste des aliments du repas (maquette « Repas actuel » : icône ronde,
+     nom + poids + fibres à gauche, glucides en évidence à droite) */
   .food-item {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 10px;
+    gap: 12px;
     padding: 12px 0;
     border-bottom: 1px solid var(--border);
   }
   .food-item:last-child { border-bottom: none; }
+  .food-item .f-ico {
+    flex: none;
+    width: 46px;
+    height: 46px;
+    border-radius: 50%;
+    background: var(--accent-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+  }
   .food-item .info { flex: 1; min-width: 0; }
-  .food-item .name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .food-item .detail { font-size: 0.94rem; color: var(--muted); margin-top: 2px; }
-  .food-item .net { font-weight: 700; color: var(--accent-text); white-space: nowrap; font-size: 1.05rem; font-variant-numeric: tabular-nums; }
+  .food-item .name { font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .food-item .detail { font-size: 0.9rem; color: var(--muted); margin-top: 2px; }
+  .food-item .net {
+    font-weight: 800;
+    white-space: nowrap;
+    font-size: 1.25rem;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+  }
+  .food-item .net small { display: block; font-size: 0.75rem; font-weight: 700; color: var(--muted); }
+  /* Étiquette de section (« ALIMENTS ») */
+  .sec-label {
+    font-size: 0.76rem;
+    font-weight: 800;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin: 2px 0 2px;
+  }
+  /* Duo de stats Glucides | Fibres */
+  .meal-duo {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    margin-top: 12px;
+    overflow: hidden;
+  }
+  .duo-cell { padding: 12px 8px; text-align: center; }
+  .duo-cell + .duo-cell { border-left: 1px solid var(--border); }
+  .duo-ico { color: var(--accent-text); font-size: 1.05rem; }
+  .duo-lbl { font-size: 0.85rem; font-weight: 700; color: var(--muted); margin-top: 2px; }
+  .duo-val { font-size: 1.5rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+  .duo-val small { font-size: 0.95rem; font-weight: 700; }
+  /* Encadré « À entrer dans la pompe » : bordure accent, gros total.
+     Le chiffre reste en encre neutre à fort contraste (AAA). */
+  .pump-box {
+    margin-top: 12px;
+    border: 2px solid var(--accent-text);
+    border-radius: 16px;
+    padding: 12px 12px 10px;
+    text-align: center;
+  }
+  .pump-lbl { color: var(--accent-text); font-weight: 700; font-size: 0.95rem; }
+  .pump-val { font-size: 2.6rem; font-weight: 800; line-height: 1.15; font-variant-numeric: tabular-nums; }
+  .pump-val small { font-size: 1.3rem; font-weight: 700; }
   .food-item .remove {
     background: none;
     border: none;
@@ -1545,11 +1600,30 @@
     </details>
 
     <div class="card">
-      <h2>🍽️ Repas en cours</h2>
+      <h2 style="margin-bottom:0;">🍽️ Repas actuel</h2>
+      <p class="hint" style="margin:0 0 10px;">Calcul glucides</p>
+      <div class="sec-label" id="meal-sec-label" style="display:none;">Aliments</div>
       <div id="meal-list"><p class="empty"><span class="illus" aria-hidden="true">🍽️</span>Ton repas est vide. Ajoute ton premier aliment ci-dessus!</p></div>
+      <div class="meal-duo" id="meal-duo" style="display:none;">
+        <div class="duo-cell">
+          <div class="duo-ico" aria-hidden="true">🌾</div>
+          <div class="duo-lbl">Glucides</div>
+          <div class="duo-val" id="duo-carbs">0 <small>g</small></div>
+        </div>
+        <div class="duo-cell">
+          <div class="duo-ico" aria-hidden="true">🍃</div>
+          <div class="duo-lbl">Fibres</div>
+          <div class="duo-val" id="duo-fiber">0 <small>g</small></div>
+        </div>
+      </div>
+      <p class="hint" id="duo-polyols" style="display:none; text-align:center; margin:6px 0 0;"></p>
+      <div class="pump-box" id="pump-box" style="display:none;">
+        <div class="pump-lbl">À entrer dans la pompe</div>
+        <div class="pump-val" id="pump-val">0 <small>g</small></div>
+      </div>
       <div class="btn-row" style="margin-top:12px; display:none;" id="meal-actions">
         <button class="btn btn-secondary" id="clear-btn">Vider</button>
-        <button class="btn" id="finish-btn">✅ Enregistrer au journal</button>
+        <button class="btn" id="finish-btn">✅ Confirmer le repas</button>
       </div>
     </div>
 
@@ -1780,7 +1854,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.9.1</span>
+  <br><span id="app-version">Glucides Nets v2.9.2</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -2397,6 +2471,36 @@
   }
 
   /* ── Rendu du repas ── */
+  /* Icône d'aliment par mots-clés : purement décorative (aria-hidden),
+     assiette générique quand rien ne matche. */
+  var FOOD_ICONS = [
+    [/cereale|froot|flocons|avoine|granola|musli|muesli/, '🥣'],
+    [/\blait\b|boisson de soya/, '🥛'], [/yogourt|yaourt/, '🍦'],
+    [/banane/, '🍌'], [/pomme de terre|patate|frite|croustille/, '🍟'],
+    [/pomme/, '🍎'], [/orange|clementine|mandarine/, '🍊'],
+    [/fraise/, '🍓'], [/bleuet|myrtille/, '🫐'], [/raisin/, '🍇'],
+    [/melon d'eau|pasteque/, '🍉'], [/poire|peche|prune|kiwi|mangue|ananas/, '🍑'],
+    [/pain|baguette|toast|rotie|bagel|tortilla|pita/, '🍞'],
+    [/croissant|viennoiserie/, '🥐'], [/riz/, '🍚'],
+    [/pates|spaghetti|macaroni|nouille|lasagne/, '🍝'],
+    [/pizza/, '🍕'], [/sushi|maki/, '🍣'], [/soupe|potage|chili|ragout/, '🍲'],
+    [/fromage/, '🧀'], [/oeuf/, '🥚'], [/poulet|dinde/, '🍗'],
+    [/boeuf|porc|jambon|viande|steak/, '🥩'], [/poisson|saumon|thon/, '🐟'],
+    [/carotte/, '🥕'], [/brocoli|legume/, '🥦'], [/mais\b|ble d'inde/, '🌽'],
+    [/salade|laitue/, '🥗'], [/chocolat/, '🍫'], [/biscuit|oreo/, '🍪'],
+    [/gateau|muffin|cupcake/, '🧁'], [/creme glacee|glace|sorbet/, '🍨'],
+    [/bonbon|jujube/, '🍬'], [/jus|smoothie/, '🧃'], [/cafe|espresso/, '☕'],
+    [/sandwich|burger|hamburger/, '🍔'], [/craquelin|crackers/, '🥨'],
+    [/photo\)$/, '📷']
+  ];
+  function foodEmoji(name) {
+    var q = normalize(name || '');
+    for (var i = 0; i < FOOD_ICONS.length; i++) {
+      if (FOOD_ICONS[i][0].test(q)) return FOOD_ICONS[i][1];
+    }
+    return '🍽️';
+  }
+
   function renderMeal() {
     var list = $('meal-list');
     var actions = $('meal-actions');
@@ -2424,6 +2528,11 @@
         var div = document.createElement('div');
         div.className = 'food-item';
 
+        var ico = document.createElement('div');
+        ico.className = 'f-ico';
+        ico.setAttribute('aria-hidden', 'true');
+        ico.textContent = foodEmoji(item.name);
+
         var info = document.createElement('div');
         info.className = 'info';
         var nameEl = document.createElement('div');
@@ -2431,18 +2540,18 @@
         nameEl.textContent = item.name;
         var detail = document.createElement('div');
         detail.className = 'detail';
-        var parts = ['Gluc. ' + round1(item.carbs * item.ratio),
-                     'Fibres ' + round1(item.fiber * item.ratio)];
-        if (item.polyols > 0) parts.push('Polyols ' + round1(item.polyols * item.ratio));
-        if (item.grams) parts.push(item.grams + ' grammes');
+        var parts = [];
+        if (item.grams) parts.push(item.grams + ' g');
         else if (item.ratio !== 1) parts.push('portion ×' + round2(item.ratio));
+        parts.push('Fibres ' + round1(item.fiber * item.ratio) + ' g');
+        if (item.polyols > 0) parts.push('Polyols ' + round1(item.polyols * item.ratio) + ' g');
         detail.textContent = parts.join(' · ');
         info.appendChild(nameEl);
         info.appendChild(detail);
 
         var netEl = document.createElement('div');
         netEl.className = 'net';
-        netEl.textContent = net + ' glucides';
+        netEl.innerHTML = net + ' g<small>glucides</small>';
 
         var removeBtn = document.createElement('button');
         removeBtn.className = 'remove';
@@ -2454,6 +2563,7 @@
           renderMeal();
         });
 
+        div.appendChild(ico);
         div.appendChild(info);
         div.appendChild(netEl);
         div.appendChild(removeBtn);
@@ -2461,6 +2571,11 @@
       });
       actions.style.display = 'flex';
     }
+    // Stats, encadré pompe et étiquette de section : visibles avec un repas
+    var has = meal.length > 0;
+    $('meal-sec-label').style.display = has ? 'block' : 'none';
+    $('meal-duo').style.display = has ? 'grid' : 'none';
+    $('pump-box').style.display = has ? 'block' : 'none';
     renderTotal();
     renderHome();
   }
@@ -2637,6 +2752,13 @@
     $('total-detail').textContent =
       'Glucides : ' + round1(totalCarbs) + ' · Fibres : ' + round1(totalFiber) +
       ' · Polyols : ' + round1(totalPolyols);
+    // Carte « Repas actuel » : duo de stats + encadré pompe
+    $('duo-carbs').innerHTML = round1(totalCarbs) + ' <small>g</small>';
+    $('duo-fiber').innerHTML = round1(totalFiber) + ' <small>g</small>';
+    $('pump-val').innerHTML = round1(totalNet) + ' <small>g</small>';
+    var pol = $('duo-polyols');
+    pol.textContent = totalPolyols > 0 ? 'Polyols : ' + round1(totalPolyols) + ' g' : '';
+    pol.style.display = totalPolyols > 0 ? 'block' : 'none';
   }
 
   /* ── Favoris ── */
