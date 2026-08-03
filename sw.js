@@ -4,7 +4,7 @@
    Open Food Facts (données nutritionnelles toujours fraîches). */
 'use strict';
 
-var CACHE = 'glucides-nets-v1';
+var CACHE = 'glucides-nets-v2';
 var ASSETS = [
   '.',
   'index.html',

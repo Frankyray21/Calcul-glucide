@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#1a6b54">
+<meta name="theme-color" content="#07111F">
 <meta name="description" content="Calculateur de glucides nets pour pompe à insuline — diabète de type 1">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png" type="image/png">
@@ -13,71 +13,113 @@
 <title>Glucides Nets — Calculateur pour pompe à insuline</title>
 <style>
   :root {
-    --bg: #f4f7f6;
-    --card: #ffffff;
-    --text: #1c2b27;
-    --muted: #5f7370;
-    --accent: #1a6b54;
-    --accent-light: #e3f1ec;
-    --danger: #b3402e;
-    --border: #dde6e3;
-    --radius: 14px;
-    --chart: #00875a;
-    --chart-soft: rgba(0, 135, 90, 0.12);
-  }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #101715;
-      --card: #1a2320;
-      --text: #e8efec;
-      --muted: #93a5a0;
-      --accent: #4dbd97;
-      --accent-light: #1f342d;
-      --border: #2c3a35;
-      --chart: #35a67d;
-      --chart-soft: rgba(53, 166, 125, 0.16);
-    }
+    --bg: #07111F;
+    --bg-2: #0D1928;
+    --card: #142235;
+    --card-2: #192A3E;
+    --border: rgba(148, 163, 184, 0.22);
+    --text: #F5F7FA;
+    --muted: #9EABBD;
+    --blue: #3B82F6;
+    --blue-light: #60A5FA;
+    --blue-soft: rgba(59, 130, 246, 0.12);
+    --violet: #A76CF5;
+    --violet-light: #C49AFF;
+    --green: #65B958;
+    --green-pressed: #4E9D45;
+    --danger: #F87171;
+    --radius: 20px;
+    --nav-h: 62px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { color-scheme: dark; }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-family: "Inter", -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
-    padding-bottom: 150px;
+    padding-bottom: calc(220px + env(safe-area-inset-bottom));
+    -webkit-font-smoothing: antialiased;
   }
-  header {
-    background: var(--accent);
-    color: #fff;
-    padding: 16px 16px 0;
-    text-align: center;
-  }
-  header h1 { font-size: 1.2rem; font-weight: 700; }
-  header p { font-size: 0.78rem; opacity: 0.9; margin-top: 2px; }
 
-  .tabs {
-    display: flex;
+  /* ── En-tête ── */
+  header { padding: calc(14px + env(safe-area-inset-top)) 20px 6px; }
+  .header-inner {
     max-width: 560px;
-    margin: 12px auto 0;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .logo {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+    border-radius: 14px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--blue-light);
+  }
+  .logo svg { width: 26px; height: 26px; }
+  .titles { flex: 1; min-width: 0; }
+  header h1 { font-size: 1.7rem; font-weight: 600; letter-spacing: -0.02em; }
+  header p { font-size: 0.88rem; color: var(--muted); margin-top: 1px; }
+  .info-btn {
+    width: 44px;
+    height: 44px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    background: none;
+    border: 1px solid var(--border);
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+  }
+  .info-btn svg { width: 20px; height: 20px; }
+  .info-btn:active { color: var(--blue-light); border-color: var(--blue); }
+
+  /* ── Navigation inférieure ── */
+  .bottom-nav {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: var(--bg-2);
+    border-top: 1px solid var(--border);
+    padding-bottom: env(safe-area-inset-bottom);
+    z-index: 45;
+  }
+  .bottom-nav .inner {
+    max-width: 560px;
+    margin: 0 auto;
+    display: flex;
+    height: var(--nav-h);
   }
   .tab-btn {
     flex: 1;
-    padding: 12px 2px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 3px;
     background: none;
     border: none;
-    color: rgba(255,255,255,0.75);
-    font-size: 0.82rem;
-    font-weight: 700;
+    color: var(--muted);
+    font-family: inherit;
+    font-size: 0.68rem;
+    font-weight: 600;
     cursor: pointer;
-    border-bottom: 3px solid transparent;
-    white-space: nowrap;
+    min-height: 48px;
   }
-  .tab-btn.active {
-    color: #fff;
-    border-bottom-color: #fff;
-  }
+  .tab-btn svg { width: 22px; height: 22px; }
+  .tab-btn.active { color: var(--blue-light); }
 
-  main { max-width: 560px; margin: 0 auto; padding: 16px; }
+  main { max-width: 560px; margin: 0 auto; padding: 12px 20px 0; }
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
 
@@ -85,48 +127,76 @@
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 16px;
+    padding: 18px;
     margin-bottom: 16px;
   }
-  .card h2 { font-size: 1rem; margin-bottom: 12px; }
+  .card h2 { font-size: 1.05rem; font-weight: 600; margin-bottom: 12px; }
 
-  label { display: block; font-size: 0.82rem; color: var(--muted); margin-bottom: 4px; font-weight: 600; }
+  label {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--muted);
+    margin-bottom: 5px;
+    font-weight: 600;
+    letter-spacing: 0.01em;
+  }
   input[type="text"], input[type="number"], input[type="search"], select {
     width: 100%;
-    padding: 12px;
-    font-size: 1.05rem;
+    min-height: 48px;
+    padding: 12px 14px;
+    font-size: 1rem;
+    font-family: inherit;
     border: 1px solid var(--border);
-    border-radius: 10px;
-    background: var(--bg);
+    border-radius: 12px;
+    background: var(--bg-2);
     color: var(--text);
     -moz-appearance: textfield;
   }
+  ::placeholder { color: rgba(158, 171, 189, 0.55); }
   input::-webkit-outer-spin-button, input::-webkit-inner-spin-button { -webkit-appearance: none; }
-  input:focus, select:focus { outline: 2px solid var(--accent); border-color: var(--accent); }
+  input:focus, select:focus {
+    outline: 2px solid var(--blue);
+    outline-offset: -1px;
+    border-color: var(--blue);
+  }
+  button:focus-visible { outline: 2px solid var(--blue-light); outline-offset: 2px; }
 
   .row { display: flex; gap: 10px; margin-bottom: 12px; }
   .row > div { flex: 1; }
 
   .btn {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
     width: 100%;
-    padding: 14px;
-    font-size: 1.05rem;
-    font-weight: 700;
+    min-height: 50px;
+    padding: 13px 16px;
+    font-size: 1rem;
+    font-weight: 600;
+    font-family: inherit;
     border: none;
-    border-radius: 10px;
-    background: var(--accent);
+    border-radius: 14px;
+    background: var(--blue);
     color: #fff;
     cursor: pointer;
   }
-  .btn:active { opacity: 0.85; }
-  .btn-secondary { background: var(--accent-light); color: var(--accent); }
+  .btn:active { background: #2E6FD8; }
+  .btn svg { width: 20px; height: 20px; flex-shrink: 0; }
+  .btn-green { background: var(--green); }
+  .btn-green:active { background: var(--green-pressed); }
+  .btn-secondary {
+    background: var(--card-2);
+    color: var(--blue-light);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:active { background: #1E3049; }
 
   /* Recherche base d'aliments */
   .search-results {
     margin-top: 8px;
     border: 1px solid var(--border);
-    border-radius: 10px;
+    border-radius: 12px;
     overflow: hidden;
     display: none;
   }
@@ -137,18 +207,20 @@
     align-items: center;
     gap: 8px;
     width: 100%;
-    padding: 11px 12px;
-    background: var(--card);
+    min-height: 48px;
+    padding: 11px 14px;
+    background: var(--card-2);
     border: none;
     border-bottom: 1px solid var(--border);
     color: var(--text);
+    font-family: inherit;
     font-size: 0.95rem;
     cursor: pointer;
     text-align: left;
   }
   .search-results button:last-child { border-bottom: none; }
-  .search-results button:active { background: var(--accent-light); }
-  .search-results .val { color: var(--accent); font-weight: 700; font-size: 0.85rem; white-space: nowrap; }
+  .search-results button:active { background: var(--blue-soft); }
+  .search-results .val { color: var(--violet-light); font-weight: 700; font-size: 0.85rem; white-space: nowrap; }
 
   /* Liste des aliments du repas */
   .food-item {
@@ -163,14 +235,14 @@
   .food-item .info { flex: 1; min-width: 0; }
   .food-item .name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .food-item .detail { font-size: 0.78rem; color: var(--muted); margin-top: 2px; }
-  .food-item .net { font-weight: 700; color: var(--accent); white-space: nowrap; font-size: 1.05rem; }
+  .food-item .net { font-weight: 700; color: var(--violet-light); white-space: nowrap; font-size: 1.05rem; }
   .food-item .remove {
     background: none;
     border: none;
     color: var(--danger);
     font-size: 1.3rem;
     cursor: pointer;
-    padding: 4px 8px;
+    padding: 8px 10px;
     line-height: 1;
   }
   .empty { color: var(--muted); font-size: 0.9rem; text-align: center; padding: 12px 0; }
@@ -185,8 +257,8 @@
   .photo-preview {
     width: 72px;
     height: 72px;
-    border-radius: 12px;
-    background: var(--accent-light);
+    border-radius: 14px;
+    background: var(--card-2);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -204,9 +276,9 @@
     gap: 12px;
   }
   .recipe-card {
-    background: var(--card);
+    background: var(--card-2);
     border: 1px solid var(--border);
-    border-radius: var(--radius);
+    border-radius: 16px;
     overflow: hidden;
     cursor: pointer;
     position: relative;
@@ -215,11 +287,11 @@
     color: var(--text);
     font-family: inherit;
   }
-  .recipe-card:active { outline: 2px solid var(--accent); }
+  .recipe-card:active { outline: 2px solid var(--blue); }
   .recipe-card .photo {
     width: 100%;
     aspect-ratio: 4/3;
-    background: var(--accent-light);
+    background: var(--bg-2);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -227,21 +299,21 @@
     overflow: hidden;
   }
   .recipe-card .photo img { width: 100%; height: 100%; object-fit: cover; }
-  .recipe-card .body { padding: 10px; }
+  .recipe-card .body { padding: 10px 12px 12px; }
   .recipe-card .name {
-    font-weight: 700;
+    font-weight: 600;
     font-size: 0.92rem;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
   .recipe-card .stats { font-size: 0.75rem; color: var(--muted); margin-top: 4px; line-height: 1.5; }
-  .recipe-card .stats b { color: var(--accent); }
+  .recipe-card .stats b { color: var(--violet-light); }
   .recipe-card .del {
     position: absolute;
     top: 6px;
     right: 6px;
-    background: rgba(0,0,0,0.55);
+    background: rgba(7, 17, 31, 0.72);
     color: #fff;
     border: none;
     border-radius: 50%;
@@ -256,7 +328,7 @@
   .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.5);
+    background: rgba(2, 8, 20, 0.72);
     display: none;
     align-items: flex-end;
     justify-content: center;
@@ -265,33 +337,52 @@
   .modal-overlay.open { display: flex; }
   .modal {
     background: var(--card);
-    border-radius: 20px 20px 0 0;
-    padding: 20px 16px calc(20px + env(safe-area-inset-bottom));
+    border: 1px solid var(--border);
+    border-bottom: none;
+    border-radius: 22px 22px 0 0;
+    padding: 22px 20px calc(20px + env(safe-area-inset-bottom));
     width: 100%;
     max-width: 560px;
   }
-  .modal h3 { font-size: 1.05rem; margin-bottom: 4px; }
-  .modal .stats-line { font-size: 0.8rem; color: var(--muted); margin-bottom: 14px; }
+  .modal h3 { font-size: 1.4rem; font-weight: 600; margin-bottom: 4px; }
+  .modal .stats-line { font-size: 0.85rem; color: var(--muted); margin-bottom: 14px; }
   .modal .live-net {
     text-align: center;
-    font-size: 1.6rem;
-    font-weight: 800;
-    color: var(--accent);
-    margin: 12px 0 16px;
+    font-size: 1.8rem;
+    font-weight: 700;
+    color: var(--violet);
+    margin: 14px 0 16px;
   }
-  .modal .live-net small { font-size: 0.9rem; font-weight: 600; }
+  .modal .live-net small { font-size: 0.9rem; font-weight: 600; color: var(--muted); }
   .modal .actions { display: flex; gap: 10px; }
+
+  /* Boutons plus / moins */
+  .stepper { display: flex; align-items: center; gap: 12px; }
+  .stepper input { flex: 1; text-align: center; font-size: 1.3rem; font-weight: 700; }
+  .step-btn {
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    border: 1.5px solid var(--blue);
+    background: none;
+    color: var(--blue-light);
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+    font-family: inherit;
+  }
+  .step-btn:active { background: var(--blue-soft); }
 
   /* Barre de total fixe en bas */
   .total-bar {
     position: fixed;
-    bottom: 0;
     left: 0;
     right: 0;
-    background: var(--card);
-    border-top: 2px solid var(--accent);
-    padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
-    box-shadow: 0 -4px 16px rgba(0,0,0,0.12);
+    bottom: calc(var(--nav-h) + env(safe-area-inset-bottom));
+    background: var(--bg-2);
+    border-top: 1px solid rgba(59, 130, 246, 0.45);
+    padding: 10px 20px 12px;
     z-index: 40;
   }
   .total-bar .inner {
@@ -300,18 +391,43 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 12px;
+    gap: 16px;
   }
-  .total-bar .label { font-size: 0.8rem; color: var(--muted); font-weight: 600; }
-  .total-bar .sub { font-size: 0.72rem; color: var(--muted); margin-top: 2px; }
-  .total-bar .value {
-    font-size: 2.2rem;
-    font-weight: 800;
-    color: var(--accent);
-    line-height: 1;
-    white-space: nowrap;
+  .total-bar .label {
+    font-size: 0.68rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    font-weight: 600;
+    margin-bottom: 6px;
   }
-  .total-bar .value small { font-size: 1rem; font-weight: 600; }
+  .total-bar .mini-row { display: flex; gap: 24px; }
+  .total-bar .mini { font-size: 0.78rem; color: var(--muted); }
+  .total-bar .mini b { display: block; font-size: 1.05rem; font-weight: 700; color: var(--text); margin-top: 1px; }
+  .total-bar .mini b.carb { color: var(--violet); }
+  .total-bar .value { text-align: right; line-height: 1; white-space: nowrap; }
+  .total-bar .value span { font-size: 2.6rem; font-weight: 700; letter-spacing: -0.02em; }
+  .total-bar .value small { display: block; font-size: 0.72rem; font-weight: 600; color: var(--muted); margin-top: 4px; }
+
+  /* Confirmation verte discrète */
+  .toast {
+    position: fixed;
+    left: 50%;
+    transform: translateX(-50%) translateY(8px);
+    bottom: calc(var(--nav-h) + 96px + env(safe-area-inset-bottom));
+    background: var(--green);
+    color: #fff;
+    padding: 10px 18px;
+    border-radius: 12px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s, transform 0.25s;
+    z-index: 60;
+    max-width: calc(100% - 40px);
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
 
   details.help { margin-bottom: 16px; }
   details.help summary {
@@ -329,7 +445,7 @@
     font-size: 0.72rem;
     color: var(--muted);
     text-align: center;
-    padding: 8px 16px 16px;
+    padding: 8px 20px 16px;
     max-width: 560px;
     margin: 0 auto;
   }
@@ -339,11 +455,13 @@
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    background: var(--accent-light);
-    color: var(--accent);
+    background: var(--blue-soft);
+    color: var(--blue-light);
     border: none;
     border-radius: 20px;
+    min-height: 40px;
     padding: 8px 14px;
+    font-family: inherit;
     font-size: 0.85rem;
     font-weight: 600;
     cursor: pointer;
@@ -355,55 +473,57 @@
     align-items: center;
     gap: 8px;
   }
-  .save-fav-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--accent); }
+  .save-fav-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--blue); }
   .save-fav-row label { margin: 0; font-size: 0.85rem; }
 
-  .hint { font-size: 0.72rem; color: var(--muted); margin: -6px 0 12px; }
+  .hint { font-size: 0.74rem; color: var(--muted); margin: -6px 0 12px; }
 
   /* Outil interactif glucides ↔ grammes */
   .chart-wrap { position: relative; }
   .chart-wrap svg { width: 100%; height: auto; display: block; touch-action: none; }
-  .chart-grid line { stroke: var(--border); stroke-width: 1; }
+  .chart-grid line { stroke: rgba(148, 163, 184, 0.14); stroke-width: 1; }
   .chart-axis text { fill: var(--muted); font-size: 10px; font-family: inherit; }
-  .chart-line { stroke: var(--chart); stroke-width: 2; fill: none; }
-  .chart-area { fill: var(--chart-soft); }
-  .chart-dot { fill: var(--chart); stroke: var(--card); stroke-width: 2; }
+  .chart-line { stroke: var(--blue); stroke-width: 2; fill: none; }
+  .chart-area { fill: rgba(59, 130, 246, 0.10); }
+  .chart-dot { fill: var(--blue-light); stroke: var(--card); stroke-width: 2; }
   .chart-crosshair { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
   .chart-readout {
     text-align: center;
-    font-size: 1.05rem;
+    font-size: 1rem;
     margin: 10px 0 4px;
+    color: var(--muted);
   }
-  .chart-readout b { color: var(--chart); font-size: 1.35rem; }
+  .chart-readout b { color: var(--violet); font-size: 1.35rem; }
   input[type="range"] {
     width: 100%;
     margin: 10px 0 4px;
-    accent-color: var(--chart);
+    accent-color: var(--blue);
     height: 28px;
   }
   .tool-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; margin-top: 10px; }
-  .tool-table th, .tool-table td { padding: 7px 8px; text-align: right; border-bottom: 1px solid var(--border); }
+  .tool-table th, .tool-table td { padding: 8px; text-align: right; border-bottom: 1px solid rgba(148, 163, 184, 0.14); }
   .tool-table th:first-child, .tool-table td:first-child { text-align: left; }
   .tool-table th { color: var(--muted); font-size: 0.75rem; font-weight: 600; }
-  .tool-table tr.current td { background: var(--chart-soft); font-weight: 700; }
+  .tool-table tr.current td { background: var(--blue-soft); font-weight: 700; }
   .inverse-box {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-top: 12px;
-    background: var(--accent-light);
-    border-radius: 10px;
-    padding: 12px;
+    margin-top: 14px;
+    background: var(--card-2);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 12px 14px;
   }
   .inverse-box input { flex: 1; }
-  .inverse-box .result { flex: 1.4; font-size: 0.9rem; }
-  .inverse-box .result b { color: var(--chart); font-size: 1.15rem; }
+  .inverse-box .result { flex: 1.4; font-size: 0.9rem; color: var(--muted); }
+  .inverse-box .result b { color: var(--violet); font-size: 1.15rem; }
 
   /* Scanner de code-barres */
   #scan-video {
     width: 100%;
     max-height: 260px;
-    border-radius: 10px;
+    border-radius: 14px;
     background: #000;
     object-fit: cover;
     display: none;
@@ -419,19 +539,19 @@
     justify-content: space-between;
     align-items: baseline;
     padding: 10px 0 6px;
-    border-bottom: 2px solid var(--accent);
+    border-bottom: 1px solid var(--border);
     margin-top: 8px;
   }
-  .day-header .date { font-weight: 700; font-size: 0.92rem; text-transform: capitalize; }
-  .day-header .day-total { font-size: 0.85rem; color: var(--accent); font-weight: 700; }
+  .day-header .date { font-weight: 600; font-size: 0.92rem; text-transform: capitalize; }
+  .day-header .day-total { font-size: 0.85rem; color: var(--violet); font-weight: 700; }
   .journal-meal {
     display: flex;
     align-items: center;
     gap: 8px;
     padding: 10px 0;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.14);
   }
-  .journal-meal .time { font-size: 0.8rem; color: var(--muted); font-weight: 700; width: 44px; flex-shrink: 0; }
+  .journal-meal .time { font-size: 0.8rem; color: var(--muted); font-weight: 600; width: 44px; flex-shrink: 0; }
   .journal-meal .foods {
     flex: 1;
     min-width: 0;
@@ -440,18 +560,18 @@
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .journal-meal .net { font-weight: 700; color: var(--accent); white-space: nowrap; }
+  .journal-meal .net { font-weight: 700; color: var(--violet-light); white-space: nowrap; }
   .journal-meal .icon-btn {
     background: none;
     border: none;
     cursor: pointer;
     font-size: 1.05rem;
-    padding: 4px 6px;
-    color: var(--muted);
+    padding: 8px;
+    color: var(--blue-light);
   }
   .journal-meal .icon-btn.del { color: var(--danger); }
   .week-chart text { fill: var(--muted); font-size: 10px; font-family: inherit; }
-  .week-chart .bar { fill: var(--chart); }
+  .week-chart .bar { fill: var(--blue); }
   .week-chart .bar-label { fill: var(--text); font-weight: 700; }
   .week-chart .baseline { stroke: var(--border); stroke-width: 1; }
 
@@ -462,20 +582,20 @@
     align-items: center;
     gap: 8px;
     padding: 8px 0;
-    border-bottom: 1px solid var(--border);
+    border-bottom: 1px solid rgba(148, 163, 184, 0.14);
     font-size: 0.88rem;
   }
   .ing-item .detail { color: var(--muted); font-size: 0.76rem; }
-  .ing-item .remove { background: none; border: none; color: var(--danger); font-size: 1.1rem; cursor: pointer; padding: 2px 6px; }
+  .ing-item .remove { background: none; border: none; color: var(--danger); font-size: 1.1rem; cursor: pointer; padding: 8px; }
   .ing-total { font-size: 0.88rem; margin: 10px 0; color: var(--muted); }
-  .ing-total b { color: var(--accent); }
+  .ing-total b { color: var(--violet-light); }
 
   /* Partage sur carte recette */
   .recipe-card .share {
     position: absolute;
     top: 6px;
     left: 6px;
-    background: rgba(0,0,0,0.55);
+    background: rgba(7, 17, 31, 0.72);
     color: #fff;
     border: none;
     border-radius: 50%;
@@ -493,8 +613,8 @@
   .install-banner {
     display: none;
     max-width: 560px;
-    margin: 16px auto -4px;
-    padding: 0 16px;
+    margin: 14px auto -2px;
+    padding: 0 20px;
   }
   .install-banner.visible { display: block; }
   .install-banner button {
@@ -503,17 +623,18 @@
     justify-content: center;
     gap: 8px;
     width: 100%;
+    min-height: 50px;
     padding: 13px;
     font-size: 1rem;
-    font-weight: 700;
-    border: none;
-    border-radius: 12px;
-    background: linear-gradient(135deg, var(--accent), #0e8a63);
-    color: #fff;
+    font-weight: 600;
+    font-family: inherit;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--card-2);
+    color: var(--blue-light);
     cursor: pointer;
-    box-shadow: 0 4px 14px rgba(26, 107, 84, 0.35);
   }
-  .install-banner button:active { opacity: 0.85; }
+  .install-banner button:active { background: #1E3049; }
   .install-steps { list-style: none; margin: 12px 0; }
   .install-steps li {
     display: flex;
@@ -523,7 +644,7 @@
     font-size: 0.92rem;
   }
   .install-steps .num {
-    background: var(--accent);
+    background: var(--blue);
     color: #fff;
     border-radius: 50%;
     width: 24px;
@@ -540,18 +661,33 @@
 <body>
 
 <header>
-  <h1>🧮 Glucides Nets</h1>
-  <p>Calculateur de repas pour pompe à insuline</p>
-  <nav class="tabs">
-    <button class="tab-btn active" data-tab="meal">🍽️ Repas</button>
-    <button class="tab-btn" data-tab="recipes">📖 Recettes</button>
-    <button class="tab-btn" data-tab="tool">📈 Outil</button>
-    <button class="tab-btn" data-tab="journal">📅 Journal</button>
-  </nav>
+  <div class="header-inner">
+    <div class="logo" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true">
+        <rect x="3" y="3" width="18" height="18" rx="3"/>
+        <line x1="5.5" y1="8" x2="18.5" y2="8"/>
+        <line x1="5.5" y1="12" x2="18.5" y2="12"/>
+        <line x1="5.5" y1="16" x2="18.5" y2="16"/>
+        <circle cx="9" cy="8" r="1.5" fill="currentColor" stroke="none"/>
+        <circle cx="13" cy="8" r="1.5" fill="currentColor" stroke="none"/>
+        <circle cx="11" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+        <circle cx="15.5" cy="12" r="1.5" fill="currentColor" stroke="none"/>
+        <circle cx="8.5" cy="16" r="1.5" fill="currentColor" stroke="none"/>
+        <circle cx="14" cy="16" r="1.5" fill="currentColor" stroke="none"/>
+      </svg>
+    </div>
+    <div class="titles">
+      <h1>Glucides Nets</h1>
+      <p>Calculateur de repas</p>
+    </div>
+    <button class="info-btn" id="info-btn" type="button" aria-label="Comment sont calculés les glucides nets?">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+    </button>
+  </div>
 </header>
 
 <div class="install-banner" id="install-banner">
-  <button id="install-btn" type="button">📲 Télécharger l'app sur votre appareil</button>
+  <button id="install-btn" type="button">Télécharger l'app sur votre appareil</button>
 </div>
 
 <main>
@@ -559,8 +695,8 @@
   <!-- ═══════════ ONGLET REPAS ═══════════ -->
   <section class="tab-panel active" id="panel-meal">
 
-    <details class="help">
-      <summary>ℹ️ Comment sont calculés les glucides nets?</summary>
+    <details class="help" id="help-details">
+      <summary>Comment sont calculés les glucides nets?</summary>
       <div class="card">
         <p><strong>Glucides nets = Glucides totaux − Fibres − (Polyols ÷ 2)</strong></p>
         <p>Au Canada et aux États-Unis, les fibres sont incluses dans les glucides totaux sur l'étiquette nutritionnelle. Comme les fibres ne font pas monter la glycémie, on les soustrait.</p>
@@ -571,20 +707,23 @@
     </details>
 
     <div class="card">
-      <h2>📷 Scanner un produit</h2>
+      <h2>Scanner un produit</h2>
       <p class="hint" style="margin:0 0 10px;">Scannez le code-barres d'un produit emballé — ses valeurs nutritionnelles sont récupérées automatiquement depuis Open Food Facts (connexion Internet requise).</p>
-      <button class="btn btn-secondary" id="scan-open-btn" type="button">📷 Scanner un code-barres</button>
+      <button class="btn" id="scan-open-btn" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+        Scanner un code-barres
+      </button>
     </div>
 
     <div class="card">
-      <h2>🔍 Base d'aliments courants</h2>
-      <input type="search" id="db-search" placeholder="Chercher… (ex. : riz, pomme, pain)" autocomplete="off">
+      <h2>Base d'aliments</h2>
+      <input type="search" id="db-search" placeholder="Rechercher un aliment…" autocomplete="off">
       <div class="search-results" id="db-results"></div>
       <p class="hint" style="margin-top:8px;">Valeurs par 100 g — source : USDA FoodData Central (cohérent avec le Fichier canadien sur les éléments nutritifs). Pour un produit emballé, fiez-vous d'abord à son étiquette. Choisissez un aliment, puis indiquez le poids consommé.</p>
     </div>
 
     <div class="card">
-      <h2>➕ Ajouter un aliment</h2>
+      <h2>Ajouter un aliment</h2>
       <div style="margin-bottom:12px;">
         <label for="food-name">Nom de l'aliment</label>
         <input type="text" id="food-name" placeholder="ex. : Pain multigrain" autocomplete="off">
@@ -627,20 +766,20 @@
         <input type="checkbox" id="save-fav">
         <label for="save-fav">Enregistrer dans mes favoris</label>
       </div>
-      <button class="btn" id="add-btn">Ajouter au repas</button>
+      <button class="btn btn-green" id="add-btn">Ajouter au repas</button>
     </div>
 
     <div class="card" id="favorites-card" style="display:none;">
-      <h2>⭐ Mes favoris</h2>
+      <h2>Mes favoris</h2>
       <div class="favorites-list" id="favorites-list"></div>
     </div>
 
     <div class="card">
-      <h2>🍽️ Repas en cours</h2>
+      <h2>Repas en cours</h2>
       <div id="meal-list"><p class="empty">Aucun aliment ajouté pour l'instant.</p></div>
       <div class="btn-row" style="margin-top:12px; display:none;" id="meal-actions">
         <button class="btn btn-secondary" id="clear-btn">Vider</button>
-        <button class="btn" id="finish-btn">✅ Enregistrer au journal</button>
+        <button class="btn btn-green" id="finish-btn">Enregistrer au journal</button>
       </div>
     </div>
 
@@ -650,7 +789,7 @@
   <section class="tab-panel" id="panel-recipes">
 
     <div class="card">
-      <h2>🧑‍🍳 Calculer à partir des ingrédients</h2>
+      <h2>Calculer à partir des ingrédients</h2>
       <p class="hint" style="margin:0 0 10px;">Ajoutez chaque ingrédient pesé — l'app calcule automatiquement les valeurs par 100 g du plat final.</p>
       <input type="search" id="ing-search" placeholder="Chercher dans la base… (ex. : riz)" autocomplete="off">
       <div class="search-results" id="ing-results"></div>
@@ -690,7 +829,7 @@
     </div>
 
     <div class="card">
-      <h2>📷 Nouvelle recette</h2>
+      <h2>Nouvelle recette</h2>
       <div class="photo-picker">
         <div class="photo-preview" id="photo-preview">🍲</div>
         <button class="btn btn-secondary" id="photo-btn" type="button">Ajouter une photo</button>
@@ -723,19 +862,19 @@
           </select>
         </div>
       </div>
-      <p class="hint">💡 Astuce : pour une recette complète, additionnez les glucides et fibres de tous les ingrédients, pesez le plat final, puis calculez les valeurs par 100 g (total ÷ poids × 100).</p>
+      <p class="hint">Astuce : pour une recette complète, additionnez les glucides et fibres de tous les ingrédients, pesez le plat final, puis calculez les valeurs par 100 g (total ÷ poids × 100).</p>
       <button class="btn" id="save-recipe-btn">Enregistrer la recette</button>
     </div>
 
     <div class="card">
-      <h2>📖 Mes recettes</h2>
+      <h2>Mes recettes</h2>
       <p class="hint" style="margin:0 0 12px;">Touchez une recette pour l'ajouter au repas — il suffit d'indiquer le poids de votre portion.</p>
       <div class="recipe-grid" id="recipe-grid"></div>
       <p class="empty" id="recipes-empty">Aucune recette pour l'instant. Créez-en une ci-dessus!</p>
     </div>
 
     <div class="card">
-      <h2>⭐ Recettes populaires</h2>
+      <h2>Recettes populaires</h2>
       <p class="hint" style="margin:0 0 12px;">Plats courants avec valeurs moyennes par 100 g (USDA / FCÉN, recettes types). Votre version maison peut différer — pour un calcul exact, utilisez « Calculer à partir des ingrédients ».</p>
       <div class="recipe-grid" id="builtin-grid"></div>
     </div>
@@ -746,7 +885,7 @@
   <section class="tab-panel" id="panel-tool">
 
     <div class="card">
-      <h2>📈 Relation glucides ↔ grammes</h2>
+      <h2>Relation glucides ↔ grammes</h2>
       <p class="hint" style="margin:0 0 12px;">Choisissez un aliment, puis glissez le curseur (ou touchez le graphique) pour voir les glucides nets selon le poids.</p>
 
       <label for="tool-select">Aliment ou recette</label>
@@ -781,7 +920,7 @@
 
       <div class="inverse-box">
         <div style="flex:1;">
-          <label for="inverse-target">🎯 Cible (g nets)</label>
+          <label for="inverse-target">Cible (g nets)</label>
           <input type="number" id="inverse-target" inputmode="decimal" min="0" step="1" placeholder="ex. : 30">
         </div>
         <div class="result" id="inverse-result">Entrez une cible pour connaître le poids à servir.</div>
@@ -795,24 +934,24 @@
   <section class="tab-panel" id="panel-journal">
 
     <div class="card">
-      <h2>📊 7 derniers jours</h2>
+      <h2>7 derniers jours</h2>
       <p class="hint" style="margin:0 0 8px;" id="week-summary">Aucun repas enregistré pour l'instant.</p>
       <svg class="week-chart" id="week-chart" viewBox="0 0 340 130" role="img"
            aria-label="Glucides nets par jour, 7 derniers jours"></svg>
     </div>
 
     <div class="card">
-      <h2>📅 Repas enregistrés</h2>
-      <p class="hint" style="margin:0 0 8px;">Terminez un repas avec « ✅ Enregistrer au journal » dans l'onglet Repas. Touchez ↻ pour recharger un repas passé.</p>
+      <h2>Repas enregistrés</h2>
+      <p class="hint" style="margin:0 0 8px;">Terminez un repas avec « Enregistrer au journal » dans l'onglet Repas. Touchez ↻ pour recharger un repas passé.</p>
       <div id="journal-list"><p class="empty">Aucun repas enregistré pour l'instant.</p></div>
     </div>
 
     <div class="card">
-      <h2>💾 Sauvegarde et partage</h2>
+      <h2>Sauvegarde et partage</h2>
       <p class="hint" style="margin:0 0 10px;">Vos données restent sur cet appareil. Exportez un fichier pour les sauvegarder ou les transférer sur un autre appareil.</p>
       <div class="btn-row">
-        <button class="btn btn-secondary" id="export-btn" type="button">⬇️ Exporter</button>
-        <button class="btn btn-secondary" id="import-btn" type="button">⬆️ Importer</button>
+        <button class="btn btn-secondary" id="export-btn" type="button">Exporter</button>
+        <button class="btn btn-secondary" id="import-btn" type="button">Importer</button>
       </div>
       <input type="file" id="import-input" accept="application/json,.json" style="display:none;">
       <p class="hint" id="backup-status" style="margin-top:10px;"></p>
@@ -830,17 +969,17 @@
 <!-- Modal : instructions d'installation -->
 <div class="modal-overlay" id="install-modal">
   <div class="modal">
-    <h3>📲 Installer Glucides Nets</h3>
+    <h3>Installer Glucides Nets</h3>
     <p class="stats-line">L'app s'installe directement depuis le navigateur — rien à télécharger sur un magasin d'applications.</p>
     <ul class="install-steps" id="install-steps-ios" style="display:none;">
       <li><span class="num">1</span><span>Touchez le bouton <strong>Partager</strong> <span aria-hidden="true">(carré avec flèche ↑)</span> dans la barre de Safari.</span></li>
       <li><span class="num">2</span><span>Faites défiler et choisissez <strong>« Sur l'écran d'accueil »</strong>.</span></li>
-      <li><span class="num">3</span><span>Touchez <strong>Ajouter</strong> — l'icône verte apparaît sur votre écran d'accueil.</span></li>
+      <li><span class="num">3</span><span>Touchez <strong>Ajouter</strong> — l'icône de l'app apparaît sur votre écran d'accueil.</span></li>
     </ul>
     <ul class="install-steps" id="install-steps-generic" style="display:none;">
       <li><span class="num">1</span><span>Ouvrez le <strong>menu du navigateur</strong> (⋮ ou ⋯).</span></li>
       <li><span class="num">2</span><span>Choisissez <strong>« Ajouter à l'écran d'accueil »</strong> ou <strong>« Installer l'application »</strong>.</span></li>
-      <li><span class="num">3</span><span>Confirmez — l'icône verte apparaît sur votre écran d'accueil.</span></li>
+      <li><span class="num">3</span><span>Confirmez — l'icône de l'app apparaît sur votre écran d'accueil.</span></li>
     </ul>
     <p class="stats-line">Une fois installée, l'app s'ouvre en plein écran et fonctionne même sans connexion.</p>
     <button class="btn btn-secondary" id="install-modal-close" type="button">Fermer</button>
@@ -850,7 +989,7 @@
 <!-- Modal : scanner de code-barres -->
 <div class="modal-overlay" id="scan-modal">
   <div class="modal">
-    <h3>📷 Scanner un code-barres</h3>
+    <h3>Scanner un code-barres</h3>
     <p class="stats-line" id="scan-status">Pointez la caméra vers le code-barres du produit.</p>
     <video id="scan-video" autoplay playsinline muted></video>
     <label for="barcode-manual">Ou entrez le code manuellement</label>
@@ -868,11 +1007,15 @@
     <h3 id="qty-title">Recette</h3>
     <p class="stats-line" id="qty-stats"></p>
     <label for="qty-grams">Poids de la portion consommée (g)</label>
-    <input type="number" id="qty-grams" inputmode="decimal" min="0" step="1" placeholder="ex. : 250">
+    <div class="stepper">
+      <button class="step-btn" id="qty-minus" type="button" aria-label="Diminuer de 5 g">−</button>
+      <input type="number" id="qty-grams" inputmode="decimal" min="0" step="1" placeholder="ex. : 250">
+      <button class="step-btn" id="qty-plus" type="button" aria-label="Augmenter de 5 g">+</button>
+    </div>
     <div class="live-net" id="qty-net">0 <small>g nets</small></div>
     <div class="actions">
       <button class="btn btn-secondary" id="qty-cancel" type="button">Annuler</button>
-      <button class="btn" id="qty-add" type="button">Ajouter au repas</button>
+      <button class="btn btn-green" id="qty-add" type="button">Ajouter au repas</button>
     </div>
   </div>
 </div>
@@ -880,12 +1023,38 @@
 <div class="total-bar">
   <div class="inner">
     <div>
-      <div class="label">TOTAL À ENTRER DANS LA POMPE</div>
-      <div class="sub" id="total-detail">Glucides : 0 g · Fibres : 0 g · Polyols : 0 g</div>
+      <div class="label">Total à entrer dans la pompe</div>
+      <div class="mini-row">
+        <div class="mini">Glucides<b class="carb" id="total-carbs">0 g</b></div>
+        <div class="mini">Fibres<b id="total-fiber">0 g</b></div>
+      </div>
     </div>
-    <div class="value" id="total-net">0<small> g</small></div>
+    <div class="value"><span id="total-net">0</span><small>glucides</small></div>
   </div>
 </div>
+
+<nav class="bottom-nav" aria-label="Navigation principale">
+  <div class="inner">
+    <button class="tab-btn active" data-tab="meal" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>
+      <span>Repas</span>
+    </button>
+    <button class="tab-btn" data-tab="recipes" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+      <span>Recettes</span>
+    </button>
+    <button class="tab-btn" data-tab="tool" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+      <span>Outil</span>
+    </button>
+    <button class="tab-btn" data-tab="journal" type="button">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+      <span>Journal</span>
+    </button>
+  </div>
+</nav>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
 
 <script>
 (function () {
@@ -1132,17 +1301,25 @@
   }
 
   function renderTotal() {
-    var totalNet = 0, totalCarbs = 0, totalFiber = 0, totalPolyols = 0;
+    var totalNet = 0, totalCarbs = 0, totalFiber = 0;
     meal.forEach(function (item) {
       totalNet += netCarbs(item);
       totalCarbs += item.carbs * item.ratio;
       totalFiber += item.fiber * item.ratio;
-      totalPolyols += item.polyols * item.ratio;
     });
-    $('total-net').innerHTML = round1(totalNet) + '<small> g</small>';
-    $('total-detail').textContent =
-      'Glucides : ' + round1(totalCarbs) + ' g · Fibres : ' + round1(totalFiber) +
-      ' g · Polyols : ' + round1(totalPolyols) + ' g';
+    $('total-net').textContent = round1(totalNet);
+    $('total-carbs').textContent = round1(totalCarbs) + ' g';
+    $('total-fiber').textContent = round1(totalFiber) + ' g';
+  }
+
+  /* ── Confirmation verte discrète ── */
+  var toastTimer = null;
+  function showToast(msg) {
+    var t = $('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove('show'); }, 1800);
   }
 
   /* ── Favoris ── */
@@ -1180,6 +1357,7 @@
         });
         save();
         renderMeal();
+        showToast('✓ Ajouté au repas');
       });
       list.appendChild(chip);
     });
@@ -1202,6 +1380,7 @@
     renderMeal();
     renderFavorites();
     resetForm();
+    showToast('✓ Ajouté au repas');
     $('food-name').focus();
   });
 
@@ -1393,6 +1572,13 @@
   }
 
   $('qty-grams').addEventListener('input', updateQtyNet);
+  function stepQty(delta) {
+    var v = Math.max(0, (parseFloat($('qty-grams').value) || 0) + delta);
+    $('qty-grams').value = v;
+    updateQtyNet();
+  }
+  $('qty-minus').addEventListener('click', function () { stepQty(-5); });
+  $('qty-plus').addEventListener('click', function () { stepQty(5); });
   $('qty-cancel').addEventListener('click', function () {
     $('qty-modal').classList.remove('open');
     modalRecipe = null;
@@ -1418,6 +1604,7 @@
     $('qty-modal').classList.remove('open');
     modalRecipe = null;
     switchTab('meal');
+    showToast('✓ Ajouté au repas');
   });
 
   /* ══════════ Outil interactif : glucides ↔ grammes ══════════ */
@@ -1446,7 +1633,7 @@
     var sel = $('tool-select');
     sel.innerHTML = '';
     var ogR = document.createElement('optgroup');
-    ogR.label = '📖 Mes recettes';
+    ogR.label = 'Mes recettes';
     recipes.forEach(function (r, i) {
       var o = document.createElement('option');
       o.value = 'r' + i;
@@ -1455,7 +1642,7 @@
     });
     if (recipes.length > 0) sel.appendChild(ogR);
     var ogB = document.createElement('optgroup');
-    ogB.label = '⭐ Recettes populaires';
+    ogB.label = 'Recettes populaires';
     BUILTIN_RECIPES.forEach(function (b, i) {
       var o = document.createElement('option');
       o.value = 'b' + i;
@@ -1464,7 +1651,7 @@
     });
     sel.appendChild(ogB);
     var ogF = document.createElement('optgroup');
-    ogF.label = '🔍 Base d’aliments (USDA)';
+    ogF.label = 'Base d’aliments (USDA)';
     FOOD_DB.forEach(function (f, i) {
       var o = document.createElement('option');
       o.value = 'f' + i;
@@ -1693,7 +1880,7 @@
   function lookupBarcode(code) {
     code = String(code).replace(/\D/g, '');
     if (!code) { scanStatus('Code invalide.'); return; }
-    scanStatus('🔎 Recherche du produit ' + code + '…');
+    scanStatus('Recherche du produit ' + code + '…');
     fetch('https://world.openfoodfacts.org/api/v2/product/' + encodeURIComponent(code) +
           '?fields=product_name,product_name_fr,brands,nutriments')
       .then(function (r) { return r.json(); })
@@ -1830,6 +2017,7 @@
     renderMeal();
     renderJournal();
     switchTab('journal');
+    showToast('✓ Repas enregistré au journal');
   });
 
   function dayKey(ts) {
@@ -1987,7 +2175,7 @@
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(a.href);
-    backupStatus('✅ Sauvegarde exportée (' + recipes.length + ' recettes, ' +
+    backupStatus('✓ Sauvegarde exportée (' + recipes.length + ' recettes, ' +
       favorites.length + ' favoris, ' + history.length + ' repas).');
   });
 
@@ -2000,9 +2188,9 @@
     var reader = new FileReader();
     reader.onload = function (e) {
       var data;
-      try { data = JSON.parse(e.target.result); } catch (err) { backupStatus('❌ Fichier illisible.'); return; }
+      try { data = JSON.parse(e.target.result); } catch (err) { backupStatus('Fichier illisible.'); return; }
       if (!data || data.app !== 'glucides-nets') {
-        backupStatus('❌ Ce fichier n’est pas une sauvegarde Glucides Nets.');
+        backupStatus('Ce fichier n’est pas une sauvegarde Glucides Nets.');
         return;
       }
       if (!confirm('Remplacer vos recettes, favoris et journal actuels par ceux du fichier?')) return;
@@ -2015,7 +2203,7 @@
       renderJournal();
       buildToolOptions();
       drawToolChart();
-      backupStatus('✅ Importé : ' + recipes.length + ' recettes, ' + favorites.length +
+      backupStatus('✓ Importé : ' + recipes.length + ' recettes, ' + favorites.length +
         ' favoris, ' + history.length + ' repas.');
     };
     reader.readAsText(file);
@@ -2084,6 +2272,14 @@
     } else {
       showInstallInstructions();
     }
+  });
+
+  /* ══════════ Bouton d'information ══════════ */
+  $('info-btn').addEventListener('click', function () {
+    switchTab('meal');
+    var d = $('help-details');
+    d.open = true;
+    d.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
 
   $('install-modal-close').addEventListener('click', function () {
