@@ -1496,15 +1496,67 @@
   /* Photo(s) du repas analysé : affichée(s) avec le résultat pour que
      l'estimation reste rattachée à ce qu'on a photographié */
   .mp-photos { display: flex; gap: 8px; margin: 10px 0 4px; }
-  .mp-photos img {
+  .mp-photo-wrap {
+    position: relative;
     flex: 1;
     min-width: 0;
-    height: 170px;
-    object-fit: cover;
     border-radius: 14px;
     border: 1px solid var(--border);
     background: var(--bg);
+    overflow: hidden;
   }
+  .mp-photo-wrap img {
+    display: block;
+    width: 100%;
+    height: 210px;
+    object-fit: cover;
+  }
+  /* Étiquettes posées sur la photo : nom + glucides de chaque aliment */
+  #mp-tags { position: absolute; inset: 0; pointer-events: none; }
+  .mp-tag {
+    position: absolute;
+    transform: translate(-50%, -50%);
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    max-width: 70%;
+    background: rgba(7, 17, 31, 0.82);
+    border: 1px solid rgba(148, 163, 184, 0.4);
+    border-radius: 999px;
+    padding: 4px 10px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #fff;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  .mp-tag .nm { overflow: hidden; text-overflow: ellipsis; }
+  .mp-tag b { color: var(--carb, #C49AFF); }
+  .mp-tags-fallback {
+    position: absolute;
+    top: 8px;
+    left: 8px;
+    right: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    align-items: flex-start;
+    pointer-events: none;
+  }
+  .mp-tags-fallback .mp-tag { position: static; transform: none; }
+  /* Total estimé, lisible directement au bas de la photo */
+  .mp-photo-total {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    padding: 22px 12px 9px;
+    background: linear-gradient(transparent, rgba(7, 17, 31, 0.92));
+    color: #fff;
+    font-weight: 700;
+    font-size: 0.95rem;
+  }
+  .mp-photo-total b { color: #C49AFF; }
   #label-analysis { margin-top: 10px; }
   #label-analysis .msg { font-size: 0.94rem; color: var(--muted); }
   #label-analysis .btn { margin-top: 10px; }
@@ -2003,7 +2055,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.10.2</span>
+  <br><span id="app-version">Glucides Nets v2.10.3</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -4093,9 +4145,11 @@
             carbs: { type: 'number', description: 'Glucides totaux estimés pour cette portion, en grammes (estimation centrale)' },
             carbsMin: { type: ['number', 'null'], description: 'Bas de la fourchette réaliste de glucides pour cette portion, en grammes' },
             carbsMax: { type: ['number', 'null'], description: 'Haut de la fourchette réaliste de glucides pour cette portion, en grammes' },
-            fiber: { type: 'number', description: 'Fibres estimées pour cette portion, en grammes' }
+            fiber: { type: 'number', description: 'Fibres estimées pour cette portion, en grammes' },
+            x: { type: ['number', 'null'], description: 'Position approximative du CENTRE de cet aliment sur la première photo : % de la largeur, 0-100. null si impossible à situer' },
+            y: { type: ['number', 'null'], description: 'Position approximative du CENTRE de cet aliment sur la première photo : % de la hauteur, 0-100. null si impossible à situer' }
           },
-          required: ['name', 'grams', 'measure', 'carbs', 'carbsMin', 'carbsMax', 'fiber'],
+          required: ['name', 'grams', 'measure', 'carbs', 'carbsMin', 'carbsMax', 'fiber', 'x', 'y'],
           additionalProperties: false
         }
       },
@@ -4131,6 +4185,8 @@
     'et dans carbsMin/carbsMax une FOURCHETTE réaliste des glucides (l’intervalle où tu es ' +
     'raisonnablement sûr que la vraie valeur se trouve — étroit si l’aliment est standard, ' +
     'large si le plat est composé ou la portion incertaine). ' +
+    'Donne aussi x et y : la position approximative du CENTRE de cet aliment sur la PREMIÈRE photo, ' +
+    'en pourcentage de la largeur (x) et de la hauteur (y), de 0 à 100 — null si tu ne peux pas le situer. ' +
     'S’il y a PLUSIEURS photos, elles montrent le MÊME repas sous des angles différents : ' +
     'combine-les (la vue de côté renseigne la hauteur des portions) pour préciser poids et volumes. ' +
     'QUESTION : si (et seulement si) une seule précision de l’utilisateur changerait beaucoup ' +
@@ -4436,15 +4492,7 @@
   function openMealPhotoModal(foods, scaleRef, confidence, question) {
     mpSetBusy(false); // ré-active les boutons après une ré-analyse réussie
     // La ou les photos analysées, affichées avec le résultat
-    var ph = $('mp-photos');
-    ph.innerHTML = '';
-    lastAnalyzedImages.forEach(function (b64) {
-      var im = document.createElement('img');
-      im.src = 'data:image/jpeg;base64,' + b64;
-      im.alt = 'Photo du repas analysé';
-      ph.appendChild(im);
-    });
-    ph.style.display = lastAnalyzedImages.length > 0 ? 'flex' : 'none';
+    renderMpPhotos();
     // Repère de mise à l'échelle : dire sur quoi l'estimation s'appuie
     var scaleBox = $('mp-scale');
     if (scaleRef) {
@@ -4482,7 +4530,9 @@
         minPerGram: grams > 0 && cMin != null ? cMin / grams : null,
         maxPerGram: grams > 0 && cMax != null ? cMax / grams : null,
         measure: parseMeasure(f.measure),
-        origGrams: grams
+        origGrams: grams,
+        x: f.x == null ? null : Math.min(96, Math.max(4, num(f.x))),
+        y: f.y == null ? null : Math.min(90, Math.max(10, num(f.y)))
       };
     });
     labelClear();
@@ -4719,6 +4769,65 @@
     return null;
   }
 
+  function renderMpPhotos() {
+    var ph = $('mp-photos');
+    ph.innerHTML = '';
+    lastAnalyzedImages.forEach(function (b64, idx) {
+      var wrap = document.createElement('div');
+      wrap.className = 'mp-photo-wrap';
+      var im = document.createElement('img');
+      im.src = 'data:image/jpeg;base64,' + b64;
+      im.alt = 'Photo du repas analysé';
+      wrap.appendChild(im);
+      if (idx === 0) {
+        var tags = document.createElement('div');
+        tags.id = 'mp-tags';
+        var fb = document.createElement('div');
+        fb.id = 'mp-tags-fallback';
+        fb.className = 'mp-tags-fallback';
+        var tot = document.createElement('div');
+        tot.id = 'mp-photo-total';
+        tot.className = 'mp-photo-total';
+        wrap.appendChild(tags);
+        wrap.appendChild(fb);
+        wrap.appendChild(tot);
+      }
+      ph.appendChild(wrap);
+    });
+    ph.style.display = lastAnalyzedImages.length > 0 ? 'flex' : 'none';
+  }
+
+  /* Le calcul directement sur la photo : une étiquette par aliment (nom +
+     glucides) à la position estimée par l'IA — repli en pile en haut à
+     gauche quand la position manque — et le total estimé au bas de
+     l'image. Mis à jour en direct quand on corrige poids ou glucides. */
+  function renderMpOverlay(total) {
+    var tags = $('mp-tags'), fb = $('mp-tags-fallback'), tot = $('mp-photo-total');
+    if (!tags || !fb || !tot) return;
+    tags.innerHTML = '';
+    fb.innerHTML = '';
+    mpFoods.forEach(function (f) {
+      var chip = document.createElement('span');
+      chip.className = 'mp-tag';
+      var nm = document.createElement('span');
+      nm.className = 'nm';
+      nm.textContent = String(f.name || 'Aliment').replace(/\s*\(.*$/, '');
+      var val = document.createElement('b');
+      val.textContent = round1(f.carbs) + ' g';
+      chip.appendChild(nm);
+      chip.appendChild(val);
+      if (f.x != null && f.y != null) {
+        chip.style.left = f.x + '%';
+        chip.style.top = f.y + '%';
+        tags.appendChild(chip);
+      } else {
+        fb.appendChild(chip);
+      }
+    });
+    tot.style.display = mpFoods.length > 0 ? 'block' : 'none';
+    tot.innerHTML = '≈ <b>' + round1(total) + ' g</b> de glucides à entrer dans la pompe';
+  }
+
   function updateMpTotal() {
     var total = 0, lo = 0, hi = 0, hasRange = false;
     mpFoods.forEach(function (f) {
@@ -4737,6 +4846,7 @@
     $('mp-add').textContent = mpFoods.length > 0
       ? 'Ajouter ' + round1(total) + ' g au repas'
       : 'Rien à ajouter';
+    renderMpOverlay(total);
   }
 
   function renderMpList() {
