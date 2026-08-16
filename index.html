@@ -1493,6 +1493,18 @@
     0%, 100% { opacity: 0.45; }
     50% { opacity: 1; }
   }
+  /* Photo(s) du repas analysé : affichée(s) avec le résultat pour que
+     l'estimation reste rattachée à ce qu'on a photographié */
+  .mp-photos { display: flex; gap: 8px; margin: 10px 0 4px; }
+  .mp-photos img {
+    flex: 1;
+    min-width: 0;
+    height: 170px;
+    object-fit: cover;
+    border-radius: 14px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+  }
   #label-analysis { margin-top: 10px; }
   #label-analysis .msg { font-size: 0.94rem; color: var(--muted); }
   #label-analysis .btn { margin-top: 10px; }
@@ -1991,7 +2003,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.10.1</span>
+  <br><span id="app-version">Glucides Nets v2.10.2</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -2104,6 +2116,7 @@
       <h3 id="mp-title" style="margin:0;">🍽️ Repas analysé</h3>
       <span style="width:48px;" aria-hidden="true"></span>
     </div>
+    <div class="mp-photos" id="mp-photos" style="display:none;"></div>
     <p class="hint" style="margin:8px 0 8px;">Estimations de l'IA d'après ta photo — <strong>vérifie et ajuste</strong> chaque aliment (le poids surtout). En cas de doute, pèse : l'estimation visuelle reste approximative.</p>
     <p class="mp-scale" id="mp-scale" style="display:none;"></p>
     <!-- Question de clarification : posée par l'IA quand une seule précision
@@ -4422,6 +4435,16 @@
 
   function openMealPhotoModal(foods, scaleRef, confidence, question) {
     mpSetBusy(false); // ré-active les boutons après une ré-analyse réussie
+    // La ou les photos analysées, affichées avec le résultat
+    var ph = $('mp-photos');
+    ph.innerHTML = '';
+    lastAnalyzedImages.forEach(function (b64) {
+      var im = document.createElement('img');
+      im.src = 'data:image/jpeg;base64,' + b64;
+      im.alt = 'Photo du repas analysé';
+      ph.appendChild(im);
+    });
+    ph.style.display = lastAnalyzedImages.length > 0 ? 'flex' : 'none';
     // Repère de mise à l'échelle : dire sur quoi l'estimation s'appuie
     var scaleBox = $('mp-scale');
     if (scaleRef) {
