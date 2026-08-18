@@ -883,6 +883,28 @@
     font-weight: 700;
   }
   .mp-scale--warn { background: var(--warm-soft); color: var(--warm-text); }
+  /* Leçons tirées des corrections, relues par l'IA à chaque analyse */
+  .lesson {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--border);
+  }
+  .lesson:last-child { border-bottom: none; }
+  .lesson .txt { flex: 1; min-width: 0; font-size: 0.88rem; font-weight: 600; line-height: 1.4; }
+  .lesson .txt small { display: block; color: var(--muted); font-weight: 700; }
+  .lesson .forget {
+    flex: none;
+    width: 38px;
+    height: 38px;
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    background: none;
+    color: var(--danger);
+    cursor: pointer;
+  }
+
   /* Discussion du résultat : préciser l'estimation ou comprendre d'où
      vient le chiffre, sans quitter l'écran d'analyse. La question de
      clarification de l'IA arrive dans le même fil. */
@@ -2092,6 +2114,19 @@
       </div>
     </div>
 
+    <div class="card">
+      <h2>🧠 Ce que l’IA a appris de toi</h2>
+      <p class="hint" style="margin:0 0 10px;">Quand tu corriges une estimation photo avant de l’ajouter au repas — ou que tu la corriges dans la discussion — l’app retient la leçon et la redonne à l’IA à chaque analyse suivante. Retire une leçon si elle est fausse ou ne vaut plus.</p>
+      <div id="ai-memory-list"></div>
+      <label for="ai-memory-new" style="margin-top:12px;">Lui apprendre quelque chose toi-même</label>
+      <div class="scan-row">
+        <input type="text" id="ai-memory-new" maxlength="160" autocomplete="off"
+               placeholder="ex. : mes biscuits sont des Petit Écolier, 12 g de glucides chacun">
+        <button class="btn" id="ai-memory-add" type="button">Retenir</button>
+      </div>
+      <button class="btn btn-secondary" id="ai-memory-clear" type="button" style="margin-top:10px; display:none;">Tout oublier</button>
+    </div>
+
     <details class="help">
       <summary>📈 Outil interactif : glucides ↔ grammes</summary>
       <div>
@@ -2156,7 +2191,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.11.0</span>
+  <br><span id="app-version">Glucides Nets v2.12.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -3021,7 +3056,8 @@
           return;
         }
         if (!confirm('Supprimer le profil « ' + prof.name + ' » et toutes ses données (repas, favoris, recettes, journal)?')) return;
-        ['gn_meal', 'gn_favorites', 'gn_recipes', 'gn_history', 'gn_meal_ts'].forEach(function (base) {
+        ['gn_meal', 'gn_favorites', 'gn_recipes', 'gn_history', 'gn_meal_ts',
+          'gn_photo_meal', 'gn_ai_memory'].forEach(function (base) {
           var key = prof.id === 'p1' ? base : base + '__' + prof.id;
           try { localStorage.removeItem(key); } catch (e) { /* stockage indisponible */ }
         });
@@ -4236,6 +4272,190 @@
     if (bc) { res.barcode = bc[1]; return res; }
     return null;
   }
+  /* ── Mémoire des corrections ──
+     L'IA ne retient rien d'une photo à l'autre : c'est l'app qui se
+     souvient. Chaque correction faite avant d'ajouter le repas devient une
+     leçon (mauvais aliment identifié, densité de glucides, poids
+     sous-estimé, aliment vu à tort ou oublié), stockée par profil et
+     réinjectée dans le prompt de chaque analyse suivante. Les leçons sont
+     visibles et effaçables dans l'onglet Plus : une leçon fausse fausserait
+     tout le reste. */
+  var AI_MEM_MAX = 40;
+  var aiMemory = { lessons: [] };
+
+  function sanitizeLesson(l) {
+    if (!l || typeof l !== 'object') return null;
+    if (['name', 'per100', 'grams', 'absent', 'missed', 'note'].indexOf(l.kind) === -1) return null;
+    var o = {
+      kind: l.kind,
+      text: String(l.text || '').slice(0, 160).trim(),
+      aiName: String(l.aiName || '').slice(0, 60).trim(),
+      userName: String(l.userName || '').slice(0, 60).trim(),
+      aiPer100: l.aiPer100 == null ? null : num(l.aiPer100),
+      userPer100: l.userPer100 == null ? null : num(l.userPer100),
+      factor: l.factor == null ? null : num(l.factor),
+      n: Math.min(99, Math.max(1, Math.round(num(l.n) || 1))),
+      ts: num(l.ts) || 0
+    };
+    if (o.kind === 'note') return o.text.length >= 3 ? o : null;
+    return (o.aiName || o.userName) ? o : null;
+  }
+  try {
+    var rawMem = JSON.parse(lsGet(pk('gn_ai_memory')) || 'null');
+    if (rawMem && Array.isArray(rawMem.lessons)) {
+      aiMemory.lessons = rawMem.lessons.map(sanitizeLesson).filter(Boolean).slice(0, AI_MEM_MAX);
+    }
+  } catch (e) { aiMemory.lessons = []; }
+
+  function saveAiMemory() {
+    lsSet(pk('gn_ai_memory'), JSON.stringify(aiMemory));
+    renderAiMemory();
+  }
+
+  /* Une leçon par sujet : recorriger la même chose renforce la leçon
+     (compteur + valeurs les plus récentes) au lieu d'allonger la liste. */
+  function lessonKey(l) {
+    if (l.kind === 'note') return 'note|' + normalize(l.text);
+    return l.kind + '|' + normalize(l.userName || l.aiName) +
+      (l.kind === 'name' ? '|' + normalize(l.aiName) : '');
+  }
+  function addLesson(l) {
+    l = sanitizeLesson(l);
+    if (!l) return false;
+    l.ts = Date.now();
+    var key = lessonKey(l);
+    for (var i = 0; i < aiMemory.lessons.length; i++) {
+      if (lessonKey(aiMemory.lessons[i]) === key) {
+        var prev = aiMemory.lessons[i];
+        l.n = Math.min(99, prev.n + 1);
+        // Moyenne glissante : une correction isolée ne doit pas effacer
+        // dix corrections concordantes
+        if (l.factor != null && prev.factor != null) {
+          l.factor = (prev.factor * prev.n + l.factor) / (prev.n + 1);
+        }
+        aiMemory.lessons.splice(i, 1);
+        break;
+      }
+    }
+    aiMemory.lessons.unshift(l);
+    if (aiMemory.lessons.length > AI_MEM_MAX) aiMemory.lessons.length = AI_MEM_MAX;
+    return true;
+  }
+
+  /* Biais de poids : l'erreur la plus systématique de l'estimation
+     visuelle. Calculé sur l'ensemble des corrections de poids, et seulement
+     s'il est franc et répété — sinon c'est du bruit. */
+  function aiMemoryBias() {
+    var sum = 0, n = 0;
+    aiMemory.lessons.forEach(function (l) {
+      if (l.kind === 'grams' && l.factor > 0) { sum += l.factor * l.n; n += l.n; }
+    });
+    if (n < 3) return null;
+    var avg = sum / n;
+    return Math.abs(avg - 1) >= 0.15 ? avg : null;
+  }
+
+  function lessonText(l) {
+    if (l.kind === 'note') return '💬 ' + l.text;
+    var times = l.n > 1 ? ' (corrigé ' + l.n + ' fois)' : '';
+    if (l.kind === 'name') {
+      return 'Tu avais identifié « ' + l.aiName + ' » : c’était « ' + l.userName + ' »' + times;
+    }
+    if (l.kind === 'per100') {
+      return 'Pour « ' + l.userName + ' », la valeur retenue est ' + round1(l.userPer100) +
+        ' g de glucides par 100 g (tu avais estimé ' + round1(l.aiPer100) + ' g)' + times;
+    }
+    if (l.kind === 'grams') {
+      var pct = Math.round(Math.abs(l.factor - 1) * 100);
+      return 'Pour « ' + l.userName + ' », le poids réel était ' + pct + ' % ' +
+        (l.factor > 1 ? 'plus élevé' : 'plus bas') + ' que ton estimation' + times;
+    }
+    if (l.kind === 'absent') {
+      return 'Tu avais vu « ' + l.aiName + ' » sur la photo : il n’y en avait pas' + times;
+    }
+    return 'Tu avais oublié « ' + l.userName + ' » sur la photo' + times;
+  }
+
+  /* Bloc ajouté au prompt d'analyse. Cadré comme des faits sur CETTE
+     personne, applicables seulement quand la photo correspond : une leçon
+     appliquée de force à un autre aliment serait pire que pas de leçon. */
+  function aiMemoryPrompt() {
+    if (aiMemory.lessons.length === 0) return '';
+    var lines = aiMemory.lessons.slice(0, 12).map(function (l) {
+      // Ce que la personne t'apprend explicitement pèse plus lourd qu'une
+      // correction déduite : le dire, pour que ce ne soit pas noyé
+      return l.kind === 'note'
+        ? '— ELLE T’A DIT, retiens-le : ' + l.text
+        : '— ' + lessonText(l) + '.';
+    });
+    var bias = aiMemoryBias();
+    if (bias) {
+      lines.push('— De façon générale, tes estimations de poids pour cette personne sont trop ' +
+        (bias > 1 ? 'BASSES' : 'HAUTES') + ' d’environ ' + Math.round(Math.abs(bias - 1) * 100) +
+        ' % : corrige dans ce sens.');
+    }
+    return '\n\nCE QUE CETTE PERSONNE T’A DÉJÀ CORRIGÉ (leçons de ses photos précédentes — ' +
+      'ce sont des faits vérifiés sur SES aliments et SES habitudes. Applique-les quand la photo ' +
+      'correspond vraiment, ignore-les quand elle montre autre chose) :\n' + lines.join('\n');
+  }
+
+  function renderAiMemory() {
+    var box = $('ai-memory-list');
+    if (!box) return;
+    box.innerHTML = '';
+    if (aiMemory.lessons.length === 0) {
+      var empty = document.createElement('p');
+      empty.className = 'empty';
+      empty.textContent = 'Rien encore. Corrige une estimation photo avant de l’ajouter au repas — ou écris une consigne ci-dessous — et la leçon apparaîtra ici.';
+      box.appendChild(empty);
+      $('ai-memory-clear').style.display = 'none';
+      return;
+    }
+    aiMemory.lessons.forEach(function (l) {
+      var row = document.createElement('div');
+      row.className = 'lesson';
+      var txt = document.createElement('div');
+      txt.className = 'txt';
+      txt.textContent = lessonText(l);
+      var forget = document.createElement('button');
+      forget.type = 'button';
+      forget.className = 'forget';
+      forget.textContent = '✕';
+      forget.setAttribute('aria-label', 'Oublier cette leçon');
+      forget.addEventListener('click', function () {
+        var i = aiMemory.lessons.indexOf(l);
+        if (i !== -1) aiMemory.lessons.splice(i, 1);
+        saveAiMemory();
+      });
+      row.appendChild(txt);
+      row.appendChild(forget);
+      box.appendChild(row);
+    });
+    $('ai-memory-clear').style.display = 'block';
+  }
+  function aiMemoryAdd() {
+    var input = $('ai-memory-new');
+    var txt = input.value.trim().slice(0, 160);
+    if (txt.length < 3) { input.focus(); return; }
+    if (addLesson({ kind: 'note', text: txt })) {
+      input.value = '';
+      saveAiMemory();
+      toast('🧠 Retenu — l’IA en tiendra compte à la prochaine photo.');
+    }
+  }
+  $('ai-memory-add').addEventListener('click', aiMemoryAdd);
+  $('ai-memory-new').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); aiMemoryAdd(); }
+  });
+  $('ai-memory-clear').addEventListener('click', function () {
+    if (aiMemory.lessons.length === 0) return;
+    if (!confirm('Effacer les ' + aiMemory.lessons.length + ' leçons apprises de tes corrections ?')) return;
+    aiMemory.lessons = [];
+    saveAiMemory();
+    toast('🧠 Mémoire effacée — l’IA repart de zéro.');
+  });
+  renderAiMemory();
+
   /* Un aliment estimé sur la photo : partagé par l'analyse initiale et par
      la discussion du résultat, qui peut renvoyer une liste corrigée. */
   var MP_FOOD_ITEM_SCHEMA = {
@@ -4511,7 +4731,8 @@
     });
     content.push({
       type: 'text',
-      text: LABEL_PROMPT + (extraNote ? '\n\nCONTEXTE SUPPLÉMENTAIRE : ' + extraNote : '')
+      text: LABEL_PROMPT + aiMemoryPrompt() +
+        (extraNote ? '\n\nCONTEXTE SUPPLÉMENTAIRE : ' + extraNote : '')
     });
     fetch('https://api.anthropic.com/v1/messages', {
       method: 'POST',
@@ -4589,6 +4810,9 @@
      les glucides selon la densité estimée; corriger les glucides à la
      main a toujours le dernier mot. */
   var mpFoods = [];
+  /* Ce que l'IA avait dit AVANT toute correction : la référence contre
+     laquelle on diffuse l'estimation finale pour en tirer des leçons. */
+  var mpOriginal = [];
   /* Fil de discussion sur le résultat : {who:'you'|'ai', text} pour
      l'affichage ET pour donner son contexte à la requête suivante. */
   var mpChat = [];
@@ -4625,34 +4849,54 @@
   /* Aliments renvoyés par l'IA → cartes modifiables. La densité (g de
      glucides par gramme) est figée ici : c'est elle qui remet les glucides
      à l'échelle quand on corrige le poids. */
-  function mpMapFoods(foods) {
-    return foods.map(function (f) {
-      var grams = Math.max(0, num(f.grams));
-      var carbs = Math.max(0, num(f.carbs));
-      var fiber = Math.max(0, num(f.fiber));
-      // Fourchette : bornée à l'estimation centrale, ignorée si incohérente
-      var cMin = f.carbsMin == null ? null : Math.min(Math.max(0, num(f.carbsMin)), carbs);
-      var cMax = f.carbsMax == null ? null : Math.max(Math.max(0, num(f.carbsMax)), carbs);
-      return {
-        name: String(f.name || 'Aliment').slice(0, 60),
-        grams: grams, carbs: carbs, fiber: fiber,
-        carbsPerGram: grams > 0 ? carbs / grams : 0,
-        fiberPerGram: grams > 0 ? fiber / grams : 0,
-        minPerGram: grams > 0 && cMin != null ? cMin / grams : null,
-        maxPerGram: grams > 0 && cMax != null ? cMax / grams : null,
-        measure: parseMeasure(f.measure),
-        origGrams: grams,
-        x: f.x == null ? null : Math.min(96, Math.max(4, num(f.x))),
-        y: f.y == null ? null : Math.min(90, Math.max(10, num(f.y)))
-      };
+  function mpMapFoods(foods, prev) {
+    var free = (prev || []).slice();
+    return foods.map(function (f, i) {
+      // oid : suit un aliment malgré les renommages, pour savoir à la fin
+      // ce que l'IA avait dit au départ. Appariement par nom, sinon par
+      // position quand la liste garde la même longueur.
+      var oid = null;
+      if (free.length) {
+        var nn = normalize(String(f.name || ''));
+        var hit = -1;
+        for (var k = 0; k < free.length; k++) {
+          if (normalize(free[k].name) === nn) { hit = k; break; }
+        }
+        if (hit === -1 && free.length === foods.length && free[i]) hit = free.indexOf(free[i]);
+        if (hit !== -1) { oid = free[hit].oid; free.splice(hit, 1); }
+      }
+      return mpMapFood(f, oid == null ? 'n' + i + '-' + mpOidSeq++ : oid);
     });
+  }
+  var mpOidSeq = 0;
+  function mpMapFood(f, oid) {
+    var grams = Math.max(0, num(f.grams));
+    var carbs = Math.max(0, num(f.carbs));
+    var fiber = Math.max(0, num(f.fiber));
+    // Fourchette : bornée à l'estimation centrale, ignorée si incohérente
+    var cMin = f.carbsMin == null ? null : Math.min(Math.max(0, num(f.carbsMin)), carbs);
+    var cMax = f.carbsMax == null ? null : Math.max(Math.max(0, num(f.carbsMax)), carbs);
+    return {
+      oid: oid,
+      name: String(f.name || 'Aliment').slice(0, 60),
+      grams: grams, carbs: carbs, fiber: fiber,
+      carbsPerGram: grams > 0 ? carbs / grams : 0,
+      fiberPerGram: grams > 0 ? fiber / grams : 0,
+      minPerGram: grams > 0 && cMin != null ? cMin / grams : null,
+      maxPerGram: grams > 0 && cMax != null ? cMax / grams : null,
+      measure: parseMeasure(f.measure),
+      origGrams: grams,
+      x: f.x == null ? null : Math.min(96, Math.max(4, num(f.x))),
+      y: f.y == null ? null : Math.min(90, Math.max(10, num(f.y)))
+    };
   }
 
   function openMealPhotoModal(foods, scaleRef, confidence, question) {
     mpSetBusy(false); // ré-active les boutons après une ré-analyse réussie
     // Nouvelle analyse (modal fermé) : on repart d'une discussion vierge.
     // Ré-analyse du même repas : le fil reste, il fait partie du contexte.
-    if (!$('meal-photo-modal').classList.contains('open')) mpChatReset();
+    var fresh = !$('meal-photo-modal').classList.contains('open');
+    if (fresh) mpChatReset();
     // La ou les photos analysées, affichées avec le résultat
     renderMpPhotos();
     // Repère de mise à l'échelle : dire sur quoi l'estimation s'appuie
@@ -4670,7 +4914,8 @@
     } else {
       scaleBox.style.display = 'none';
     }
-    mpFoods = mpMapFoods(foods);
+    mpFoods = mpMapFoods(foods, fresh ? null : mpFoods);
+    if (fresh) mpOriginal = mpFoods.map(mpSnapshot);
     labelClear();
     renderMpList();
     // Question de clarification de l'IA : une seule, quand la réponse
@@ -4840,7 +5085,8 @@
         'COMPLÈTE et corrigée de TOUS les aliments du repas — y compris ceux qui ne changent pas, avec ' +
         'leurs valeurs et positions x/y actuelles — et dis en une phrase ce que tu as changé. ' +
         'Sinon foods=null (une simple explication ne modifie rien). ' +
-        'Ne donne jamais de dose d’insuline ni de conseil médical : pour ça, renvoie à l’équipe de soins.'
+        'Ne donne jamais de dose d’insuline ni de conseil médical : pour ça, renvoie à l’équipe de soins.' +
+        aiMemoryPrompt()
     });
 
     fetch('https://api.anthropic.com/v1/messages', {
@@ -4882,7 +5128,7 @@
         restore();
         var applied = false;
         if (Array.isArray(res.foods) && res.foods.length > 0) {
-          mpFoods = mpMapFoods(res.foods);
+          mpFoods = mpMapFoods(res.foods, mpFoods);
           renderMpList();
           applied = true;
         }
@@ -5506,9 +5752,62 @@
     updateMpTotal();
   }
 
+  function mpSnapshot(f) {
+    return { oid: f.oid, name: f.name, grams: f.grams, carbs: f.carbs };
+  }
+
+  /* ── Tirer les leçons des corrections ──
+     Le moment de vérité est « Ajouter au repas » : ce que l'utilisateur
+     valide alors est ce qu'il croit juste. On compare cette liste à
+     l'estimation initiale de l'IA — peu importe que la correction vienne
+     d'un champ modifié ou de la discussion — et on en garde ce qui a des
+     chances de se reproduire. Les seuils évitent d'apprendre du bruit :
+     un poids ajusté de 3 % n'enseigne rien. */
+  function mpCaptureLessons() {
+    if (mpOriginal.length === 0) return 0;
+    var learned = 0;
+    var left = mpOriginal.slice();
+    mpFoods.forEach(function (f) {
+      var oi = -1;
+      for (var i = 0; i < left.length; i++) { if (left[i].oid === f.oid) { oi = i; break; } }
+      if (oi === -1) {
+        // Aliment absent de l'analyse : l'IA l'avait manqué
+        if (f.name) learned += addLesson({ kind: 'missed', userName: f.name }) ? 1 : 0;
+        return;
+      }
+      var o = left.splice(oi, 1)[0];
+      var name = (f.name || o.name).trim();
+      if (name.length >= 2 && normalize(name) !== normalize(o.name)) {
+        learned += addLesson({ kind: 'name', aiName: o.name, userName: name }) ? 1 : 0;
+      }
+      if (o.grams > 0 && f.grams > 0) {
+        var factor = f.grams / o.grams;
+        if (Math.abs(factor - 1) > 0.15 && factor > 0.2 && factor < 5) {
+          learned += addLesson({ kind: 'grams', userName: name, factor: factor }) ? 1 : 0;
+        }
+        // Densité de glucides : indépendante du poids, donc réutilisable
+        var aiPer100 = o.carbs / o.grams * 100;
+        var userPer100 = f.carbs / f.grams * 100;
+        if (userPer100 > 0.5 && userPer100 <= 100 && aiPer100 > 0 &&
+            Math.abs(userPer100 - aiPer100) / aiPer100 > 0.12) {
+          learned += addLesson({
+            kind: 'per100', userName: name, aiPer100: aiPer100, userPer100: userPer100
+          }) ? 1 : 0;
+        }
+      }
+    });
+    // Ce qui restait dans l'analyse mais que l'utilisateur a retiré
+    left.forEach(function (o) {
+      learned += addLesson({ kind: 'absent', aiName: o.name }) ? 1 : 0;
+    });
+    if (learned > 0) saveAiMemory();
+    return learned;
+  }
+
   $('mp-add').addEventListener('click', function () {
     if (mpFoods.length === 0) { closeMealPhotoModal(); return; }
     var count = mpFoods.length;
+    var learned = mpCaptureLessons();
     mpFoods.forEach(function (f) {
       meal.push({
         name: (f.name || 'Aliment').trim() + ' (photo)',
@@ -5525,6 +5824,10 @@
     rememberPhotoMeal();
     toast('✓ ' + count + ' aliment' + (count > 1 ? 's' : '') + ' ajouté' + (count > 1 ? 's' : '') +
       ' au repas — estimations à vérifier. Reprends une photo des restes à la fin pour voir ce qui a été consommé.', { duration: 7000 });
+    if (learned > 0) {
+      toast('🧠 Tes corrections sont retenues — l’IA en tiendra compte à la prochaine photo. ' +
+        'Onglet Plus pour les revoir.', { duration: 7000 });
+    }
     markEngagement();
   });
 
@@ -5858,7 +6161,8 @@
       exportedAt: new Date().toISOString(),
       recipes: recipes,
       favorites: favorites,
-      history: history
+      history: history,
+      aiMemory: aiMemory.lessons
     };
     var blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
     var a = document.createElement('a');
@@ -5869,7 +6173,8 @@
     document.body.removeChild(a);
     URL.revokeObjectURL(a.href);
     backupStatus('✅ Sauvegarde exportée (' + recipes.length + ' recettes, ' +
-      favorites.length + ' favoris, ' + history.length + ' repas).');
+      favorites.length + ' favoris, ' + history.length + ' repas, ' +
+      aiMemory.lessons.length + ' leçons apprises).');
   });
 
   $('import-btn').addEventListener('click', function () { $('import-input').click(); });
@@ -5889,12 +6194,15 @@
       if (data.version && num(data.version) > 1) {
         backupStatus('⚠️ Cette sauvegarde vient d’une version plus récente de l’app — l’import est tenté, mais vérifie tes données.');
       }
-      if (!confirm('Remplacer tes recettes, favoris et journal actuels par ceux du fichier?')) return;
+      if (!confirm('Remplacer tes recettes, favoris, journal et leçons apprises actuels par ceux du fichier?')) return;
       // Chaque entrée est assainie : un fichier tronqué ou édité ne doit
       // jamais planter le rendu ni afficher des totaux « NaN »
       recipes = (Array.isArray(data.recipes) ? data.recipes : []).map(sanitizeRecipe).filter(Boolean);
       favorites = (Array.isArray(data.favorites) ? data.favorites : []).map(sanitizeItem).filter(Boolean);
       history = (Array.isArray(data.history) ? data.history : []).map(sanitizeEntry).filter(Boolean);
+      aiMemory.lessons = (Array.isArray(data.aiMemory) ? data.aiMemory : [])
+        .map(sanitizeLesson).filter(Boolean).slice(0, AI_MEM_MAX);
+      saveAiMemory();
       save();
       renderRecipes();
       renderFavorites();
@@ -5902,7 +6210,7 @@
       buildToolOptions();
       drawToolChart();
       backupStatus('✅ Importé : ' + recipes.length + ' recettes, ' + favorites.length +
-        ' favoris, ' + history.length + ' repas.');
+        ' favoris, ' + history.length + ' repas, ' + aiMemory.lessons.length + ' leçons.');
     };
     reader.readAsText(file);
   });
