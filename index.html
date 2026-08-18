@@ -883,19 +883,88 @@
     font-weight: 700;
   }
   .mp-scale--warn { background: var(--warm-soft); color: var(--warm-text); }
-  /* Question de clarification de l'IA (une seule, quand ça compte) */
-  .mp-question {
+  /* Discussion du résultat : préciser l'estimation ou comprendre d'où
+     vient le chiffre, sans quitter l'écran d'analyse. La question de
+     clarification de l'IA arrive dans le même fil. */
+  .mp-chat {
     margin: 0 0 12px;
-    padding: 10px 12px;
-    border-radius: 12px;
-    background: var(--warm-soft);
-    color: var(--warm-text);
-    font-size: 0.88rem;
-    font-weight: 700;
+    padding: 12px;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--card);
   }
-  .mp-question-row { display: flex; gap: 8px; margin-top: 8px; }
-  .mp-question-row input { flex: 1; min-width: 0; }
-  .mp-question-row .btn { flex: none; width: auto; padding: 10px 16px; }
+  .mp-chat > summary {
+    list-style: none;
+    cursor: pointer;
+    font-weight: 800;
+    font-size: 0.95rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .mp-chat > summary::-webkit-details-marker { display: none; }
+  .mp-chat > summary::after {
+    content: '⌄';
+    margin-left: auto;
+    font-size: 1.1rem;
+    color: var(--muted);
+  }
+  .mp-chat[open] > summary::after { content: '⌃'; }
+  .mp-chat-hint { margin: 8px 0 0; font-size: 0.8rem; color: var(--muted); }
+  .mp-chat-thread {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .mp-chat-thread:empty { display: none; }
+  .mp-msg {
+    max-width: 88%;
+    padding: 9px 12px;
+    border-radius: 14px;
+    font-size: 0.88rem;
+    font-weight: 600;
+    line-height: 1.45;
+    white-space: pre-wrap;
+  }
+  .mp-msg--you {
+    align-self: flex-end;
+    background: var(--accent-light);
+    color: var(--accent-text);
+    border-bottom-right-radius: 5px;
+  }
+  .mp-msg--ai {
+    align-self: flex-start;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-bottom-left-radius: 5px;
+  }
+  .mp-msg--ask { background: var(--warm-soft); color: var(--warm-text); border-color: transparent; }
+  .mp-msg--wait { color: var(--muted); font-weight: 700; }
+  /* Signale que la réponse a modifié les cartes d'aliments au-dessus */
+  .mp-msg-applied {
+    display: block;
+    margin-top: 6px;
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: var(--accent-text);
+  }
+  .mp-chat-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+  .mp-chip {
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    border-radius: 999px;
+    padding: 7px 12px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+  .mp-chip:active { background: var(--accent-light); }
+  .mp-chat-row { display: flex; gap: 8px; margin-top: 10px; }
+  .mp-chat-row input { flex: 1; min-width: 0; }
+  .mp-chat-row .btn { flex: none; width: auto; padding: 10px 16px; }
   /* Estimation qui sort de la plausibilité (base USDA/FCÉN) */
   .mp-warn {
     margin-top: 8px;
@@ -2087,7 +2156,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.10.4</span>
+  <br><span id="app-version">Glucides Nets v2.11.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -2203,16 +2272,22 @@
     <div class="mp-photos" id="mp-photos" style="display:none;"></div>
     <p class="hint" style="margin:8px 0 8px;">Estimations de l'IA d'après ta photo — <strong>vérifie et ajuste</strong> chaque aliment (le poids surtout). En cas de doute, pèse : l'estimation visuelle reste approximative.</p>
     <p class="mp-scale" id="mp-scale" style="display:none;"></p>
-    <!-- Question de clarification : posée par l'IA quand une seule précision
-         changerait beaucoup l'estimation (« Riz ou couscous ? ») -->
-    <div class="mp-question" id="mp-question" style="display:none;">
-      <p id="mp-question-text" style="margin:0;"></p>
-      <div class="mp-question-row">
-        <input type="text" id="mp-question-input" placeholder="Ta réponse…" aria-labelledby="mp-question-text">
-        <button class="btn btn-secondary" id="mp-question-send" type="button">Préciser</button>
-      </div>
-    </div>
     <div id="mp-list"></div>
+    <!-- Discuter du résultat : préciser (« c'est du couscous », « la portion
+         était plus grosse ») ou comprendre (« pourquoi ce total ? »). La
+         question de clarification de l'IA ouvre le fil automatiquement. -->
+    <details class="mp-chat" id="mp-chat">
+      <summary id="mp-chat-summary">💬 Discuter du résultat</summary>
+      <p class="mp-chat-hint">Précise ce que l’IA n’a pas pu voir, ou demande d’où vient le chiffre. Les corrections mettent l’estimation à jour au-dessus.</p>
+      <div class="mp-chat-thread" id="mp-chat-thread" role="log" aria-live="polite"></div>
+      <div class="mp-chat-chips" id="mp-chat-chips"></div>
+      <div class="mp-chat-row">
+        <input type="text" id="mp-chat-input" autocomplete="off"
+               placeholder="Ex. : c’est du couscous, pas du riz"
+               aria-label="Ton message à propos de l’estimation">
+        <button class="btn btn-secondary" id="mp-chat-send" type="button">Envoyer</button>
+      </div>
+    </details>
     <div class="calc-card">
       <div class="calc-row">
         <span class="calc-label hero-label">Glucides estimés</span>
@@ -4161,6 +4236,25 @@
     if (bc) { res.barcode = bc[1]; return res; }
     return null;
   }
+  /* Un aliment estimé sur la photo : partagé par l'analyse initiale et par
+     la discussion du résultat, qui peut renvoyer une liste corrigée. */
+  var MP_FOOD_ITEM_SCHEMA = {
+    type: 'object',
+    properties: {
+      name: { type: 'string', description: 'Nom court de l’aliment en français' },
+      grams: { type: 'number', description: 'Poids estimé de la portion visible, en grammes' },
+      measure: { type: ['string', 'null'], description: 'Aliment dénombrable : le NOMBRE d’unités visibles (« 4 biscuits », « 2 tranches », « 6 fraises »). Sinon la mesure maison équivalente quand c’est logique (« ¾ tasse », « 2 c. à soupe »). Sinon null' },
+      carbs: { type: 'number', description: 'Glucides totaux estimés pour cette portion, en grammes (estimation centrale)' },
+      carbsMin: { type: ['number', 'null'], description: 'Bas de la fourchette réaliste de glucides pour cette portion, en grammes' },
+      carbsMax: { type: ['number', 'null'], description: 'Haut de la fourchette réaliste de glucides pour cette portion, en grammes' },
+      fiber: { type: 'number', description: 'Fibres estimées pour cette portion, en grammes' },
+      x: { type: ['number', 'null'], description: 'Position approximative du CENTRE de cet aliment sur la première photo : % de la largeur, 0-100. null si impossible à situer' },
+      y: { type: ['number', 'null'], description: 'Position approximative du CENTRE de cet aliment sur la première photo : % de la hauteur, 0-100. null si impossible à situer' }
+    },
+    required: ['name', 'grams', 'measure', 'carbs', 'carbsMin', 'carbsMax', 'fiber', 'x', 'y'],
+    additionalProperties: false
+  };
+
   var LABEL_SCHEMA = {
     type: 'object',
     properties: {
@@ -4187,22 +4281,7 @@
       foods: {
         type: ['array', 'null'],
         description: 'Quand la photo montre un plat, une assiette ou une collation sans étiquette : un élément par aliment identifié, sinon null',
-        items: {
-          type: 'object',
-          properties: {
-            name: { type: 'string', description: 'Nom court de l’aliment en français' },
-            grams: { type: 'number', description: 'Poids estimé de la portion visible, en grammes' },
-            measure: { type: ['string', 'null'], description: 'Aliment dénombrable : le NOMBRE d’unités visibles (« 4 biscuits », « 2 tranches », « 6 fraises »). Sinon la mesure maison équivalente quand c’est logique (« ¾ tasse », « 2 c. à soupe »). Sinon null' },
-            carbs: { type: 'number', description: 'Glucides totaux estimés pour cette portion, en grammes (estimation centrale)' },
-            carbsMin: { type: ['number', 'null'], description: 'Bas de la fourchette réaliste de glucides pour cette portion, en grammes' },
-            carbsMax: { type: ['number', 'null'], description: 'Haut de la fourchette réaliste de glucides pour cette portion, en grammes' },
-            fiber: { type: 'number', description: 'Fibres estimées pour cette portion, en grammes' },
-            x: { type: ['number', 'null'], description: 'Position approximative du CENTRE de cet aliment sur la première photo : % de la largeur, 0-100. null si impossible à situer' },
-            y: { type: ['number', 'null'], description: 'Position approximative du CENTRE de cet aliment sur la première photo : % de la hauteur, 0-100. null si impossible à situer' }
-          },
-          required: ['name', 'grams', 'measure', 'carbs', 'carbsMin', 'carbsMax', 'fiber', 'x', 'y'],
-          additionalProperties: false
-        }
+        items: MP_FOOD_ITEM_SCHEMA
       },
       question: { type: ['string', 'null'], description: 'UNE question courte à poser à l’utilisateur seulement si la réponse changerait beaucoup l’estimation (ex. « Riz ou couscous ? »), sinon null' }
     },
@@ -4510,7 +4589,10 @@
      les glucides selon la densité estimée; corriger les glucides à la
      main a toujours le dernier mot. */
   var mpFoods = [];
-  var mpQuestion = null;
+  /* Fil de discussion sur le résultat : {who:'you'|'ai', text} pour
+     l'affichage ET pour donner son contexte à la requête suivante. */
+  var mpChat = [];
+  var mpLastQuestion = null;
 
   /* Mesure maison estimée (« ¾ tasse », « 2 c. à soupe ») : décomposée en
      quantité + unité pour suivre les changements de poids. */
@@ -4540,33 +4622,11 @@
     return String(round1(q)).replace('.', ',');
   }
 
-  function openMealPhotoModal(foods, scaleRef, confidence, question) {
-    mpSetBusy(false); // ré-active les boutons après une ré-analyse réussie
-    // La ou les photos analysées, affichées avec le résultat
-    renderMpPhotos();
-    // Repère de mise à l'échelle : dire sur quoi l'estimation s'appuie
-    var scaleBox = $('mp-scale');
-    if (scaleRef) {
-      scaleBox.textContent = '📏 Échelle calibrée sur : ' + scaleRef +
-        (confidence ? ' · confiance ' + confidence : '') + '.';
-      scaleBox.className = 'mp-scale' + (confidence === 'faible' ? ' mp-scale--warn' : '');
-      scaleBox.style.display = 'block';
-    } else if (confidence === 'faible') {
-      scaleBox.textContent = '📏 Aucun repère de taille sur la photo — estimation prudente. ' +
-        'Astuce : place une cuillère ou une fourchette à côté de l’assiette et reprends la photo.';
-      scaleBox.className = 'mp-scale mp-scale--warn';
-      scaleBox.style.display = 'block';
-    } else {
-      scaleBox.style.display = 'none';
-    }
-    // Question de clarification : une seule, seulement quand ça compte
-    mpQuestion = question ? String(question).slice(0, 200) : null;
-    $('mp-question').style.display = mpQuestion ? 'block' : 'none';
-    if (mpQuestion) {
-      $('mp-question-text').textContent = '🤔 ' + mpQuestion;
-      $('mp-question-input').value = '';
-    }
-    mpFoods = foods.map(function (f) {
+  /* Aliments renvoyés par l'IA → cartes modifiables. La densité (g de
+     glucides par gramme) est figée ici : c'est elle qui remet les glucides
+     à l'échelle quand on corrige le poids. */
+  function mpMapFoods(foods) {
+    return foods.map(function (f) {
       var grams = Math.max(0, num(f.grams));
       var carbs = Math.max(0, num(f.carbs));
       var fiber = Math.max(0, num(f.fiber));
@@ -4586,8 +4646,42 @@
         y: f.y == null ? null : Math.min(90, Math.max(10, num(f.y)))
       };
     });
+  }
+
+  function openMealPhotoModal(foods, scaleRef, confidence, question) {
+    mpSetBusy(false); // ré-active les boutons après une ré-analyse réussie
+    // Nouvelle analyse (modal fermé) : on repart d'une discussion vierge.
+    // Ré-analyse du même repas : le fil reste, il fait partie du contexte.
+    if (!$('meal-photo-modal').classList.contains('open')) mpChatReset();
+    // La ou les photos analysées, affichées avec le résultat
+    renderMpPhotos();
+    // Repère de mise à l'échelle : dire sur quoi l'estimation s'appuie
+    var scaleBox = $('mp-scale');
+    if (scaleRef) {
+      scaleBox.textContent = '📏 Échelle calibrée sur : ' + scaleRef +
+        (confidence ? ' · confiance ' + confidence : '') + '.';
+      scaleBox.className = 'mp-scale' + (confidence === 'faible' ? ' mp-scale--warn' : '');
+      scaleBox.style.display = 'block';
+    } else if (confidence === 'faible') {
+      scaleBox.textContent = '📏 Aucun repère de taille sur la photo — estimation prudente. ' +
+        'Astuce : place une cuillère ou une fourchette à côté de l’assiette et reprends la photo.';
+      scaleBox.className = 'mp-scale mp-scale--warn';
+      scaleBox.style.display = 'block';
+    } else {
+      scaleBox.style.display = 'none';
+    }
+    mpFoods = mpMapFoods(foods);
     labelClear();
     renderMpList();
+    // Question de clarification de l'IA : une seule, quand la réponse
+    // changerait beaucoup le total. Elle ouvre le fil de discussion —
+    // y répondre est exactement « préciser le résultat ».
+    var q = question ? String(question).slice(0, 200) : null;
+    if (q && q !== mpLastQuestion) {
+      mpLastQuestion = q;
+      mpChatPush('ai', q, { ask: true });
+      $('mp-chat').open = true;
+    }
     openModal('meal-photo-modal', '#mp-add');
   }
   function closeMealPhotoModal() { mpSetBusy(false); closeModal('meal-photo-modal'); }
@@ -4601,7 +4695,7 @@
      Trois leviers : répondre à la question de l'IA, ajouter un 2e angle,
      ou photographier les restes du repas pour soustraire le non-mangé. */
   function mpSetBusy(busy, msg) {
-    ['mp-add', 'mp-angle', 'mp-leftover', 'mp-question-send'].forEach(function (id) {
+    ['mp-add', 'mp-angle', 'mp-leftover', 'mp-chat-send'].forEach(function (id) {
       $(id).disabled = busy;
     });
     if (busy) {
@@ -4625,12 +4719,191 @@
     });
   }
 
-  $('mp-question-send').addEventListener('click', function () {
-    var ans = $('mp-question-input').value.trim();
-    if (!ans || !mpQuestion) { $('mp-question-input').focus(); return; }
-    mpReanalyze('Tu avais posé la question : « ' + mpQuestion + ' ». Réponse de l’utilisateur : « ' +
-      ans + ' ». Refais l’estimation du même repas en tenant compte de cette réponse, et remets question=null.',
-      '🤔 On refait l’estimation avec ta réponse…');
+  /* ── Discuter du résultat ──
+     Deux besoins dans un seul fil : PRÉCISER (« c’est du couscous »,
+     « la portion était plus grosse ») — la réponse renvoie alors la liste
+     corrigée des aliments, appliquée aux cartes — et COMPRENDRE
+     (« pourquoi 9,6 g ? ») — la réponse explique, sans rien changer. */
+  var MP_DISCUSS_SCHEMA = {
+    type: 'object',
+    properties: {
+      reply: { type: 'string', description: 'Réponse à afficher, en français, tutoiement, 1 à 4 phrases courtes' },
+      foods: {
+        type: ['array', 'null'],
+        description: 'Liste COMPLÈTE et corrigée de tous les aliments du repas si le message change l’estimation, sinon null',
+        items: MP_FOOD_ITEM_SCHEMA
+      }
+    },
+    required: ['reply', 'foods'],
+    additionalProperties: false
+  };
+
+  /* Suggestions : les deux usages de la discussion, en un geste. Celles
+     qui parlent d’un aliment précis n’apparaissent que s’il y en a un seul,
+     sinon la correction serait ambiguë. */
+  function mpRenderChips() {
+    var chips = ['Pourquoi ce total ?', 'Comment tu as estimé le poids ?'];
+    if (mpFoods.length === 1) chips.push('Ce n’est pas le bon aliment');
+    chips.push('La portion était plus grosse', 'Il y a une sauce sucrée');
+    var box = $('mp-chat-chips');
+    box.innerHTML = '';
+    chips.forEach(function (txt) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'mp-chip';
+      b.textContent = txt;
+      b.addEventListener('click', function () {
+        $('mp-chat-input').value = txt;
+        $('mp-chat-input').focus();
+      });
+      box.appendChild(b);
+    });
+  }
+
+  function mpChatReset() {
+    mpChat = [];
+    mpLastQuestion = null;
+    $('mp-chat-thread').innerHTML = '';
+    $('mp-chat-input').value = '';
+    $('mp-chat').open = false;
+    $('mp-chat-summary').textContent = '💬 Discuter du résultat';
+  }
+
+  /* opts.ask : question de l’IA (mise en avant). opts.wait : bulle
+     d’attente, retirée à l’arrivée de la réponse. opts.applied : note
+     « estimation mise à jour » sous la réponse. */
+  function mpChatPush(who, text, opts) {
+    opts = opts || {};
+    var bubble = document.createElement('div');
+    bubble.className = 'mp-msg mp-msg--' + (who === 'you' ? 'you' : 'ai') +
+      (opts.ask ? ' mp-msg--ask' : '') + (opts.wait ? ' mp-msg--wait' : '');
+    bubble.textContent = (opts.ask ? '🤔 ' : '') + text;
+    if (opts.applied) {
+      var note = document.createElement('span');
+      note.className = 'mp-msg-applied';
+      note.textContent = '✏️ Estimation mise à jour ci-dessus — vérifie avant d’ajouter.';
+      bubble.appendChild(note);
+    }
+    $('mp-chat-thread').appendChild(bubble);
+    if (!opts.wait) mpChat.push({ who: who, text: text });
+    bubble.scrollIntoView({ block: 'nearest' });
+    return bubble;
+  }
+
+  function mpEstimateSummary() {
+    if (mpFoods.length === 0) return 'aucun aliment retenu';
+    return mpFoods.map(function (f) {
+      return '« ' + f.name + ' » ' + round1(f.grams) + ' g → ' + round1(f.carbs) +
+        ' g de glucides dont ' + round1(f.fiber) + ' g de fibres';
+    }).join('; ');
+  }
+
+  function mpSendChat(message) {
+    if (!lsGet('gn_api_key')) {
+      toast('⚠️ La discussion demande la lecture IA — active-la avec le bouton ✨ de l’onglet Calculer.', { type: 'error', duration: 6000 });
+      return;
+    }
+    mpChatPush('you', message);
+    var waiting = mpChatPush('ai', '💬 …', { wait: true });
+    var scale = $('mp-scale');
+    var prev = { text: scale.textContent, cls: scale.className, disp: scale.style.display };
+    mpSetBusy(true, '💬 On regarde ta remarque…');
+    function restore() {
+      mpSetBusy(false);
+      scale.textContent = prev.text;
+      scale.className = prev.cls;
+      scale.style.display = prev.disp;
+      if (waiting.parentNode) waiting.parentNode.removeChild(waiting);
+    }
+
+    // Le fil précédent (sans le message courant) sert de contexte
+    var history = mpChat.slice(0, -1).map(function (m) {
+      return (m.who === 'you' ? 'Utilisateur' : 'Toi') + ' : « ' + m.text + ' »';
+    }).join('\n');
+
+    var content = lastAnalyzedImages.map(function (b64) {
+      return { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } };
+    });
+    content.push({
+      type: 'text',
+      text: 'Tu assistes une personne diabétique de type 1 qui doit entrer un nombre de grammes de ' +
+        'glucides dans sa pompe à insuline. La ou les photos ci-dessus sont son repas. ' +
+        'ESTIMATION ACTUELLEMENT AFFICHÉE : ' + mpEstimateSummary() + '. ' +
+        (history ? 'DISCUSSION JUSQU’ICI :\n' + history + '\n' : '') +
+        'NOUVEAU MESSAGE DE L’UTILISATEUR : « ' + message +' ». ' +
+        'Réponds dans reply : français, tutoiement, 1 à 4 phrases courtes et concrètes. ' +
+        'Si on te demande d’où vient un chiffre, explique le raisonnement avec des nombres ' +
+        '(repère de taille utilisé, poids estimé, glucides pour 100 g de référence, fibres soustraites) ' +
+        'et dis franchement ce qui reste incertain. ' +
+        'Si le message apporte une correction ou une précision qui change l’estimation (autre aliment, ' +
+        'portion différente, ingrédient ajouté ou retiré, cuisson, sauce…), renvoie dans foods la liste ' +
+        'COMPLÈTE et corrigée de TOUS les aliments du repas — y compris ceux qui ne changent pas, avec ' +
+        'leurs valeurs et positions x/y actuelles — et dis en une phrase ce que tu as changé. ' +
+        'Sinon foods=null (une simple explication ne modifie rien). ' +
+        'Ne donne jamais de dose d’insuline ni de conseil médical : pour ça, renvoie à l’équipe de soins.'
+    });
+
+    fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': lsGet('gn_api_key') || '',
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: JSON.stringify({
+        model: 'claude-opus-5',
+        max_tokens: 2048,
+        output_config: {
+          effort: 'low',
+          format: { type: 'json_schema', schema: MP_DISCUSS_SCHEMA }
+        },
+        messages: [{ role: 'user', content: content }]
+      })
+    })
+      .then(function (r) {
+        if (r.status === 401) throw { msg: 'Ta clé API a été refusée — vérifie-la avec le bouton 🔑.' };
+        if (r.status === 429) throw { msg: 'Trop de demandes d’un coup — attends un instant, puis réessaie.' };
+        if (!r.ok) {
+          return r.json().then(function (e) {
+            throw { msg: 'Le service IA a refusé la demande' + (e && e.error && e.error.message ? ' : ' + e.error.message : '') + '.' };
+          }, function () { throw { msg: 'Le service IA a refusé la demande (erreur ' + r.status + ').' }; });
+        }
+        return r.json();
+      })
+      .then(function (data) {
+        if (data.stop_reason === 'refusal') throw { msg: 'Je ne peux pas répondre à ça ici — reformule ta question sur le repas.' };
+        var text = (data.content || [])
+          .filter(function (blk) { return blk.type === 'text'; })
+          .map(function (blk) { return blk.text; })
+          .join('');
+        var res;
+        try { res = JSON.parse(text); } catch (e) { throw { msg: 'Réponse illisible — réessaie.' }; }
+        restore();
+        var applied = false;
+        if (Array.isArray(res.foods) && res.foods.length > 0) {
+          mpFoods = mpMapFoods(res.foods);
+          renderMpList();
+          applied = true;
+        }
+        mpChatPush('ai', String(res.reply || 'C’est noté.').slice(0, 600), { applied: applied });
+      })
+      .catch(function (err) {
+        restore();
+        toast('⚠️ ' + ((err && err.msg) || 'Erreur réseau ou service indisponible — réessaie.'), { type: 'error', duration: 6000 });
+      });
+  }
+
+  function mpChatSubmit() {
+    var input = $('mp-chat-input');
+    var msg = input.value.trim().slice(0, 300);
+    if (!msg) { input.focus(); return; }
+    input.value = '';
+    mpSendChat(msg);
+  }
+  $('mp-chat-send').addEventListener('click', mpChatSubmit);
+  $('mp-chat-input').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); mpChatSubmit(); }
   });
 
   var mpFileMode = null;
@@ -5229,6 +5502,7 @@
       row.appendChild(warnEl);
       box.appendChild(row);
     });
+    mpRenderChips();
     updateMpTotal();
   }
 
