@@ -1600,46 +1600,97 @@
   .mp-photo-wrap img {
     display: block;
     width: 100%;
-    height: 250px;
-    object-fit: cover;
+    height: auto;
+    max-height: 52vh;
+    /* JAMAIS « cover » ici : les positions renvoyées par l'IA portent sur
+       l'image entière, et un recadrage décalerait tous les contours. */
+    object-fit: contain;
   }
   /* Ce qui a été compté, montré sur la photo : un contour cyan par aliment
      repéré, et sa carte de calcul. Le contour dit CE QUI est compté, la
      carte dit COMBIEN — avec, pour les aliments dénombrables, la valeur
      d'un seul morceau : c'est ce qui se vérifie d'un coup d'œil. */
-  #mp-boxes, #mp-cards { position: absolute; inset: 0; pointer-events: none; }
-  .mp-box {
-    position: absolute;
-    border: 2px solid var(--cyan);
-    border-radius: 10px;
-    /* Liseré sombre : le cyan seul disparaît sur une photo claire */
-    box-shadow: 0 0 0 1px rgba(7, 17, 31, 0.55), 0 0 12px rgba(34, 211, 238, 0.4);
-    background: rgba(34, 211, 238, 0.08);
+  /* Position et taille posées en JS : celles de l'image affichée, bandes
+     de « contain » exclues */
+  #mp-shapes, #mp-cards { position: absolute; inset: 0; pointer-events: none; }
+  /* Le trait ne doit pas s'écraser avec l'image : viewBox 0-100 étiré, mais
+     épaisseur de trait figée en pixels */
+  .mp-shape {
+    fill: rgba(34, 211, 238, 0.10);
+    stroke: var(--cyan);
+    stroke-width: 2;
+    vector-effect: non-scaling-stroke;
   }
+  /* Doublure sombre sous le cyan : sur une photo claire, le cyan seul
+     se perd complètement */
+  .mp-shape-halo {
+    fill: none;
+    stroke: rgba(7, 17, 31, 0.55);
+    stroke-width: 4;
+    vector-effect: non-scaling-stroke;
+  }
+  .mp-crumb-line {
+    fill: none;
+    stroke: #fff;
+    stroke-width: 1.5;
+    stroke-dasharray: 4 3;
+    vector-effect: non-scaling-stroke;
+  }
+  /* Pastille d'un morceau : son rang et ce qu'il vaut à lui seul */
+  .mp-pip {
+    position: absolute;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: rgba(7, 17, 31, 0.86);
+    color: #fff;
+    font-size: 0.66rem;
+    font-weight: 800;
+    white-space: nowrap;
+  }
+  .mp-pip .no { color: var(--cyan); }
+  .mp-pip .v { color: var(--carb, #C49AFF); }
+  /* Récapitulatif d'un aliment, au bas de la photo */
   .mp-card {
     position: absolute;
     max-width: 78%;
-    padding: 5px 9px;
+    padding: 6px 10px;
     border-radius: 10px;
     border-left: 3px solid var(--cyan);
     background: rgba(7, 17, 31, 0.88);
     color: #fff;
     font-size: 0.72rem;
     font-weight: 700;
-    line-height: 1.35;
+    line-height: 1.4;
   }
   .mp-card .nm {
     display: block;
+    font-size: 0.82rem;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
   }
-  .mp-card .qty { display: block; color: var(--cyan); white-space: nowrap; }
-  .mp-card .each {
+  .mp-card .qty {
     display: block;
-    color: rgba(255, 255, 255, 0.74);
+    color: rgba(255, 255, 255, 0.82);
     font-weight: 600;
     white-space: nowrap;
+  }
+  .mp-card .qty b { color: var(--carb, #C49AFF); }
+  /* Miettes vues mais écartées : le dire vaut mieux que laisser croire
+     qu'elles ont été oubliées */
+  .mp-crumbs {
+    position: absolute;
+    padding: 4px 8px;
+    border-radius: 8px;
+    background: rgba(7, 17, 31, 0.86);
+    color: rgba(255, 255, 255, 0.86);
+    font-size: 0.68rem;
+    font-weight: 700;
+    line-height: 1.25;
+    text-align: center;
   }
   /* Total estimé, lisible directement au bas de la photo */
   .mp-photo-total {
@@ -2197,7 +2248,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.13.0</span>
+  <br><span id="app-version">Glucides Nets v2.14.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -4477,9 +4528,24 @@
       x: { type: ['number', 'null'], description: 'Position approximative du CENTRE de cet aliment sur la première photo : % de la largeur, 0-100. null si impossible à situer' },
       y: { type: ['number', 'null'], description: 'Position approximative du CENTRE de cet aliment sur la première photo : % de la hauteur, 0-100. null si impossible à situer' },
       w: { type: ['number', 'null'], description: 'Largeur du rectangle qui entoure cet aliment (TOUS ses morceaux compris) sur la première photo : % de la largeur de l’image, 0-100. null si impossible à cadrer' },
-      h: { type: ['number', 'null'], description: 'Hauteur du rectangle qui entoure cet aliment (TOUS ses morceaux compris) sur la première photo : % de la hauteur de l’image, 0-100. null si impossible à cadrer' }
+      h: { type: ['number', 'null'], description: 'Hauteur du rectangle qui entoure cet aliment (TOUS ses morceaux compris) sur la première photo : % de la hauteur de l’image, 0-100. null si impossible à cadrer' },
+      pieces: {
+        type: ['array', 'null'],
+        description: 'Aliment en morceaux distincts et dénombrables (biscuits, tranches, fraises…) : UN élément par morceau visible sur la première photo, 12 au maximum, chacun cadré serré sur CE morceau-là. null si l’aliment ne se compte pas ou si les morceaux ne se distinguent pas.',
+        items: {
+          type: 'object',
+          properties: {
+            x: { type: 'number', description: 'Centre du morceau : % de la largeur de l’image, 0-100' },
+            y: { type: 'number', description: 'Centre du morceau : % de la hauteur de l’image, 0-100' },
+            w: { type: 'number', description: 'Largeur du morceau : % de la largeur de l’image' },
+            h: { type: 'number', description: 'Hauteur du morceau : % de la hauteur de l’image' }
+          },
+          required: ['x', 'y', 'w', 'h'],
+          additionalProperties: false
+        }
+      }
     },
-    required: ['name', 'grams', 'measure', 'carbs', 'carbsMin', 'carbsMax', 'fiber', 'x', 'y', 'w', 'h'],
+    required: ['name', 'grams', 'measure', 'carbs', 'carbsMin', 'carbsMax', 'fiber', 'x', 'y', 'w', 'h', 'pieces'],
     additionalProperties: false
   };
 
@@ -4511,9 +4577,19 @@
         description: 'Quand la photo montre un plat, une assiette ou une collation sans étiquette : un élément par aliment identifié, sinon null',
         items: MP_FOOD_ITEM_SCHEMA
       },
-      question: { type: ['string', 'null'], description: 'UNE question courte à poser à l’utilisateur seulement si la réponse changerait beaucoup l’estimation (ex. « Riz ou couscous ? »), sinon null' }
+      question: { type: ['string', 'null'], description: 'UNE question courte à poser à l’utilisateur seulement si la réponse changerait beaucoup l’estimation (ex. « Riz ou couscous ? »), sinon null' },
+      crumbs: {
+        type: ['object', 'null'],
+        description: 'Miettes, éclats ou résidus bien visibles sur la photo mais négligeables, volontairement écartés du calcul : leur position. null s’il n’y en a pas.',
+        properties: {
+          x: { type: 'number', description: 'Position des miettes : % de la largeur de l’image, 0-100' },
+          y: { type: 'number', description: 'Position des miettes : % de la hauteur de l’image, 0-100' }
+        },
+        required: ['x', 'y'],
+        additionalProperties: false
+      }
     },
-    required: ['found', 'productName', 'basis', 'portionGrams', 'portionLabel', 'carbs', 'fiber', 'polyols', 'erythritol', 'barcode', 'scaleRef', 'confidence', 'foods', 'question'],
+    required: ['found', 'productName', 'basis', 'portionGrams', 'portionLabel', 'carbs', 'fiber', 'polyols', 'erythritol', 'barcode', 'scaleRef', 'confidence', 'foods', 'question', 'crumbs'],
     additionalProperties: false
   };
 
@@ -4547,18 +4623,25 @@
     'en pourcentage de la largeur (x) et de la hauteur (y), de 0 à 100 — null si tu ne peux pas le situer. ' +
     'CADRAGE : ajoute w et h, la largeur et la hauteur du plus petit rectangle qui contient CET aliment ' +
     'sur la PREMIÈRE photo, en pourcentage de la largeur et de la hauteur de l’image (le rectangle est ' +
-    'centré sur x,y). Quand l’aliment est en plusieurs morceaux identiques (5 biscuits, 3 tranches), le ' +
-    'rectangle entoure L’ENSEMBLE des morceaux, pas un seul. Serre le cadre sur l’aliment, sans y inclure ' +
-    'l’assiette ni la table autour. w=h=null si tu ne peux pas le cadrer. ' +
-    'N’entoure et ne liste PAS les miettes, éclats, résidus ni traces négligeables : seulement ce qui ' +
-    'compte vraiment dans le calcul des glucides. ' +
+    'centré sur x,y). Quand l’aliment est en plusieurs morceaux identiques, ce rectangle entoure ' +
+    'L’ENSEMBLE des morceaux. Serre le cadre sur l’aliment, sans y inclure l’assiette ni la table autour. ' +
+    'w=h=null si tu ne peux pas le cadrer. ' +
+    'MORCEAU PAR MORCEAU : si l’aliment se compte et que ses morceaux se distinguent à l’œil (biscuits, ' +
+    'tranches, fraises, boulettes, sushis…), remplis pieces avec UN cadre serré par morceau visible, dans ' +
+    'l’ordre de lecture, 12 au maximum — c’est ce qui permet de montrer à l’utilisateur ce que vaut UN ' +
+    'morceau. Le nombre de morceaux dans pieces doit correspondre au nombre annoncé dans measure. ' +
+    'pieces=null si l’aliment ne se compte pas (purée, riz, sauce, boisson) ou si les morceaux se ' +
+    'chevauchent trop pour être cadrés un par un. ' +
+    'MIETTES : ne liste JAMAIS les miettes, éclats, résidus ou traces négligeables comme un aliment. ' +
+    'Si la photo en montre nettement, indique seulement leur position dans crumbs — elles seront ' +
+    'signalées comme écartées du calcul. Sinon crumbs=null. ' +
     'S’il y a PLUSIEURS photos, elles montrent le MÊME repas sous des angles différents : ' +
     'combine-les (la vue de côté renseigne la hauteur des portions) pour préciser poids et volumes. ' +
     'QUESTION : si (et seulement si) une seule précision de l’utilisateur changerait beaucoup ' +
     'l’estimation (aliments ambigus : « Riz ou couscous ? », « La sauce est-elle sucrée ? », ' +
     '« Boisson sucrée ou eau ? »), pose cette unique question courte dans question; sinon question=null. ' +
     'CAS 4 — rien de tout ça : found=false, barcode=null, foods=null, scaleRef=null, confidence=null. ' +
-    'Dans les CAS 1, 2 et 4 : question=null (et carbsMin/carbsMax=null au CAS 1).';
+    'Dans les CAS 1, 2 et 4 : question=null, crumbs=null (et carbsMin/carbsMax=null au CAS 1).';
 
   var lastLabelImage = null;
 
@@ -4825,6 +4908,8 @@
      les glucides selon la densité estimée; corriger les glucides à la
      main a toujours le dernier mot. */
   var mpFoods = [];
+  /* Miettes repérées sur la photo mais volontairement écartées du calcul */
+  var mpCrumbs = null;
   /* Ce que l'IA avait dit AVANT toute correction : la référence contre
      laquelle on diffuse l'estimation finale pour en tirer des leçons. */
   var mpOriginal = [];
@@ -4904,11 +4989,31 @@
       x: f.x == null ? null : Math.min(96, Math.max(4, num(f.x))),
       y: f.y == null ? null : Math.min(90, Math.max(10, num(f.y))),
       w: f.w == null ? null : Math.min(100, Math.max(5, num(f.w))),
-      h: f.h == null ? null : Math.min(100, Math.max(5, num(f.h)))
+      h: f.h == null ? null : Math.min(100, Math.max(5, num(f.h))),
+      pieces: mpMapPieces(f.pieces)
     };
   }
 
-  function openMealPhotoModal(foods, scaleRef, confidence, question) {
+  /* Cadres des morceaux : bornés à l'image, 12 au plus. Un morceau mal
+     cadré vaut mieux qu'un morceau tracé hors de la photo. */
+  function mpMapPieces(list) {
+    if (!Array.isArray(list) || list.length === 0) return null;
+    var out = list.slice(0, 12).map(function (pc) {
+      var w = Math.min(60, Math.max(2, num(pc.w)));
+      var h = Math.min(60, Math.max(2, num(pc.h)));
+      return {
+        x: Math.min(100, Math.max(0, num(pc.x))),
+        y: Math.min(100, Math.max(0, num(pc.y))),
+        w: w, h: h
+      };
+    });
+    return out.length ? out : null;
+  }
+
+  function openMealPhotoModal(foods, scaleRef, confidence, question, crumbs) {
+    mpCrumbs = crumbs && crumbs.x != null && crumbs.y != null
+      ? { x: Math.min(100, Math.max(0, num(crumbs.x))), y: Math.min(100, Math.max(0, num(crumbs.y))) }
+      : null;
     mpSetBusy(false); // ré-active les boutons après une ré-analyse réussie
     // Nouvelle analyse (modal fermé) : on repart d'une discussion vierge.
     // Ré-analyse du même repas : le fil reste, il fait partie du contexte.
@@ -5586,13 +5691,18 @@
       var im = document.createElement('img');
       im.src = 'data:image/jpeg;base64,' + b64;
       im.alt = 'Photo du repas analysé';
+      // La hauteur de l'image n'est connue qu'une fois chargée : replacer
+      if (idx === 0) im.id = 'mp-photo-img';
+      im.addEventListener('load', layoutMpCards);
       wrap.appendChild(im);
       if (idx === 0) {
         // Contours et cartes : deux calques, pour que jamais un contour ne
         // passe par-dessus une carte. Le tout redit ce que les cartes
         // modifiables donnent déjà : masqué aux lecteurs d'écran.
-        var boxes = document.createElement('div');
-        boxes.id = 'mp-boxes';
+        var boxes = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        boxes.id = 'mp-shapes';
+        boxes.setAttribute('viewBox', '0 0 100 100');
+        boxes.setAttribute('preserveAspectRatio', 'none');
         boxes.setAttribute('aria-hidden', 'true');
         var cards = document.createElement('div');
         cards.id = 'mp-cards';
@@ -5613,7 +5723,7 @@
   function fr1(v) { return String(round1(v)).replace('.', ','); }
 
   /* Singulier d'une unité dénombrable : « biscuits » → « biscuit »,
-     « morceaux » → « morceau ». Sert à nommer UN morceau dans la carte. */
+     « morceaux » → « morceau ». Sert à nommer UN morceau. */
   function singular(unit) {
     if (/aux$/i.test(unit)) return unit.slice(0, -3) + 'au';
     if (/[sx]$/i.test(unit) && unit.length > 3) return unit.slice(0, -1);
@@ -5632,116 +5742,268 @@
     return n >= 2 && Math.abs(qty - n) < 0.34 ? n : 0;
   }
 
-  /* Le calcul montré sur la photo elle-même : chaque aliment repéré reçoit
-     son contour cyan et sa carte — nom, glucides nets, et pour un aliment
-     en plusieurs morceaux, la quantité et ce que vaut UN morceau. Sans
-     cadre fourni par l'IA, un contour par défaut est centré sur la
-     position; sans position, la carte va dans la pile en haut à gauche.
-     Mis à jour en direct quand on corrige un poids ou des glucides. */
+  /* Unité à afficher pour un aliment compté (« biscuits », sinon un mot
+     neutre quand l'IA a donné des morceaux sans nommer l'unité) */
+  function mpUnit(f, n) {
+    if (f.measure && !isVolumeUnit(f.measure.unit)) return f.measure.unit;
+    return n > 1 ? 'morceaux' : 'morceau';
+  }
+
+  /* Le calcul montré sur la photo elle-même. Ce qui compte pour vérifier
+     une estimation d'un coup d'œil, c'est de voir CE QUI a été compté :
+     chaque morceau reçoit donc son propre contour cyan et sa pastille
+     « rang · valeur du morceau », l'aliment son récapitulatif au bas de
+     l'image, et les miettes vues mais écartées sont dites comme telles —
+     sinon on croit qu'elles ont été oubliées. Sans découpe par morceau,
+     un seul contour entoure l'aliment. Mis à jour en direct quand on
+     corrige un poids ou des glucides. */
+  var mpOutlines = [];   // contours tracés, en % — obstacles au placement
+
   function renderMpOverlay(total) {
-    var boxes = $('mp-boxes'), cards = $('mp-cards'), tot = $('mp-photo-total');
-    if (!boxes || !cards || !tot) return;
-    boxes.innerHTML = '';
+    var shapes = $('mp-shapes'), cards = $('mp-cards'), tot = $('mp-photo-total');
+    if (!shapes || !cards || !tot) return;
+    shapes.innerHTML = '';
     cards.innerHTML = '';
+    mpOutlines = [];
+
     mpFoods.forEach(function (f) {
       var net = mpNet(f);
-      var pieces = mpPieceCount(f);
+      // Les morceaux dessinés sont ceux vus sur la photo : c'est eux qui
+      // fixent la valeur unitaire, même si le poids corrigé fait dire
+      // « 10 biscuits » à la mesure — ces 5 morceaux-là valent plus cher.
+      var pieces = f.pieces && f.pieces.length >= 2 ? f.pieces : null;
+      var n = pieces ? pieces.length : mpPieceCount(f);
+
+      if (pieces) {
+        pieces.forEach(function (pc, i) {
+          outline(pc.x, pc.y, pc.w, pc.h);
+          var pip = document.createElement('div');
+          pip.className = 'mp-pip';
+          var no = document.createElement('span');
+          no.className = 'no';
+          no.textContent = (i + 1);
+          var v = document.createElement('span');
+          v.className = 'v';
+          v.textContent = '≈ ' + fr1(net / pieces.length) + ' g';
+          pip.appendChild(no);
+          pip.appendChild(document.createTextNode('·'));
+          pip.appendChild(v);
+          pip.dataset.px = pc.x;
+          pip.dataset.py = pc.y;
+          pip.dataset.ph = pc.h;
+          cards.appendChild(pip);
+        });
+      } else if (f.x != null && f.y != null) {
+        outline(f.x, f.y, f.w != null ? f.w : 24, f.h != null ? f.h : 24);
+      }
+
       var card = document.createElement('div');
       card.className = 'mp-card';
-
       var nm = document.createElement('span');
       nm.className = 'nm';
       nm.textContent = String(f.name || 'Aliment').replace(/\s*\(.*$/, '');
       card.appendChild(nm);
-
       var qty = document.createElement('span');
       qty.className = 'qty';
-      qty.textContent = pieces
-        ? pieces + ' ' + f.measure.unit + ' · total ≈ ' + fr1(net) + ' g nets'
-        : '≈ ' + fr1(net) + ' g nets';
+      qty.innerHTML = (n >= 2 ? n + ' ' + mpUnit(f, n) + ' · total ' : '')
+        + '≈ <b>' + fr1(net) + ' g</b> nets';
       card.appendChild(qty);
-
-      if (pieces) {
-        var each = document.createElement('span');
-        each.className = 'each';
-        each.textContent = 'Chaque ' + singular(f.measure.unit) + ' : ≈ ' + fr1(net / pieces) + ' g';
-        card.appendChild(each);
-      }
-
-      if (f.x == null || f.y == null) {
-        cards.appendChild(card); // pile en haut à gauche, placée plus bas
-        return;
-      }
-      // Cadre : celui de l'IA, sinon un carré par défaut autour du centre
-      var bw = f.w != null ? f.w : 24;
-      var bh = f.h != null ? f.h : 24;
-      var box = document.createElement('div');
-      box.className = 'mp-box';
-      box.style.left = Math.max(0, f.x - bw / 2) + '%';
-      box.style.top = Math.max(0, f.y - bh / 2) + '%';
-      box.style.width = Math.min(bw, 100 - Math.max(0, f.x - bw / 2)) + '%';
-      box.style.height = Math.min(bh, 100 - Math.max(0, f.y - bh / 2)) + '%';
-      boxes.appendChild(box);
-
-      card.dataset.bx = f.x;
-      card.dataset.by = f.y;
-      card.dataset.bh = bh;
       cards.appendChild(card);
     });
+
+    // Miettes : signalées à leur place, reliées à leur étiquette
+    if (mpCrumbs) {
+      var lbl = document.createElement('div');
+      lbl.className = 'mp-crumbs';
+      lbl.textContent = 'Miettes ignorées';
+      lbl.dataset.cx = mpCrumbs.x;
+      lbl.dataset.cy = mpCrumbs.y;
+      cards.appendChild(lbl);
+    }
+
     tot.style.display = mpFoods.length > 0 ? 'block' : 'none';
-    tot.innerHTML = '≈ <b>' + round1(total) + ' g</b> de glucides à entrer dans la pompe';
+    tot.innerHTML = '≈ <b>' + fr1(total) + ' g</b> de glucides à entrer dans la pompe';
     layoutMpCards();
+
+    function outline(x, y, w, h) {
+      var attrs = {
+        x: Math.max(0, Math.min(100 - w, x - w / 2)),
+        y: Math.max(0, Math.min(100 - h, y - h / 2)),
+        width: w, height: h, rx: Math.min(w, h) * 0.28, ry: Math.min(w, h) * 0.28
+      };
+      mpOutlines.push({ x: attrs.x, y: attrs.y, w: w, h: h });
+      attrs['class'] = 'mp-shape-halo';
+      shapes.appendChild(svgEl('rect', attrs));
+      attrs['class'] = 'mp-shape';
+      shapes.appendChild(svgEl('rect', attrs));
+    }
   }
 
-  /* Placement des cartes : sous son contour de préférence, au-dessus
-     sinon, puis à la première hauteur libre — deux cartes qui se
-     recouvrent ne se lisent ni l'une ni l'autre. En pixels, car la hauteur
-     d'une carte dépend de son texte. */
+  /* Placement des textes, en pixels et après affichage : la taille d'une
+     pastille dépend de son contenu. Les pastilles se posent au plus près
+     de leur morceau, les récapitulatifs s'empilent en bas à gauche —
+     jamais l'un sur l'autre, ni par-dessus le total. */
+  /* Zone réellement occupée par la photo dans son cadre : avec
+     « object-fit: contain », une image plus large que haute laisse des
+     bandes vides. Les contours doivent se caler sur l'image, pas sur le
+     cadre, sinon tout glisse. */
+  function mpFitLayers() {
+    var img = $('mp-photo-img'), shapes = $('mp-shapes'), cards = $('mp-cards');
+    if (!img || !shapes || !cards) return null;
+    var bw = img.offsetWidth, bh = img.offsetHeight;
+    var iw = img.naturalWidth, ih = img.naturalHeight;
+    var box = { l: 0, t: 0, w: bw, h: bh };
+    if (iw > 0 && ih > 0 && bw > 0 && bh > 0) {
+      var k = Math.min(bw / iw, bh / ih);
+      box = { l: (bw - iw * k) / 2, t: (bh - ih * k) / 2, w: iw * k, h: ih * k };
+    }
+    [shapes, cards].forEach(function (el) {
+      el.style.left = box.l + 'px';
+      el.style.top = box.t + 'px';
+      el.style.width = box.w + 'px';
+      el.style.height = box.h + 'px';
+      el.style.right = 'auto';
+      el.style.bottom = 'auto';
+    });
+    return box;
+  }
+
   function layoutMpCards() {
     var layer = $('mp-cards');
     if (!layer) return;
+    mpFitLayers();
     var W = layer.offsetWidth, H = layer.offsetHeight;
     if (!W || !H) return; // modal encore masqué : replacé à l'ouverture
-    // Bandeau du total : son texte est au bas d'un dégradé, on peut donc
-    // mordre sur sa partie transparente sans rien rendre illisible
+    // Le texte du total est au bas d'un dégradé : on peut mordre sur sa
+    // partie transparente sans rien rendre illisible
     var totEl = $('mp-photo-total');
     var BOTTOM = Math.max(24, (totEl ? totEl.offsetHeight : 42) - 18);
     var placed = [];
-    var stack = 6;
-    function overlaps(l, t, w, h) {
+    // Le bandeau du total ne se négocie pas : c'est le nombre à entrer
+    // dans la pompe
+    placed.push({ l: 0, t: H - BOTTOM, w: W, h: BOTTOM });
+    // Les aliments entourés : une pastille qui cache son propre aliment
+    // ne sert à rien
+    var foods = mpOutlines.map(function (o) {
+      return { l: o.x / 100 * W, t: o.y / 100 * H, w: o.w / 100 * W, h: o.h / 100 * H };
+    });
+    function clearOfFood(l, t, w, h) {
+      for (var i = 0; i < foods.length; i++) {
+        var r = foods[i];
+        if (l < r.l + r.w && l + w > r.l && t < r.t + r.h && t + h > r.t) return false;
+      }
+      return true;
+    }
+    function free(l, t, w, h) {
+      if (l < 2 || t < 2 || l + w > W - 2 || t + h > H - 2) return false;
       for (var i = 0; i < placed.length; i++) {
         var r = placed[i];
-        if (l < r.l + r.w + 4 && l + w + 4 > r.l && t < r.t + r.h + 4 && t + h + 4 > r.t) return true;
+        if (l < r.l + r.w + 3 && l + w + 3 > r.l && t < r.t + r.h + 3 && t + h + 3 > r.t) return false;
       }
-      return false;
+      return true;
     }
-    Array.prototype.forEach.call(layer.children, function (card) {
-      var cw = card.offsetWidth, ch = card.offsetHeight;
-      var maxTop = Math.max(4, H - BOTTOM - ch);
-      if (card.dataset.bx === undefined) {
-        // Aliment non situé sur la photo : pile en haut à gauche
-        card.style.left = '6px';
-        card.style.top = Math.min(stack, maxTop) + 'px';
-        placed.push({ l: 6, t: stack, w: cw, h: ch });
-        stack += ch + 6;
-        return;
-      }
-      var cx = num(card.dataset.bx) / 100 * W;
-      var by = num(card.dataset.by) / 100 * H;
-      var bh = num(card.dataset.bh) / 100 * H;
-      var left = Math.min(Math.max(4, cx - cw / 2), Math.max(4, W - cw - 4));
-      var cands = [by + bh / 2 + 4, by - bh / 2 - ch - 4];
-      for (var t = 4; t <= maxTop; t += 8) cands.push(t);
-      var top = null;
-      for (var i = 0; i < cands.length; i++) {
-        var c = Math.min(Math.max(4, cands[i]), maxTop);
-        if (!overlaps(left, c, cw, ch)) { top = c; break; }
-      }
-      if (top === null) top = Math.min(Math.max(4, cands[0]), maxTop);
-      card.style.left = left + 'px';
-      card.style.top = top + 'px';
-      placed.push({ l: left, t: top, w: cw, h: ch });
+    function put(el, l, t) {
+      el.style.left = l + 'px';
+      el.style.top = t + 'px';
+      placed.push({ l: l, t: t, w: el.offsetWidth, h: el.offsetHeight });
+    }
+
+    // Le placement peut être rejoué (image chargée, rotation) : le trait
+    // des miettes est retracé à chaque fois, jamais empilé
+    var oldLine = $('mp-shapes') && $('mp-shapes').querySelectorAll('.mp-crumb-line');
+    if (oldLine) Array.prototype.forEach.call(oldLine, function (el) { el.parentNode.removeChild(el); });
+
+    var pips = layer.querySelectorAll('.mp-pip');
+    var cards = layer.querySelectorAll('.mp-card');
+    var crumbs = layer.querySelector('.mp-crumbs');
+
+    // 1. Les récapitulatifs d'abord : leur place en bas est fixe, les
+    //    pastilles savent ensuite les éviter
+    var stack = H - BOTTOM;
+    Array.prototype.forEach.call(cards, function (card) {
+      var ch = card.offsetHeight;
+      stack -= ch + 6;
+      put(card, 6, Math.max(4, stack));
     });
+
+
+    // 2. Chaque pastille au plus près de son morceau : au-dessus, sinon
+    //    dessous, sinon décalée sur le côté
+    Array.prototype.forEach.call(pips, function (pip) {
+      var pw = pip.offsetWidth, ph = pip.offsetHeight;
+      var cx = num(pip.dataset.px) / 100 * W;
+      var cy = num(pip.dataset.py) / 100 * H;
+      var bh = num(pip.dataset.ph) / 100 * H / 2;
+      var above = cy - bh - ph - 3, below = cy + bh + 3;
+      var cands = [
+        [cx - pw / 2, above], [cx - pw / 2, below],
+        [cx - pw - bh - 4, cy - ph / 2], [cx + bh + 4, cy - ph / 2],
+        [cx - pw / 2, above - ph - 3], [cx - pw / 2, below + ph + 3]
+      ];
+      var i, l, t;
+      // 1re passe : une place qui ne recouvre aucun aliment entouré
+      for (i = 0; i < cands.length; i++) {
+        l = Math.round(cands[i][0]); t = Math.round(cands[i][1]);
+        if (free(l, t, pw, ph) && clearOfFood(l, t, pw, ph)) { put(pip, l, t); return; }
+      }
+      // 2e passe : photo chargée, on accepte de mordre sur un aliment
+      // plutôt que d'éloigner l'étiquette de son morceau
+      for (i = 0; i < cands.length; i++) {
+        l = Math.round(cands[i][0]); t = Math.round(cands[i][1]);
+        if (free(l, t, pw, ph)) { put(pip, l, t); return; }
+      }
+      // Rien autour : on balaie la photo pour au moins rester lisible
+      for (var t2 = 4; t2 < H - ph - 4; t2 += 6) {
+        for (var l2 = 4; l2 < W - pw - 4; l2 += 12) {
+          if (free(l2, t2, pw, ph)) { put(pip, l2, t2); return; }
+        }
+      }
+      put(pip, Math.round(Math.min(Math.max(4, cx - pw / 2), W - pw - 4)), Math.round(Math.max(4, above)));
+    });
+
+    // 3. L'étiquette des miettes, reliée à elles par un trait pointillé
+    if (crumbs) {
+      var lw = crumbs.offsetWidth, lh = crumbs.offsetHeight;
+      var mx = num(crumbs.dataset.cx) / 100 * W;
+      var my = num(crumbs.dataset.cy) / 100 * H;
+      // Le trait qui relie l'étiquette aux miettes doit rester court :
+      // à l'autre bout de la photo, il ne désigne plus rien. On prend donc
+      // la place libre la plus PROCHE, pas la première venue.
+      var best = null;
+      [34, 52, 74, 100].forEach(function (d) {
+        [[d, 0], [-d - lw, 0], [d, -d], [-d - lw, -d], [d, d], [-d - lw, d], [0, -d - lh], [0, d]]
+          .forEach(function (o) {
+            var l = Math.round(mx + o[0]), t = Math.round(my + o[1] - lh / 2);
+            if (!free(l, t, lw, lh)) return;
+            var dist = Math.abs(l + lw / 2 - mx) + Math.abs(t + lh / 2 - my);
+            if (!best || dist < best.d) best = { l: l, t: t, d: dist };
+          });
+      });
+      if (!best) {
+        // Rien autour : on cherche la place libre la plus proche sur toute
+        // la photo, plutôt que d'écrire par-dessus une autre étiquette
+        for (var t5 = 4; t5 < H - lh - 4; t5 += 8) {
+          for (var l5 = 4; l5 < W - lw - 4; l5 += 8) {
+            if (!free(l5, t5, lw, lh)) continue;
+            var d5 = Math.abs(l5 + lw / 2 - mx) + Math.abs(t5 + lh / 2 - my);
+            if (!best || d5 < best.d) best = { l: l5, t: t5, d: d5 };
+          }
+        }
+      }
+      if (!best) return; // photo saturée : mieux vaut rien qu'un texte illisible
+      put(crumbs, best.l, best.t);
+      var shapes = $('mp-shapes');
+      if (shapes) {
+        // Trait tracé dans le repère 0-100 du SVG, comme les contours,
+        // depuis le bord de l'étiquette tourné vers les miettes
+        var ax = (best.l + (best.l + lw / 2 < mx ? lw : 0)) / W * 100;
+        var ay = (best.t + lh / 2) / H * 100;
+        shapes.appendChild(svgEl('path', {
+          'class': 'mp-crumb-line',
+          d: 'M' + ax + ' ' + ay + ' L' + num(crumbs.dataset.cx) + ' ' + num(crumbs.dataset.cy)
+        }));
+      }
+    }
   }
   // Le modal est masqué au premier rendu (largeur nulle) et la largeur
   // change à la rotation de l'écran : replacer dans les deux cas.
@@ -5969,7 +6231,7 @@
     }
     // La photo montrait un plat ou une collation : estimation par aliment
     if (res && !res.found && Array.isArray(res.foods) && res.foods.length > 0) {
-      openMealPhotoModal(res.foods, res.scaleRef, res.confidence, res.question);
+      openMealPhotoModal(res.foods, res.scaleRef, res.confidence, res.question, res.crumbs);
       return;
     }
     if (!res || !res.found || res.carbs == null) {
