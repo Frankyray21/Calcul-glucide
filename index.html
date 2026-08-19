@@ -40,6 +40,7 @@
     --radius: 20px;
     --chart: #2563EB;
     --chart-soft: rgba(37, 99, 235, 0.14);
+    --cyan: #22D3EE;         /* repérage sur la photo analysée, hors thème */
     --carb: #7C3AED;         /* violet : uniquement les nombres de glucides */
     --carb-strong: #6D28D9;
     --carb-soft: rgba(124, 58, 237, 0.12);
@@ -1599,42 +1600,47 @@
   .mp-photo-wrap img {
     display: block;
     width: 100%;
-    height: 210px;
+    height: 250px;
     object-fit: cover;
   }
-  /* Étiquettes posées sur la photo : nom + glucides de chaque aliment */
-  #mp-tags { position: absolute; inset: 0; pointer-events: none; }
-  .mp-tag {
+  /* Ce qui a été compté, montré sur la photo : un contour cyan par aliment
+     repéré, et sa carte de calcul. Le contour dit CE QUI est compté, la
+     carte dit COMBIEN — avec, pour les aliments dénombrables, la valeur
+     d'un seul morceau : c'est ce qui se vérifie d'un coup d'œil. */
+  #mp-boxes, #mp-cards { position: absolute; inset: 0; pointer-events: none; }
+  .mp-box {
     position: absolute;
-    transform: translate(-50%, -50%);
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    max-width: 70%;
-    background: rgba(7, 17, 31, 0.82);
-    border: 1px solid rgba(148, 163, 184, 0.4);
-    border-radius: 999px;
-    padding: 4px 10px;
-    font-size: 0.78rem;
-    font-weight: 700;
+    border: 2px solid var(--cyan);
+    border-radius: 10px;
+    /* Liseré sombre : le cyan seul disparaît sur une photo claire */
+    box-shadow: 0 0 0 1px rgba(7, 17, 31, 0.55), 0 0 12px rgba(34, 211, 238, 0.4);
+    background: rgba(34, 211, 238, 0.08);
+  }
+  .mp-card {
+    position: absolute;
+    max-width: 78%;
+    padding: 5px 9px;
+    border-radius: 10px;
+    border-left: 3px solid var(--cyan);
+    background: rgba(7, 17, 31, 0.88);
     color: #fff;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.35;
+  }
+  .mp-card .nm {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
-    pointer-events: none;
   }
-  .mp-tag .nm { overflow: hidden; text-overflow: ellipsis; }
-  .mp-tag b { color: var(--carb, #C49AFF); }
-  .mp-tags-fallback {
-    position: absolute;
-    top: 8px;
-    left: 8px;
-    right: 8px;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    align-items: flex-start;
-    pointer-events: none;
+  .mp-card .qty { display: block; color: var(--cyan); white-space: nowrap; }
+  .mp-card .each {
+    display: block;
+    color: rgba(255, 255, 255, 0.74);
+    font-weight: 600;
+    white-space: nowrap;
   }
-  .mp-tags-fallback .mp-tag { position: static; transform: none; }
   /* Total estimé, lisible directement au bas de la photo */
   .mp-photo-total {
     position: absolute;
@@ -2191,7 +2197,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.12.0</span>
+  <br><span id="app-version">Glucides Nets v2.13.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -4469,9 +4475,11 @@
       carbsMax: { type: ['number', 'null'], description: 'Haut de la fourchette réaliste de glucides pour cette portion, en grammes' },
       fiber: { type: 'number', description: 'Fibres estimées pour cette portion, en grammes' },
       x: { type: ['number', 'null'], description: 'Position approximative du CENTRE de cet aliment sur la première photo : % de la largeur, 0-100. null si impossible à situer' },
-      y: { type: ['number', 'null'], description: 'Position approximative du CENTRE de cet aliment sur la première photo : % de la hauteur, 0-100. null si impossible à situer' }
+      y: { type: ['number', 'null'], description: 'Position approximative du CENTRE de cet aliment sur la première photo : % de la hauteur, 0-100. null si impossible à situer' },
+      w: { type: ['number', 'null'], description: 'Largeur du rectangle qui entoure cet aliment (TOUS ses morceaux compris) sur la première photo : % de la largeur de l’image, 0-100. null si impossible à cadrer' },
+      h: { type: ['number', 'null'], description: 'Hauteur du rectangle qui entoure cet aliment (TOUS ses morceaux compris) sur la première photo : % de la hauteur de l’image, 0-100. null si impossible à cadrer' }
     },
-    required: ['name', 'grams', 'measure', 'carbs', 'carbsMin', 'carbsMax', 'fiber', 'x', 'y'],
+    required: ['name', 'grams', 'measure', 'carbs', 'carbsMin', 'carbsMax', 'fiber', 'x', 'y', 'w', 'h'],
     additionalProperties: false
   };
 
@@ -4537,6 +4545,13 @@
     'large si le plat est composé ou la portion incertaine). ' +
     'Donne aussi x et y : la position approximative du CENTRE de cet aliment sur la PREMIÈRE photo, ' +
     'en pourcentage de la largeur (x) et de la hauteur (y), de 0 à 100 — null si tu ne peux pas le situer. ' +
+    'CADRAGE : ajoute w et h, la largeur et la hauteur du plus petit rectangle qui contient CET aliment ' +
+    'sur la PREMIÈRE photo, en pourcentage de la largeur et de la hauteur de l’image (le rectangle est ' +
+    'centré sur x,y). Quand l’aliment est en plusieurs morceaux identiques (5 biscuits, 3 tranches), le ' +
+    'rectangle entoure L’ENSEMBLE des morceaux, pas un seul. Serre le cadre sur l’aliment, sans y inclure ' +
+    'l’assiette ni la table autour. w=h=null si tu ne peux pas le cadrer. ' +
+    'N’entoure et ne liste PAS les miettes, éclats, résidus ni traces négligeables : seulement ce qui ' +
+    'compte vraiment dans le calcul des glucides. ' +
     'S’il y a PLUSIEURS photos, elles montrent le MÊME repas sous des angles différents : ' +
     'combine-les (la vue de côté renseigne la hauteur des portions) pour préciser poids et volumes. ' +
     'QUESTION : si (et seulement si) une seule précision de l’utilisateur changerait beaucoup ' +
@@ -4887,7 +4902,9 @@
       measure: parseMeasure(f.measure),
       origGrams: grams,
       x: f.x == null ? null : Math.min(96, Math.max(4, num(f.x))),
-      y: f.y == null ? null : Math.min(90, Math.max(10, num(f.y)))
+      y: f.y == null ? null : Math.min(90, Math.max(10, num(f.y))),
+      w: f.w == null ? null : Math.min(100, Math.max(5, num(f.w))),
+      h: f.h == null ? null : Math.min(100, Math.max(5, num(f.h)))
     };
   }
 
@@ -4928,6 +4945,7 @@
       $('mp-chat').open = true;
     }
     openModal('meal-photo-modal', '#mp-add');
+    requestAnimationFrame(layoutMpCards);
   }
   function closeMealPhotoModal() { mpSetBusy(false); closeModal('meal-photo-modal'); }
   trapModal('meal-photo-modal', closeMealPhotoModal);
@@ -5083,7 +5101,7 @@
         'Si le message apporte une correction ou une précision qui change l’estimation (autre aliment, ' +
         'portion différente, ingrédient ajouté ou retiré, cuisson, sauce…), renvoie dans foods la liste ' +
         'COMPLÈTE et corrigée de TOUS les aliments du repas — y compris ceux qui ne changent pas, avec ' +
-        'leurs valeurs et positions x/y actuelles — et dis en une phrase ce que tu as changé. ' +
+        'leurs valeurs, positions et cadres (x, y, w, h) actuels — et dis en une phrase ce que tu as changé. ' +
         'Sinon foods=null (une simple explication ne modifie rien). ' +
         'Ne donne jamais de dose d’insuline ni de conseil médical : pour ça, renvoie à l’équipe de soins.' +
         aiMemoryPrompt()
@@ -5570,16 +5588,20 @@
       im.alt = 'Photo du repas analysé';
       wrap.appendChild(im);
       if (idx === 0) {
-        var tags = document.createElement('div');
-        tags.id = 'mp-tags';
-        var fb = document.createElement('div');
-        fb.id = 'mp-tags-fallback';
-        fb.className = 'mp-tags-fallback';
+        // Contours et cartes : deux calques, pour que jamais un contour ne
+        // passe par-dessus une carte. Le tout redit ce que les cartes
+        // modifiables donnent déjà : masqué aux lecteurs d'écran.
+        var boxes = document.createElement('div');
+        boxes.id = 'mp-boxes';
+        boxes.setAttribute('aria-hidden', 'true');
+        var cards = document.createElement('div');
+        cards.id = 'mp-cards';
+        cards.setAttribute('aria-hidden', 'true');
         var tot = document.createElement('div');
         tot.id = 'mp-photo-total';
         tot.className = 'mp-photo-total';
-        wrap.appendChild(tags);
-        wrap.appendChild(fb);
+        wrap.appendChild(boxes);
+        wrap.appendChild(cards);
         wrap.appendChild(tot);
       }
       ph.appendChild(wrap);
@@ -5587,36 +5609,143 @@
     ph.style.display = lastAnalyzedImages.length > 0 ? 'flex' : 'none';
   }
 
-  /* Le calcul directement sur la photo : une étiquette par aliment (nom +
-     glucides) à la position estimée par l'IA — repli en pile en haut à
-     gauche quand la position manque — et le total estimé au bas de
-     l'image. Mis à jour en direct quand on corrige poids ou glucides. */
+  /* Nombre à la française sur la photo (« 6,5 g »), comme les quantités */
+  function fr1(v) { return String(round1(v)).replace('.', ','); }
+
+  /* Singulier d'une unité dénombrable : « biscuits » → « biscuit »,
+     « morceaux » → « morceau ». Sert à nommer UN morceau dans la carte. */
+  function singular(unit) {
+    if (/aux$/i.test(unit)) return unit.slice(0, -3) + 'au';
+    if (/[sx]$/i.test(unit) && unit.length > 3) return unit.slice(0, -1);
+    return unit;
+  }
+
+  /* Nombre de morceaux visibles, remis à l'échelle si le poids est corrigé.
+     0 quand l'aliment ne se compte pas (« ¾ tasse ») ou n'a pas de mesure. */
+  function mpPieceCount(f) {
+    if (!f.measure || isVolumeUnit(f.measure.unit)) return 0;
+    var qty = f.origGrams > 0 && f.grams > 0
+      ? f.measure.qty * f.grams / f.origGrams
+      : f.measure.qty;
+    // Un compte de morceaux n'a de sens qu'entier : 4,7 biscuits, non
+    var n = Math.round(qty);
+    return n >= 2 && Math.abs(qty - n) < 0.34 ? n : 0;
+  }
+
+  /* Le calcul montré sur la photo elle-même : chaque aliment repéré reçoit
+     son contour cyan et sa carte — nom, glucides nets, et pour un aliment
+     en plusieurs morceaux, la quantité et ce que vaut UN morceau. Sans
+     cadre fourni par l'IA, un contour par défaut est centré sur la
+     position; sans position, la carte va dans la pile en haut à gauche.
+     Mis à jour en direct quand on corrige un poids ou des glucides. */
   function renderMpOverlay(total) {
-    var tags = $('mp-tags'), fb = $('mp-tags-fallback'), tot = $('mp-photo-total');
-    if (!tags || !fb || !tot) return;
-    tags.innerHTML = '';
-    fb.innerHTML = '';
+    var boxes = $('mp-boxes'), cards = $('mp-cards'), tot = $('mp-photo-total');
+    if (!boxes || !cards || !tot) return;
+    boxes.innerHTML = '';
+    cards.innerHTML = '';
     mpFoods.forEach(function (f) {
-      var chip = document.createElement('span');
-      chip.className = 'mp-tag';
+      var net = mpNet(f);
+      var pieces = mpPieceCount(f);
+      var card = document.createElement('div');
+      card.className = 'mp-card';
+
       var nm = document.createElement('span');
       nm.className = 'nm';
       nm.textContent = String(f.name || 'Aliment').replace(/\s*\(.*$/, '');
-      var val = document.createElement('b');
-      val.textContent = round1(f.carbs) + ' g';
-      chip.appendChild(nm);
-      chip.appendChild(val);
-      if (f.x != null && f.y != null) {
-        chip.style.left = f.x + '%';
-        chip.style.top = f.y + '%';
-        tags.appendChild(chip);
-      } else {
-        fb.appendChild(chip);
+      card.appendChild(nm);
+
+      var qty = document.createElement('span');
+      qty.className = 'qty';
+      qty.textContent = pieces
+        ? pieces + ' ' + f.measure.unit + ' · total ≈ ' + fr1(net) + ' g nets'
+        : '≈ ' + fr1(net) + ' g nets';
+      card.appendChild(qty);
+
+      if (pieces) {
+        var each = document.createElement('span');
+        each.className = 'each';
+        each.textContent = 'Chaque ' + singular(f.measure.unit) + ' : ≈ ' + fr1(net / pieces) + ' g';
+        card.appendChild(each);
       }
+
+      if (f.x == null || f.y == null) {
+        cards.appendChild(card); // pile en haut à gauche, placée plus bas
+        return;
+      }
+      // Cadre : celui de l'IA, sinon un carré par défaut autour du centre
+      var bw = f.w != null ? f.w : 24;
+      var bh = f.h != null ? f.h : 24;
+      var box = document.createElement('div');
+      box.className = 'mp-box';
+      box.style.left = Math.max(0, f.x - bw / 2) + '%';
+      box.style.top = Math.max(0, f.y - bh / 2) + '%';
+      box.style.width = Math.min(bw, 100 - Math.max(0, f.x - bw / 2)) + '%';
+      box.style.height = Math.min(bh, 100 - Math.max(0, f.y - bh / 2)) + '%';
+      boxes.appendChild(box);
+
+      card.dataset.bx = f.x;
+      card.dataset.by = f.y;
+      card.dataset.bh = bh;
+      cards.appendChild(card);
     });
     tot.style.display = mpFoods.length > 0 ? 'block' : 'none';
     tot.innerHTML = '≈ <b>' + round1(total) + ' g</b> de glucides à entrer dans la pompe';
+    layoutMpCards();
   }
+
+  /* Placement des cartes : sous son contour de préférence, au-dessus
+     sinon, puis à la première hauteur libre — deux cartes qui se
+     recouvrent ne se lisent ni l'une ni l'autre. En pixels, car la hauteur
+     d'une carte dépend de son texte. */
+  function layoutMpCards() {
+    var layer = $('mp-cards');
+    if (!layer) return;
+    var W = layer.offsetWidth, H = layer.offsetHeight;
+    if (!W || !H) return; // modal encore masqué : replacé à l'ouverture
+    // Bandeau du total : son texte est au bas d'un dégradé, on peut donc
+    // mordre sur sa partie transparente sans rien rendre illisible
+    var totEl = $('mp-photo-total');
+    var BOTTOM = Math.max(24, (totEl ? totEl.offsetHeight : 42) - 18);
+    var placed = [];
+    var stack = 6;
+    function overlaps(l, t, w, h) {
+      for (var i = 0; i < placed.length; i++) {
+        var r = placed[i];
+        if (l < r.l + r.w + 4 && l + w + 4 > r.l && t < r.t + r.h + 4 && t + h + 4 > r.t) return true;
+      }
+      return false;
+    }
+    Array.prototype.forEach.call(layer.children, function (card) {
+      var cw = card.offsetWidth, ch = card.offsetHeight;
+      var maxTop = Math.max(4, H - BOTTOM - ch);
+      if (card.dataset.bx === undefined) {
+        // Aliment non situé sur la photo : pile en haut à gauche
+        card.style.left = '6px';
+        card.style.top = Math.min(stack, maxTop) + 'px';
+        placed.push({ l: 6, t: stack, w: cw, h: ch });
+        stack += ch + 6;
+        return;
+      }
+      var cx = num(card.dataset.bx) / 100 * W;
+      var by = num(card.dataset.by) / 100 * H;
+      var bh = num(card.dataset.bh) / 100 * H;
+      var left = Math.min(Math.max(4, cx - cw / 2), Math.max(4, W - cw - 4));
+      var cands = [by + bh / 2 + 4, by - bh / 2 - ch - 4];
+      for (var t = 4; t <= maxTop; t += 8) cands.push(t);
+      var top = null;
+      for (var i = 0; i < cands.length; i++) {
+        var c = Math.min(Math.max(4, cands[i]), maxTop);
+        if (!overlaps(left, c, cw, ch)) { top = c; break; }
+      }
+      if (top === null) top = Math.min(Math.max(4, cands[0]), maxTop);
+      card.style.left = left + 'px';
+      card.style.top = top + 'px';
+      placed.push({ l: left, t: top, w: cw, h: ch });
+    });
+  }
+  // Le modal est masqué au premier rendu (largeur nulle) et la largeur
+  // change à la rotation de l'écran : replacer dans les deux cas.
+  window.addEventListener('resize', layoutMpCards);
 
   function updateMpTotal() {
     var total = 0, lo = 0, hi = 0, hasRange = false;
