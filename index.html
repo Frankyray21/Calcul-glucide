@@ -2172,6 +2172,52 @@
     </div>
 
     <div class="card">
+      <h2>☁️ Compte et synchronisation</h2>
+
+      <!-- Sans compte, rien ne sort de l'appareil : c'est l'état par défaut -->
+      <div id="sync-off">
+        <p class="hint" style="margin:0 0 10px;">Tes données sont sur cet appareil et n’en sortent pas. Un compte permet de les retrouver sur ton autre téléphone ou ta tablette — journal, recettes, favoris, leçons et photos.</p>
+        <button class="btn btn-secondary" id="sync-setup-btn" type="button">Configurer la synchronisation</button>
+      </div>
+
+      <!-- Adresse du projet et clé publique, à coller une seule fois -->
+      <div id="sync-config" style="display:none;">
+        <p class="hint" style="margin:0 0 10px;">Colle les deux valeurs de ton projet Supabase (<em>Project Settings → API</em>). La clé <strong>anon</strong>, jamais la clé <strong>service_role</strong>.</p>
+        <label for="sync-url">Project URL</label>
+        <input type="url" id="sync-url" autocomplete="off" placeholder="https://xxxx.supabase.co">
+        <label for="sync-key">Clé anon</label>
+        <input type="password" id="sync-key" autocomplete="off" placeholder="eyJ…">
+        <div class="btn-row" style="margin-top:12px;">
+          <button class="btn btn-secondary" id="sync-config-cancel" type="button">Annuler</button>
+          <button class="btn" id="sync-config-save" type="button">Enregistrer</button>
+        </div>
+      </div>
+
+      <!-- Connexion par lien courriel : pas de mot de passe à retenir ni à perdre -->
+      <div id="sync-signin" style="display:none;">
+        <p class="hint" style="margin:0 0 10px;">Entre ton courriel : tu recevras un lien de connexion. Aucun mot de passe à retenir.</p>
+        <label for="sync-email">Courriel</label>
+        <div class="scan-row">
+          <input type="email" id="sync-email" autocomplete="email" inputmode="email" placeholder="toi@exemple.com">
+          <button class="btn" id="sync-send-link" type="button">Envoyer</button>
+        </div>
+        <p class="hint" id="sync-signin-msg" style="margin-top:10px;" role="status" aria-live="polite"></p>
+        <button class="link-btn" id="sync-forget-config" type="button" style="width:100%; text-align:center;">Changer de projet Supabase</button>
+      </div>
+
+      <!-- Connecté -->
+      <div id="sync-on" style="display:none;">
+        <p class="stats-line" style="margin:0 0 6px;">Connecté comme <strong id="sync-who"></strong></p>
+        <p class="hint" id="sync-state" style="margin:0 0 12px;" role="status" aria-live="polite"></p>
+        <div class="btn-row">
+          <button class="btn" id="sync-now" type="button">Synchroniser maintenant</button>
+          <button class="btn btn-secondary" id="sync-signout" type="button">Se déconnecter</button>
+        </div>
+        <button class="link-btn" id="sync-delete-account" type="button" style="width:100%; text-align:center; color:var(--danger);">Supprimer mon compte et toutes ses données</button>
+      </div>
+    </div>
+
+    <div class="card">
       <h2>🧠 Ce que l’IA a appris de toi</h2>
       <p class="hint" style="margin:0 0 10px;">Quand tu corriges une estimation photo avant de l’ajouter au repas — ou que tu la corriges dans la discussion — l’app retient la leçon et la redonne à l’IA à chaque analyse suivante. Retire une leçon si elle est fausse ou ne vaut plus.</p>
       <div id="ai-memory-list"></div>
@@ -2248,7 +2294,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.14.0</span>
+  <br><span id="app-version">Glucides Nets v2.16.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -2578,23 +2624,46 @@
   }
   function sanitizeRecipe(r) {
     if (!r || typeof r !== 'object') return null;
-    return {
+    return stamp({
       name: String(r.name || 'Recette'),
       carbs: num(r.carbs),
       fiber: num(r.fiber),
       polyols: num(r.polyols),
       polyolType: r.polyolType === 'full' ? 'full' : 'half',
       photo: typeof r.photo === 'string' ? r.photo : null
-    };
+    }, r);
   }
   function sanitizeEntry(e) {
     if (!e || typeof e !== 'object') return null;
-    return {
+    return stamp({
       ts: num(e.ts) || 0,
       items: (Array.isArray(e.items) ? e.items : []).map(sanitizeItem).filter(Boolean),
       net: num(e.net), carbs: num(e.carbs), fiber: num(e.fiber), polyols: num(e.polyols)
-    };
+    }, e);
   }
+  /* ── Identité des enregistrements ──
+     Préalable à toute synchronisation entre appareils : sans identifiant
+     stable, une recette modifiée sur le téléphone et une autre ajoutée sur
+     la tablette sont indiscernables. id ne change jamais, updatedAt
+     tranche les conflits (la version la plus récente gagne). Les données
+     déjà présentes sont estampillées à la première lecture — aucune
+     migration à lancer, aucune perte possible. */
+  function uid() {
+    try {
+      if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    } catch (e) { /* contexte non sécurisé */ }
+    return 'x' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+  }
+  function stamp(rec, raw) {
+    rec.id = raw && typeof raw.id === 'string' && raw.id ? raw.id : uid();
+    rec.updatedAt = raw && num(raw.updatedAt) > 0 ? num(raw.updatedAt) : Date.now();
+    return rec;
+  }
+  function sanitizeFav(it) {
+    var s = sanitizeItem(it);
+    return s ? stamp(s, it) : null;
+  }
+
   function loadList(key, sanitize) {
     var raw;
     try { raw = JSON.parse(lsGet(key) || '[]'); } catch (e) { raw = []; }
@@ -2613,6 +2682,8 @@
     PROFILES = [{ id: 'p1', name: 'Profil 1', allergies: '' }];
   }
   PROFILES = PROFILES.filter(function (p) { return p && p.id && p.name; });
+  // Les profils se synchronisent comme le reste : même horodatage
+  PROFILES.forEach(function (p) { if (!(num(p.updatedAt) > 0)) p.updatedAt = Date.now(); });
   var activeProfileId = lsGet('gn_active_profile') || 'p1';
   if (!PROFILES.some(function (p) { return p.id === activeProfileId; })) {
     activeProfileId = PROFILES[0].id;
@@ -2629,9 +2700,69 @@
   function saveProfiles() { lsSet('gn_profiles', JSON.stringify(PROFILES)); }
 
   meal = loadList(pk('gn_meal'), sanitizeItem);
-  favorites = loadList(pk('gn_favorites'), sanitizeItem);
+  favorites = loadList(pk('gn_favorites'), sanitizeFav);
   recipes = loadList(pk('gn_recipes'), sanitizeRecipe);
   history = loadList(pk('gn_history'), sanitizeEntry);
+
+  /* ── Traces de suppression ──
+     Supprimer une recette la retire de la liste; il n'en reste rien à
+     envoyer. Un autre appareil qui l'a encore la renverrait à la
+     prochaine synchro — la suppression ne « prendrait » jamais. On garde
+     donc la trace du geste, et pas seulement son résultat. Les listes
+     affichées restent inchangées : ces traces vivent à part. */
+  var TOMB_TTL = 90 * 24 * 60 * 60 * 1000;
+  var tombs = [];
+  try {
+    var rawTombs = JSON.parse(lsGet(pk('gn_tombs')) || '[]');
+    if (Array.isArray(rawTombs)) {
+      tombs = rawTombs.filter(function (t) {
+        return t && typeof t.id === 'string' && typeof t.kind === 'string' &&
+          Date.now() - num(t.deletedAt) < TOMB_TTL;
+      }).slice(-500);
+    }
+  } catch (e) { tombs = []; }
+  function saveTombs() { lsSet(pk('gn_tombs'), JSON.stringify(tombs)); }
+  /* À appeler AVANT de retirer l'enregistrement de sa liste */
+  function forget(kind, rec) {
+    if (!rec || !rec.id) return;
+    tombs = tombs.filter(function (t) { return t.id !== rec.id; });
+    // pid : la synchro doit savoir DANS QUEL profil replacer la trace
+    tombs.push({ kind: kind, id: rec.id, pid: activeProfileId, deletedAt: Date.now() });
+    if (tombs.length > 500) tombs = tombs.slice(-500);
+    saveTombs();
+  }
+
+  /* ── Détection des modifications ──
+     updatedAt doit bouger dès qu'un enregistrement change, sinon la
+     synchro garderait l'ancienne version. Plutôt que d'estampiller à la
+     main à chaque endroit qui modifie quelque chose — et d'en oublier un —
+     on compare à la sauvegarde précédente : tout changement réel se voit,
+     d'où qu'il vienne. */
+  var shadow = {};
+  function bodyOf(rec) {
+    var copy = {};
+    for (var k in rec) { if (rec.hasOwnProperty(k) && k !== 'updatedAt') copy[k] = rec[k]; }
+    return JSON.stringify(copy);
+  }
+  function markEdits(list) {
+    list.forEach(function (rec) {
+      if (!rec || !rec.id) return;
+      var body = bodyOf(rec);
+      if (shadow[rec.id] !== undefined && shadow[rec.id] !== body) rec.updatedAt = Date.now();
+      shadow[rec.id] = body;
+    });
+  }
+  [favorites, recipes, history].forEach(function (list) {
+    list.forEach(function (rec) { if (rec && rec.id) shadow[rec.id] = bodyOf(rec); });
+  });
+
+  /* Stockage persistant : sans cette demande, le navigateur peut vider
+     localStorage sous pression d'espace — journal, recettes et leçons
+     avec. Refus possible, ce n'est qu'une demande : l'export reste le
+     vrai filet de sécurité. */
+  try {
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
+  } catch (e) { /* non supporté */ }
 
   var $ = function (id) { return document.getElementById(id); };
 
@@ -2698,6 +2829,9 @@
      et le total pompe se désynchronise du repas en mémoire). */
   function save() {
     var failed = false;
+    markEdits(favorites);
+    markEdits(recipes);
+    markEdits(history);
     [[pk('gn_meal'), meal], [pk('gn_favorites'), favorites], [pk('gn_history'), history], [pk('gn_recipes'), recipes]]
       .forEach(function (pair) {
         if (!lsSet(pair[0], JSON.stringify(pair[1]))) failed = true;
@@ -3095,7 +3229,10 @@
       edit.setAttribute('aria-label', 'Modifier le profil ' + prof.name);
       edit.addEventListener('click', function () {
         var name = prompt('Prénom ou surnom :', prof.name);
-        if (name && name.trim()) prof.name = name.trim().slice(0, 30);
+        if (name && name.trim()) {
+          prof.name = name.trim().slice(0, 30);
+          prof.updatedAt = Date.now();
+        }
         var alg = prompt('Allergies et intolérances (laisser vide si aucune) :', prof.allergies || '');
         if (alg !== null) prof.allergies = alg.trim().slice(0, 120);
         saveProfiles();
@@ -3118,6 +3255,7 @@
           var key = prof.id === 'p1' ? base : base + '__' + prof.id;
           try { localStorage.removeItem(key); } catch (e) { /* stockage indisponible */ }
         });
+        forget('profile', prof);
         PROFILES = PROFILES.filter(function (x) { return x.id !== prof.id; });
         saveProfiles();
         if (prof.id === activeProfileId) {
@@ -3138,7 +3276,7 @@
     var name = $('profile-new-name').value.trim().slice(0, 30);
     if (!name) { $('profile-new-name').focus(); return; }
     var id = 'p' + Date.now().toString(36);
-    PROFILES.push({ id: id, name: name, allergies: '' });
+    PROFILES.push({ id: id, name: name, allergies: '', updatedAt: Date.now() });
     saveProfiles();
     $('profile-new-name').value = '';
     renderProfiles();
@@ -3202,6 +3340,7 @@
       del.textContent = '✕';
       del.setAttribute('aria-label', 'Supprimer le favori ' + fav.name);
       del.addEventListener('click', function () {
+        forget('favorite', favorites[i]);
         favorites.splice(i, 1);
         save();
         renderFavorites();
@@ -3222,10 +3361,10 @@
     meal.push(item);
     touchMeal();
     if ($('save-fav').checked) {
-      favorites.push({
+      favorites.push(stamp({
         name: item.name, carbs: item.carbs, fiber: item.fiber,
         polyols: item.polyols, polyolType: item.polyolType
-      });
+      }));
     }
     save();
     renderMeal();
@@ -3298,14 +3437,14 @@
     var polyols = parseFloat($('recipe-polyols').value) || 0;
     if (!name) { $('recipe-name').focus(); return; }
     if (carbs === 0 && fiber === 0 && polyols === 0) { $('recipe-carbs').focus(); return; }
-    recipes.push({
+    recipes.push(stamp({
       name: name,
       carbs: carbs,
       fiber: fiber,
       polyols: polyols,
       polyolType: $('recipe-polyol-type').value,
       photo: pendingPhoto
-    });
+    }));
     save();
     ['recipe-name', 'recipe-carbs', 'recipe-fiber', 'recipe-polyols'].forEach(function (id) { $(id).value = ''; });
     $('recipe-polyol-type').value = 'half';
@@ -3388,6 +3527,7 @@
       del.setAttribute('aria-label', 'Supprimer la recette ' + r.name);
       del.addEventListener('click', function () {
         if (confirm('Supprimer la recette « ' + r.name + ' »?')) {
+          forget('recipe', recipes[i]);
           recipes.splice(i, 1);
           save();
           renderRecipes();
@@ -3703,12 +3843,13 @@
     if (!modalRecipe) return;
     var idx = favIndexOf(modalRecipe.name);
     if (idx === -1) {
-      favorites.push({
+      favorites.push(stamp({
         name: modalRecipe.name, carbs: modalRecipe.carbs, fiber: modalRecipe.fiber,
         polyols: modalRecipe.polyols, polyolType: modalRecipe.polyolType
-      });
+      }));
       toast('♥ ' + modalRecipe.name + ' gardé dans tes favoris');
     } else {
+      forget('favorite', favorites[idx]);
       favorites.splice(idx, 1);
       toast('Retiré des favoris');
     }
@@ -4344,6 +4485,7 @@
     if (!l || typeof l !== 'object') return null;
     if (['name', 'per100', 'grams', 'absent', 'missed', 'note'].indexOf(l.kind) === -1) return null;
     var o = {
+      id: typeof l.id === 'string' && l.id ? l.id : uid(),
       kind: l.kind,
       text: String(l.text || '').slice(0, 160).trim(),
       aiName: String(l.aiName || '').slice(0, 60).trim(),
@@ -4474,18 +4616,19 @@
       var txt = document.createElement('div');
       txt.className = 'txt';
       txt.textContent = lessonText(l);
-      var forget = document.createElement('button');
-      forget.type = 'button';
-      forget.className = 'forget';
-      forget.textContent = '✕';
-      forget.setAttribute('aria-label', 'Oublier cette leçon');
-      forget.addEventListener('click', function () {
+      // Nom distinct de la fonction forget() : la variable la masquerait
+      var forgetBtn = document.createElement('button');
+      forgetBtn.type = 'button';
+      forgetBtn.className = 'forget';
+      forgetBtn.textContent = '✕';
+      forgetBtn.setAttribute('aria-label', 'Oublier cette leçon');
+      forgetBtn.addEventListener('click', function () {
         var i = aiMemory.lessons.indexOf(l);
-        if (i !== -1) aiMemory.lessons.splice(i, 1);
+        if (i !== -1) { forget('lesson', l); aiMemory.lessons.splice(i, 1); }
         saveAiMemory();
       });
       row.appendChild(txt);
-      row.appendChild(forget);
+      row.appendChild(forgetBtn);
       box.appendChild(row);
     });
     $('ai-memory-clear').style.display = 'block';
@@ -4507,6 +4650,7 @@
   $('ai-memory-clear').addEventListener('click', function () {
     if (aiMemory.lessons.length === 0) return;
     if (!confirm('Effacer les ' + aiMemory.lessons.length + ' leçons apprises de tes corrections ?')) return;
+    aiMemory.lessons.forEach(function (l) { forget('lesson', l); });
     aiMemory.lessons = [];
     saveAiMemory();
     toast('🧠 Mémoire effacée — l’IA repart de zéro.');
@@ -6382,11 +6526,13 @@
       totF += item.fiber * item.ratio;
       totP += item.polyols * item.ratio;
     });
-    history.unshift({
+    history.unshift(stamp({
       ts: Date.now(),
       items: meal.slice(),
       net: round1(totNet), carbs: round1(totC), fiber: round1(totF), polyols: round1(totP)
-    });
+    }));
+    // Plafond du journal : les plus anciens sortent sans laisser de trace,
+    // ce n'est pas une suppression voulue mais un élagage local
     if (history.length > 300) history.length = 300;
     meal = [];
     save();
@@ -6472,6 +6618,7 @@
       del.textContent = '✕';
       del.setAttribute('aria-label', 'Supprimer ce repas du journal');
       del.addEventListener('click', function () {
+        forget('entry', history[idx]);
         history.splice(idx, 1);
         save();
         renderJournal();
@@ -6553,7 +6700,8 @@
       recipes: recipes,
       favorites: favorites,
       history: history,
-      aiMemory: aiMemory.lessons
+      aiMemory: aiMemory.lessons,
+      tombs: tombs
     };
     var blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
     var a = document.createElement('a');
@@ -6589,11 +6737,20 @@
       // Chaque entrée est assainie : un fichier tronqué ou édité ne doit
       // jamais planter le rendu ni afficher des totaux « NaN »
       recipes = (Array.isArray(data.recipes) ? data.recipes : []).map(sanitizeRecipe).filter(Boolean);
-      favorites = (Array.isArray(data.favorites) ? data.favorites : []).map(sanitizeItem).filter(Boolean);
+      favorites = (Array.isArray(data.favorites) ? data.favorites : []).map(sanitizeFav).filter(Boolean);
       history = (Array.isArray(data.history) ? data.history : []).map(sanitizeEntry).filter(Boolean);
       aiMemory.lessons = (Array.isArray(data.aiMemory) ? data.aiMemory : [])
         .map(sanitizeLesson).filter(Boolean).slice(0, AI_MEM_MAX);
       saveAiMemory();
+      // Les suppressions font partie de la sauvegarde : sans elles, un
+      // import ferait réapparaître ce qui avait été effacé ailleurs
+      if (Array.isArray(data.tombs)) {
+        tombs = data.tombs.filter(function (t) {
+          return t && typeof t.id === 'string' && typeof t.kind === 'string' &&
+            Date.now() - num(t.deletedAt) < TOMB_TTL;
+        }).slice(-500);
+        saveTombs();
+      }
       save();
       renderRecipes();
       renderFavorites();
@@ -6621,6 +6778,658 @@
       alert(text);
     }
   }
+
+  /* ══════════ Compte et synchronisation entre appareils ══════════
+     Optionnelle et éteinte par défaut : sans compte, rien ne sort de
+     l'appareil. Une fois branchée, l'app reste maîtresse de ses données —
+     localStorage est la source d'affichage, le serveur n'est qu'un point
+     de rendez-vous entre appareils. Tout continue de fonctionner hors
+     ligne; la synchro rattrape au retour du réseau.
+
+     Arbitrage des conflits : la version la plus récemment modifiée gagne.
+     C'est suffisant ici (une personne, deux ou trois appareils, rarement
+     la même recette modifiée des deux côtés à la minute près) et ça évite
+     une machinerie de fusion que personne ne pourrait vérifier. */
+
+  var SB = { url: lsGet('gn_sb_url') || '', key: lsGet('gn_sb_key') || '' };
+  var sbSession = null;
+  try { sbSession = JSON.parse(lsGet('gn_sb_session') || 'null'); } catch (e) { sbSession = null; }
+
+  function sbConfigured() { return !!(SB.url && SB.key); }
+  function sbSignedIn() { return !!(sbSession && sbSession.access_token && sbSession.user_id); }
+
+  function saveSbSession() {
+    if (sbSession) lsSet('gn_sb_session', JSON.stringify(sbSession));
+    else { try { localStorage.removeItem('gn_sb_session'); } catch (e) {} }
+  }
+
+  /* Un appel authentifié. Le jeton d'accès expire vite (une heure) :
+     on le renouvelle une fois en silence avant d'abandonner, sinon
+     l'utilisateur serait déconnecté tous les matins. */
+  function sbFetch(path, opts, retried) {
+    opts = opts || {};
+    var headers = opts.headers || {};
+    headers.apikey = SB.key;
+    if (sbSession && sbSession.access_token) {
+      headers.Authorization = 'Bearer ' + sbSession.access_token;
+    }
+    return fetch(SB.url + path, {
+      method: opts.method || 'GET',
+      headers: headers,
+      body: opts.body
+    }).then(function (r) {
+      if (r.status !== 401 || retried || !sbSession || !sbSession.refresh_token) return r;
+      return sbRefresh().then(function (ok) {
+        if (!ok) return r;
+        return sbFetch(path, opts, true);
+      });
+    });
+  }
+
+  function sbJson(path, opts) {
+    opts = opts || {};
+    opts.headers = opts.headers || {};
+    opts.headers['content-type'] = 'application/json';
+    return sbFetch(path, opts).then(function (r) {
+      return r.text().then(function (t) {
+        var data = null;
+        try { data = t ? JSON.parse(t) : null; } catch (e) { data = null; }
+        if (!r.ok) {
+          var msg = (data && (data.message || data.error_description || data.msg)) ||
+            ('erreur ' + r.status);
+          throw new Error(msg);
+        }
+        return data;
+      });
+    });
+  }
+
+  function sbRefresh() {
+    return fetch(SB.url + '/auth/v1/token?grant_type=refresh_token', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', apikey: SB.key },
+      body: JSON.stringify({ refresh_token: sbSession.refresh_token })
+    }).then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d || !d.access_token) { sbSession = null; saveSbSession(); renderSync(); return false; }
+        sbSession.access_token = d.access_token;
+        sbSession.refresh_token = d.refresh_token || sbSession.refresh_token;
+        saveSbSession();
+        return true;
+      })
+      .catch(function () { return false; });
+  }
+
+  /* ── Correspondance entre l'app et les tables ──
+     Les noms diffèrent (camelCase ici, snake_case en base) et surtout la
+     conversion doit être explicite : recopier un objet tel quel enverrait
+     au serveur des champs internes qui n'ont rien à y faire. */
+  var SYNC_TABLES = [
+    {
+      name: 'recipes', kind: 'recipe', key: 'gn_recipes', scoped: true,
+      out: function (r, pid) {
+        return { id: r.id, profile_id: pid, name: r.name, carbs: r.carbs, fiber: r.fiber,
+          polyols: r.polyols, polyol_type: r.polyolType, photo_path: r.photoPath || null };
+      },
+      into: function (row) {
+        return { id: row.id, name: row.name, carbs: num(row.carbs), fiber: num(row.fiber),
+          polyols: num(row.polyols), polyolType: row.polyol_type === 'full' ? 'full' : 'half',
+          photo: null, photoPath: row.photo_path || null };
+      }
+    },
+    {
+      name: 'favorites', kind: 'favorite', key: 'gn_favorites', scoped: true,
+      out: function (f, pid) {
+        return { id: f.id, profile_id: pid, name: f.name, carbs: f.carbs, fiber: f.fiber,
+          polyols: f.polyols, polyol_type: f.polyolType, ratio: f.ratio || 1,
+          grams: f.grams == null ? null : f.grams };
+      },
+      into: function (row) {
+        var o = { id: row.id, name: row.name, carbs: num(row.carbs), fiber: num(row.fiber),
+          polyols: num(row.polyols), polyolType: row.polyol_type === 'full' ? 'full' : 'half',
+          ratio: num(row.ratio) || 1 };
+        if (row.grams != null) o.grams = num(row.grams);
+        return o;
+      }
+    },
+    {
+      name: 'entries', kind: 'entry', key: 'gn_history', scoped: true,
+      out: function (e, pid) {
+        return { id: e.id, profile_id: pid, eaten_at: new Date(num(e.ts) || Date.now()).toISOString(),
+          items: e.items || [], net: e.net, carbs: e.carbs, fiber: e.fiber, polyols: e.polyols };
+      },
+      into: function (row) {
+        return { id: row.id, ts: Date.parse(row.eaten_at) || 0,
+          items: (Array.isArray(row.items) ? row.items : []).map(sanitizeItem).filter(Boolean),
+          net: num(row.net), carbs: num(row.carbs), fiber: num(row.fiber), polyols: num(row.polyols) };
+      }
+    },
+    {
+      name: 'lessons', kind: 'lesson', key: 'gn_ai_memory', scoped: true, wrapped: true,
+      out: function (l, pid) {
+        return { id: l.id, profile_id: pid, kind: l.kind, text: l.text || '',
+          ai_name: l.aiName || '', user_name: l.userName || '',
+          ai_per100: l.aiPer100, user_per100: l.userPer100, factor: l.factor, n: l.n };
+      },
+      into: function (row) {
+        return { id: row.id, kind: row.kind, text: row.text || '',
+          aiName: row.ai_name || '', userName: row.user_name || '',
+          aiPer100: row.ai_per100 == null ? null : num(row.ai_per100),
+          userPer100: row.user_per100 == null ? null : num(row.user_per100),
+          factor: row.factor == null ? null : num(row.factor),
+          n: Math.max(1, Math.round(num(row.n) || 1)) };
+      }
+    }
+  ];
+
+  /* Les données d'un profil vivent sous une clé qui lui est propre. Le
+     profil actif est en mémoire (c'est lui qu'on affiche); les autres se
+     synchronisent directement dans leur clé — sinon ils ne partiraient
+     qu'au moment d'en changer. */
+  function profileKey(base, pid) { return pid === 'p1' ? base : base + '__' + pid; }
+
+  function readScoped(tab, pid) {
+    if (pid === activeProfileId) {
+      if (tab.name === 'recipes') return recipes;
+      if (tab.name === 'favorites') return favorites;
+      if (tab.name === 'entries') return history;
+      if (tab.name === 'lessons') return aiMemory.lessons;
+    }
+    var raw;
+    try { raw = JSON.parse(lsGet(profileKey(tab.key, pid)) || (tab.wrapped ? '{}' : '[]')); }
+    catch (e) { raw = null; }
+    if (tab.wrapped) return (raw && Array.isArray(raw.lessons)) ? raw.lessons : [];
+    return Array.isArray(raw) ? raw : [];
+  }
+
+  function writeScoped(tab, pid, list) {
+    if (pid === activeProfileId) {
+      // Copie d'abord : pour le profil actif, readScoped a rendu le tableau
+      // vivant lui-même. Le vider avant de le recopier le viderait pour de
+      // bon — l'app perdrait ses recettes à la première synchro.
+      var copy = list.slice();
+      if (tab.name === 'lessons') { aiMemory.lessons = copy; saveAiMemory(); return; }
+      var target = tab.name === 'recipes' ? recipes : tab.name === 'favorites' ? favorites : history;
+      target.length = 0;
+      Array.prototype.push.apply(target, copy);
+      save();
+      return;
+    }
+    lsSet(profileKey(tab.key, pid), JSON.stringify(tab.wrapped ? { lessons: list } : list));
+  }
+
+  /* ── Photos ──
+     Stockées localement en data URL, dans le bucket privé sous
+     <compte>/<recette>.jpg. Une photo ne repart que si elle a changé :
+     le chemin retenu sert de témoin. */
+  function dataUrlToBlob(dataUrl) {
+    var parts = String(dataUrl).split(',');
+    var mime = (parts[0].match(/:(.*?);/) || [])[1] || 'image/jpeg';
+    var bin = atob(parts[1] || '');
+    var arr = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    return new Blob([arr], { type: mime });
+  }
+
+  function uploadPhoto(path, dataUrl) {
+    return sbFetch('/storage/v1/object/' + path, {
+      method: 'POST',
+      headers: { 'x-upsert': 'true', 'content-type': 'image/jpeg' },
+      body: dataUrlToBlob(dataUrl)
+    }).then(function (r) {
+      if (!r.ok && r.status !== 409) throw new Error('photo refusée (' + r.status + ')');
+      return path;
+    });
+  }
+
+  function downloadPhoto(path) {
+    return sbFetch('/storage/v1/object/' + path).then(function (r) {
+      if (!r.ok) return null;
+      return r.blob().then(function (b) {
+        return new Promise(function (res) {
+          var fr = new FileReader();
+          fr.onload = function () { res(fr.result); };
+          fr.onerror = function () { res(null); };
+          fr.readAsDataURL(b);
+        });
+      });
+    }).catch(function () { return null; });
+  }
+
+  function deletePhoto(path) {
+    return sbFetch('/storage/v1/object/' + path, { method: 'DELETE' }).catch(function () {});
+  }
+
+  /* ── Une passe de synchronisation ──
+     D'abord envoyer (ce que cet appareil sait et que le serveur ignore
+     peut-être), puis recevoir : dans cet ordre, une modification faite
+     hors ligne n'est jamais écrasée par une version plus ancienne. */
+  function syncCursor(pid, table) { return lsGet('gn_sb_cur_' + pid + '_' + table) || '1970-01-01T00:00:00Z'; }
+  function setSyncCursor(pid, table, v) { lsSet('gn_sb_cur_' + pid + '_' + table, v); }
+  function pushKey(pid, table) { return 'gn_sb_push_' + pid + '_' + table; }
+
+  var syncing = false;
+  function syncNow(silent) {
+    if (syncing || !sbSignedIn()) return Promise.resolve(false);
+    if (!navigator.onLine) {
+      if (!silent) syncState('⏸️ Hors ligne — la synchro reprendra au retour du réseau.');
+      return Promise.resolve(false);
+    }
+    syncing = true;
+    if (!silent) syncState('🔄 Synchronisation…');
+    var chain = pushProfiles().then(pullProfiles);
+    PROFILES.forEach(function (prof) {
+      SYNC_TABLES.forEach(function (tab) {
+        chain = chain.then(function () { return syncTable(tab, prof.id); });
+      });
+    });
+    return chain.then(function () {
+      return pushTombs();
+    }).then(function () {
+      lsSet('gn_sb_last', String(Date.now()));
+      syncing = false;
+      refreshAfterSync();
+      renderSync();
+      if (!silent) toast('☁️ Synchronisé');
+      return true;
+    }).catch(function (err) {
+      syncing = false;
+      syncState('⚠️ ' + (err && err.message ? err.message : 'échec de la synchro'));
+      return false;
+    });
+  }
+
+  function pushProfiles() {
+    var pushedAt = Date.now();
+    var lastPush = num(lsGet('gn_sb_push_profiles'));
+    var rows = PROFILES.filter(function (p) {
+      return num(p.updatedAt) > lastPush;
+    }).map(function (p) {
+      return { id: remoteProfileId(p.id), user_id: sbSession.user_id,
+        name: p.name, allergies: p.allergies || '' };
+    });
+    if (rows.length === 0) return Promise.resolve();
+    return sbJson('/rest/v1/profiles', {
+      method: 'POST',
+      headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify(rows)
+    }).then(function () { lsSet('gn_sb_push_profiles', String(pushedAt)); });
+  }
+
+  /* « p1 » n'est pas un UUID : c'est l'identifiant historique du premier
+     profil, antérieur à toute idée de synchro. On lui en dérive un plutôt
+     que de renommer des clés de stockage existantes — une migration ratée
+     coûterait le journal de quelqu'un.
+
+     Cet identifiant doit être DÉDUIT du compte, jamais tiré au hasard :
+     deux appareils qui inventeraient chacun le leur ne parleraient jamais
+     du même profil, et ne se verraient jamais. On part donc de
+     l'identifiant du compte en changeant son chiffre de version (toujours
+     « 4 » pour un UUID aléatoire) : le résultat est stable, identique sur
+     tous les appareils du compte, et ne peut heurter ni l'identifiant d'un
+     autre compte ni celui d'un profil créé normalement. */
+  function p1Uuid() {
+    var u = String(sbSession && sbSession.user_id || '');
+    if (u.length !== 36) return u || 'p1';
+    return u.slice(0, 14) + '5' + u.slice(15);
+  }
+  function remoteProfileId(pid) { return pid === 'p1' ? p1Uuid() : pid; }
+
+  function pullProfiles() {
+    return sbJson('/rest/v1/profiles?select=*&deleted_at=is.null').then(function (rows) {
+      if (!Array.isArray(rows)) return;
+      var mine = {};
+      PROFILES.forEach(function (p) { mine[remoteProfileId(p.id)] = p; });
+      var changed = false;
+      rows.forEach(function (row) {
+        var local = mine[row.id];
+        if (local) {
+          if (Date.parse(row.updated_at) > num(local.updatedAt) && local.name !== row.name) {
+            local.name = row.name;
+            local.updatedAt = Date.parse(row.updated_at);
+            changed = true;
+          }
+          return;
+        }
+        if (isTombstoned(row.id)) return;
+        PROFILES.push({ id: row.id, name: row.name, allergies: row.allergies || '',
+          updatedAt: Date.parse(row.updated_at) || Date.now() });
+        changed = true;
+      });
+      if (changed) saveProfiles();
+    });
+  }
+
+  function isTombstoned(id) {
+    for (var i = 0; i < tombs.length; i++) { if (tombs[i].id === id) return true; }
+    return false;
+  }
+
+  function syncTable(tab, pid) {
+    var rpid = remoteProfileId(pid);
+    var local = readScoped(tab, pid);
+    var byId = {};
+    local.forEach(function (r) { if (r && r.id) byId[r.id] = r; });
+
+    // 1. Envoyer : photos d'abord, pour que la ligne parte avec son chemin
+    var photoWork = Promise.resolve();
+    if (tab.name === 'recipes') {
+      local.forEach(function (r) {
+        if (!r.photo || r.photoPath) return;
+        var path = 'meal-photos/' + sbSession.user_id + '/' + r.id + '.jpg';
+        photoWork = photoWork.then(function () {
+          return uploadPhoto(path, r.photo).then(function () { r.photoPath = path; });
+        }).catch(function () { /* la ligne partira sans photo, réessai plus tard */ });
+      });
+    }
+
+    // Ne repartent que les enregistrements modifiés depuis le dernier
+    // envoi réussi : renvoyer 300 repas à chaque passe coûterait des
+    // centaines de ko pour rien, sur un forfait de données.
+    var pushedAt = Date.now();
+    var lastPush = num(lsGet(pushKey(pid, tab.name)));
+    return photoWork.then(function () {
+      var fresh = local.filter(function (r) {
+        return r && r.id && num(r.updatedAt) > lastPush;
+      });
+      if (fresh.length === 0) return null;
+      var rows = fresh.map(function (r) {
+        var row = tab.out(r, rpid);
+        row.user_id = sbSession.user_id;
+        return row;
+      });
+      return sbJson('/rest/v1/' + tab.name, {
+        method: 'POST',
+        headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+        body: JSON.stringify(rows)
+      });
+    }).then(function () {
+      lsSet(pushKey(pid, tab.name), String(pushedAt));
+      // 2. Recevoir ce qui a changé ailleurs depuis la dernière fois
+      var since = encodeURIComponent(syncCursor(pid, tab.name));
+      return sbJson('/rest/v1/' + tab.name + '?select=*&profile_id=eq.' + rpid +
+        '&updated_at=gt.' + since + '&order=updated_at.asc&limit=1000');
+    }).then(function (rows) {
+      if (!Array.isArray(rows) || rows.length === 0) return null;
+      var newest = syncCursor(pid, tab.name);
+      var pending = [];
+      rows.forEach(function (row) {
+        if (row.updated_at > newest) newest = row.updated_at;
+        var here = byId[row.id];
+        if (row.deleted_at) {
+          if (here) { local.splice(local.indexOf(here), 1); delete byId[row.id]; }
+          return;
+        }
+        // Une suppression locale récente l'emporte sur une ligne encore
+        // présente au serveur : elle repartira au prochain envoi de traces
+        if (!here && isTombstoned(row.id)) return;
+        // Arbitrage SANS comparer les horloges. Confronter un horodatage
+        // local à celui du serveur suppose que le téléphone est à l'heure;
+        // s'il avance d'une heure, ses versions gagneraient tous les
+        // conflits à venir. On se fie donc au seul fait vérifiable : cette
+        // version a-t-elle une modification locale pas encore envoyée ?
+        // Si oui elle part au prochain envoi et c'est le serveur qui
+        // tranchera l'ordre; sinon on accepte celle du serveur.
+        // Conséquence assumée : c'est le dernier appareil à se synchroniser
+        // qui l'emporte, pas le dernier à avoir modifié.
+        if (here && num(here.updatedAt) > lastPush) return;
+        var rec = tab.into(row);
+        // Horodatage local, pas celui du serveur : il sert à savoir ce qui
+        // reste à envoyer. Le poser à l'instant de l'envoi évite que la
+        // ligne reparte en boucle à chaque passe.
+        rec.updatedAt = pushedAt;
+        if (tab.name === 'recipes' && rec.photoPath) {
+          if (here && here.photo && here.photoPath === rec.photoPath) rec.photo = here.photo;
+          else pending.push(rec);
+        }
+        if (here) local.splice(local.indexOf(here), 1, rec);
+        else local.push(rec);
+        byId[row.id] = rec;
+      });
+      setSyncCursor(pid, tab.name, newest);
+      writeScoped(tab, pid, local);
+      // Les photos arrivent après : une image manquante ne doit pas
+      // empêcher la recette elle-même d'apparaître
+      var work = Promise.resolve();
+      pending.forEach(function (rec) {
+        work = work.then(function () {
+          return downloadPhoto(rec.photoPath).then(function (dataUrl) {
+            if (dataUrl) { rec.photo = dataUrl; writeScoped(tab, pid, local); }
+          });
+        });
+      });
+      return work;
+    });
+  }
+
+  /* Les traces de suppression partent en dernier : elles doivent gagner
+     sur tout ce qui vient d'être envoyé. Une trace est une ligne comme une
+     autre, avec deleted_at renseigné — d'où les valeurs de remplissage :
+     les colonnes obligatoires doivent être là, leur contenu n'a aucune
+     importance puisque la ligne est marquée supprimée. */
+  var TOMB_TABLE = {
+    recipe: 'recipes', favorite: 'favorites', entry: 'entries',
+    lesson: 'lessons', profile: 'profiles'
+  };
+  function tombRow(t) {
+    var when = new Date(num(t.deletedAt) || Date.now()).toISOString();
+    var row = { id: t.id, user_id: sbSession.user_id, deleted_at: when };
+    if (t.kind !== 'profile') row.profile_id = remoteProfileId(t.pid || activeProfileId);
+    if (t.kind === 'entry') row.eaten_at = when;
+    else if (t.kind === 'lesson') row.kind = 'note';
+    else row.name = '(supprimé)';
+    if (t.kind === 'profile') row.name = '(supprimé)';
+    return row;
+  }
+
+  function pushTombs() {
+    // Une trace acceptée par le serveur y reste : inutile de la renvoyer à
+    // chaque passe. Sans ce marquage, une synchro où rien n'a bougé
+    // écrirait quand même.
+    var todo = tombs.filter(function (t) { return !t.sent; });
+    if (todo.length === 0) return Promise.resolve();
+    var work = Promise.resolve();
+    Object.keys(TOMB_TABLE).forEach(function (kind) {
+      var mine = todo.filter(function (t) { return t.kind === kind; });
+      if (mine.length === 0) return;
+      work = work.then(function () {
+        return sbJson('/rest/v1/' + TOMB_TABLE[kind], {
+          method: 'POST',
+          headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+          body: JSON.stringify(mine.map(tombRow))
+        }).then(function () {
+          mine.forEach(function (t) { t.sent = true; });
+          saveTombs();
+        }).catch(function () { /* réessai à la prochaine passe */ });
+      });
+    });
+    return work;
+  }
+
+  function refreshAfterSync() {
+    renderFavorites();
+    renderRecipes();
+    renderJournal();
+    renderWeekChart();
+    renderAiMemory();
+    renderProfiles();
+    renderHome();
+    buildToolOptions();
+    drawToolChart();
+  }
+
+  /* ── Connexion par lien courriel ──
+     Pas de mot de passe : rien à retenir, rien à voler, rien à
+     réinitialiser. Le lien reçu ramène sur l'app avec les jetons dans le
+     fragment d'URL — qui n'est jamais envoyé à un serveur. */
+  function syncState(msg) { $('sync-state').textContent = msg; }
+  function signinMsg(msg) { $('sync-signin-msg').textContent = msg; }
+
+  function renderSync() {
+    var configured = sbConfigured(), signedIn = sbSignedIn();
+    $('sync-off').style.display = configured ? 'none' : 'block';
+    $('sync-signin').style.display = configured && !signedIn ? 'block' : 'none';
+    $('sync-on').style.display = signedIn ? 'block' : 'none';
+    if (!signedIn) return;
+    $('sync-who').textContent = sbSession.email || 'ce compte';
+    var last = num(lsGet('gn_sb_last'));
+    syncState(last
+      ? 'Dernière synchro : ' + new Date(last).toLocaleString('fr-CA')
+      : 'Jamais synchronisé sur cet appareil.');
+  }
+
+  $('sync-setup-btn').addEventListener('click', function () {
+    $('sync-off').style.display = 'none';
+    $('sync-config').style.display = 'block';
+    $('sync-url').value = SB.url;
+    $('sync-url').focus();
+  });
+  $('sync-config-cancel').addEventListener('click', function () {
+    $('sync-config').style.display = 'none';
+    renderSync();
+  });
+  $('sync-config-save').addEventListener('click', function () {
+    var url = $('sync-url').value.trim().replace(/\/+$/, '');
+    var key = $('sync-key').value.trim();
+    if (!/^https:\/\/.+/.test(url)) { $('sync-url').focus(); toast('⚠️ Adresse invalide — elle commence par https://', { type: 'error' }); return; }
+    if (key.length < 20) { $('sync-key').focus(); toast('⚠️ Clé invalide', { type: 'error' }); return; }
+    // Garde-fou : la clé service_role contourne toute l'isolation. Dans une
+    // page web, elle exposerait les données de tous les comptes.
+    if (key.indexOf('service_role') !== -1 || atobSafe(key).indexOf('service_role') !== -1) {
+      toast('⚠️ C’est la clé service_role — elle donne accès à tout. Utilise la clé anon.', { type: 'error', duration: 8000 });
+      return;
+    }
+    SB.url = url; SB.key = key;
+    lsSet('gn_sb_url', url); lsSet('gn_sb_key', key);
+    $('sync-config').style.display = 'none';
+    $('sync-key').value = '';
+    renderSync();
+    toast('✓ Projet enregistré — connecte-toi avec ton courriel');
+  });
+  function atobSafe(jwt) {
+    try { return atob(String(jwt).split('.')[1] || ''); } catch (e) { return ''; }
+  }
+
+  $('sync-forget-config').addEventListener('click', function () {
+    if (!confirm('Oublier ce projet Supabase ? Tes données restent sur cet appareil.')) return;
+    SB.url = ''; SB.key = '';
+    try { localStorage.removeItem('gn_sb_url'); localStorage.removeItem('gn_sb_key'); } catch (e) {}
+    renderSync();
+  });
+
+  $('sync-send-link').addEventListener('click', function () {
+    var email = $('sync-email').value.trim();
+    if (!/.+@.+\..+/.test(email)) { $('sync-email').focus(); return; }
+    signinMsg('Envoi…');
+    fetch(SB.url + '/auth/v1/otp', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', apikey: SB.key },
+      body: JSON.stringify({ email: email, create_user: true,
+        options: { email_redirect_to: location.href.split('#')[0] } })
+    }).then(function (r) {
+      signinMsg(r.ok
+        ? '📬 Lien envoyé à ' + email + '. Ouvre-le sur CET appareil.'
+        : '⚠️ Envoi impossible — vérifie l’adresse du projet et la clé.');
+    }).catch(function () {
+      signinMsg('⚠️ Réseau indisponible — réessaie.');
+    });
+  });
+  $('sync-email').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') { e.preventDefault(); $('sync-send-link').click(); }
+  });
+
+  /* Retour du lien : les jetons arrivent dans le fragment. On les range
+     et on nettoie l'URL tout de suite — un jeton d'accès dans la barre
+     d'adresse finit dans l'historique et les captures d'écran. */
+  (function readAuthRedirect() {
+    if (!location.hash || location.hash.indexOf('access_token=') === -1) return;
+    var p = new URLSearchParams(location.hash.slice(1));
+    var at = p.get('access_token');
+    if (!at) return;
+    sbSession = {
+      access_token: at,
+      refresh_token: p.get('refresh_token') || '',
+      user_id: '', email: ''
+    };
+    history.replaceState(null, '', location.pathname + location.search);
+    saveSbSession();
+    fetchMe().then(function (ok) {
+      if (ok) { toast('✓ Connecté — synchronisation en cours'); syncNow(true); }
+    });
+  })();
+
+  function fetchMe() {
+    return sbJson('/auth/v1/user').then(function (u) {
+      if (!u || !u.id) throw new Error('session invalide');
+      sbSession.user_id = u.id;
+      sbSession.email = u.email || '';
+      saveSbSession();
+      renderSync();
+      return true;
+    }).catch(function () {
+      sbSession = null; saveSbSession(); renderSync();
+      return false;
+    });
+  }
+
+  $('sync-now').addEventListener('click', function () { syncNow(false); });
+
+  $('sync-signout').addEventListener('click', function () {
+    if (!confirm('Se déconnecter ? Tes données restent sur cet appareil.')) return;
+    sbFetch('/auth/v1/logout', { method: 'POST' }).catch(function () {});
+    sbSession = null;
+    saveSbSession();
+    renderSync();
+    toast('Déconnecté');
+  });
+
+  /* Droit à l'effacement, à portée de main plutôt qu'à demander par
+     courriel. Les photos passent par l'API Storage : effacer seulement les
+     lignes laisserait les fichiers sur le disque. */
+  $('sync-delete-account').addEventListener('click', function () {
+    if (!confirm('Supprimer définitivement ton compte et TOUTES les données synchronisées ?\n\nCe qui est sur cet appareil est conservé. Cette action est irréversible.')) return;
+    if (!confirm('Dernière confirmation : le compte et son contenu seront effacés du serveur.')) return;
+    syncState('Suppression…');
+    sbJson('/storage/v1/object/list/meal-photos', {
+      method: 'POST',
+      body: JSON.stringify({ prefix: sbSession.user_id, limit: 1000 })
+    }).catch(function () { return []; }).then(function (list) {
+      var names = (Array.isArray(list) ? list : []).map(function (o) {
+        return sbSession.user_id + '/' + o.name;
+      });
+      if (names.length === 0) return null;
+      return sbJson('/storage/v1/object/meal-photos', {
+        method: 'DELETE',
+        body: JSON.stringify({ prefixes: names })
+      }).catch(function () {});
+    }).then(function () {
+      return sbJson('/rest/v1/rpc/delete_my_account', { method: 'POST', body: '{}' });
+    }).then(function () {
+      sbSession = null;
+      saveSbSession();
+      Object.keys(localStorage).forEach(function (k) {
+        if (k.indexOf('gn_sb_cur_') === 0 || k.indexOf('gn_sb_push_') === 0) {
+          try { localStorage.removeItem(k); } catch (e) {}
+        }
+      });
+      renderSync();
+      toast('Compte supprimé. Tes données restent sur cet appareil.', { duration: 7000 });
+    }).catch(function (err) {
+      syncState('⚠️ ' + (err && err.message ? err.message : 'suppression impossible'));
+    });
+  });
+
+  /* Synchro d'arrière-plan : au démarrage, au retour du réseau, et quand
+     l'app revient au premier plan. Assez pour que deux appareils restent
+     d'accord sans que personne n'y pense. */
+  if (sbSignedIn()) {
+    fetchMe().then(function (ok) { if (ok) syncNow(true); });
+  }
+  window.addEventListener('online', function () { syncNow(true); });
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) syncNow(true);
+  });
+  renderSync();
 
   /* ══════════ PWA : service worker ══════════ */
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {

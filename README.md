@@ -52,7 +52,8 @@ Barre du bas à cinq destinations — **Accueil**, **Favoris**, **➕ Calculer**
 - Chaque repas enregistré est daté et listé par jour, avec le total quotidien.
 - **Graphique des 7 derniers jours** (glucides nets par jour) et moyenne par jour actif — utile pour les rendez-vous en clinique du diabète.
 - **↻ Recharge** un repas passé en un geste (pratique pour les repas récurrents).
-- **💾 Export / import** : sauvegarde toutes tes données (recettes, favoris, journal) dans un fichier JSON pour les transférer sur un autre appareil.
+- **💾 Export / import** : sauvegarde toutes tes données (recettes, favoris, journal, leçons apprises) dans un fichier JSON pour les transférer sur un autre appareil.
+- **☁️ Compte et synchronisation (facultatif, onglet Plus)** : par défaut, rien ne sort de l'appareil. En branchant un projet **Supabase** personnel, journal, recettes, favoris, profils, leçons et photos se retrouvent sur tous tes appareils. Connexion par **lien courriel**, sans mot de passe. L'isolation entre comptes est imposée par la base elle-même (Row Level Security), pas par l'app. Tout continue de fonctionner hors ligne — la synchro rattrape au retour du réseau. Bouton de **suppression définitive du compte** inclus. Mise en place : [`supabase/README.md`](supabase/README.md).
 
 ## Version de l'app
 
@@ -91,6 +92,8 @@ Glucides nets = Glucides totaux − Fibres − (Polyols ÷ 2)
 ## Vie privée
 
 Toutes les données (repas, favoris, recettes, photos de recettes, clé API éventuelle) sont stockées **localement** dans le navigateur (localStorage). La lecture d'étiquette par défaut (OCR) se fait **entièrement sur l'appareil** — la photo ne quitte jamais le téléphone. Deux fonctions optionnelles font des appels réseau : le scan de code-barres interroge **Open Food Facts** (seul le code-barres est envoyé), et la lecture IA optionnelle envoie **la photo de l'étiquette à Anthropic** (avec ta clé API) uniquement au moment de l'analyse. Rien d'autre ne quitte l'appareil.
+
+Si — et seulement si — tu actives la **synchronisation** (onglet Plus), tes données sont aussi envoyées à **ton propre projet Supabase**, que tu héberges et contrôles. Choisis la région canadienne : ce sont des données de santé. Le détail, y compris les obligations qui s'appliquent le jour où l'app est ouverte à d'autres familles, est dans [`supabase/README.md`](supabase/README.md).
 
 ## ⚠️ Avertissement
 
