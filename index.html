@@ -2248,7 +2248,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.14.0</span>
+  <br><span id="app-version">Glucides Nets v2.15.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -2578,23 +2578,46 @@
   }
   function sanitizeRecipe(r) {
     if (!r || typeof r !== 'object') return null;
-    return {
+    return stamp({
       name: String(r.name || 'Recette'),
       carbs: num(r.carbs),
       fiber: num(r.fiber),
       polyols: num(r.polyols),
       polyolType: r.polyolType === 'full' ? 'full' : 'half',
       photo: typeof r.photo === 'string' ? r.photo : null
-    };
+    }, r);
   }
   function sanitizeEntry(e) {
     if (!e || typeof e !== 'object') return null;
-    return {
+    return stamp({
       ts: num(e.ts) || 0,
       items: (Array.isArray(e.items) ? e.items : []).map(sanitizeItem).filter(Boolean),
       net: num(e.net), carbs: num(e.carbs), fiber: num(e.fiber), polyols: num(e.polyols)
-    };
+    }, e);
   }
+  /* ── Identité des enregistrements ──
+     Préalable à toute synchronisation entre appareils : sans identifiant
+     stable, une recette modifiée sur le téléphone et une autre ajoutée sur
+     la tablette sont indiscernables. id ne change jamais, updatedAt
+     tranche les conflits (la version la plus récente gagne). Les données
+     déjà présentes sont estampillées à la première lecture — aucune
+     migration à lancer, aucune perte possible. */
+  function uid() {
+    try {
+      if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    } catch (e) { /* contexte non sécurisé */ }
+    return 'x' + Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+  }
+  function stamp(rec, raw) {
+    rec.id = raw && typeof raw.id === 'string' && raw.id ? raw.id : uid();
+    rec.updatedAt = raw && num(raw.updatedAt) > 0 ? num(raw.updatedAt) : Date.now();
+    return rec;
+  }
+  function sanitizeFav(it) {
+    var s = sanitizeItem(it);
+    return s ? stamp(s, it) : null;
+  }
+
   function loadList(key, sanitize) {
     var raw;
     try { raw = JSON.parse(lsGet(key) || '[]'); } catch (e) { raw = []; }
@@ -2613,6 +2636,8 @@
     PROFILES = [{ id: 'p1', name: 'Profil 1', allergies: '' }];
   }
   PROFILES = PROFILES.filter(function (p) { return p && p.id && p.name; });
+  // Les profils se synchronisent comme le reste : même horodatage
+  PROFILES.forEach(function (p) { if (!(num(p.updatedAt) > 0)) p.updatedAt = Date.now(); });
   var activeProfileId = lsGet('gn_active_profile') || 'p1';
   if (!PROFILES.some(function (p) { return p.id === activeProfileId; })) {
     activeProfileId = PROFILES[0].id;
@@ -2629,9 +2654,68 @@
   function saveProfiles() { lsSet('gn_profiles', JSON.stringify(PROFILES)); }
 
   meal = loadList(pk('gn_meal'), sanitizeItem);
-  favorites = loadList(pk('gn_favorites'), sanitizeItem);
+  favorites = loadList(pk('gn_favorites'), sanitizeFav);
   recipes = loadList(pk('gn_recipes'), sanitizeRecipe);
   history = loadList(pk('gn_history'), sanitizeEntry);
+
+  /* ── Traces de suppression ──
+     Supprimer une recette la retire de la liste; il n'en reste rien à
+     envoyer. Un autre appareil qui l'a encore la renverrait à la
+     prochaine synchro — la suppression ne « prendrait » jamais. On garde
+     donc la trace du geste, et pas seulement son résultat. Les listes
+     affichées restent inchangées : ces traces vivent à part. */
+  var TOMB_TTL = 90 * 24 * 60 * 60 * 1000;
+  var tombs = [];
+  try {
+    var rawTombs = JSON.parse(lsGet(pk('gn_tombs')) || '[]');
+    if (Array.isArray(rawTombs)) {
+      tombs = rawTombs.filter(function (t) {
+        return t && typeof t.id === 'string' && typeof t.kind === 'string' &&
+          Date.now() - num(t.deletedAt) < TOMB_TTL;
+      }).slice(-500);
+    }
+  } catch (e) { tombs = []; }
+  function saveTombs() { lsSet(pk('gn_tombs'), JSON.stringify(tombs)); }
+  /* À appeler AVANT de retirer l'enregistrement de sa liste */
+  function forget(kind, rec) {
+    if (!rec || !rec.id) return;
+    tombs = tombs.filter(function (t) { return t.id !== rec.id; });
+    tombs.push({ kind: kind, id: rec.id, deletedAt: Date.now() });
+    if (tombs.length > 500) tombs = tombs.slice(-500);
+    saveTombs();
+  }
+
+  /* ── Détection des modifications ──
+     updatedAt doit bouger dès qu'un enregistrement change, sinon la
+     synchro garderait l'ancienne version. Plutôt que d'estampiller à la
+     main à chaque endroit qui modifie quelque chose — et d'en oublier un —
+     on compare à la sauvegarde précédente : tout changement réel se voit,
+     d'où qu'il vienne. */
+  var shadow = {};
+  function bodyOf(rec) {
+    var copy = {};
+    for (var k in rec) { if (rec.hasOwnProperty(k) && k !== 'updatedAt') copy[k] = rec[k]; }
+    return JSON.stringify(copy);
+  }
+  function markEdits(list) {
+    list.forEach(function (rec) {
+      if (!rec || !rec.id) return;
+      var body = bodyOf(rec);
+      if (shadow[rec.id] !== undefined && shadow[rec.id] !== body) rec.updatedAt = Date.now();
+      shadow[rec.id] = body;
+    });
+  }
+  [favorites, recipes, history].forEach(function (list) {
+    list.forEach(function (rec) { if (rec && rec.id) shadow[rec.id] = bodyOf(rec); });
+  });
+
+  /* Stockage persistant : sans cette demande, le navigateur peut vider
+     localStorage sous pression d'espace — journal, recettes et leçons
+     avec. Refus possible, ce n'est qu'une demande : l'export reste le
+     vrai filet de sécurité. */
+  try {
+    if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
+  } catch (e) { /* non supporté */ }
 
   var $ = function (id) { return document.getElementById(id); };
 
@@ -2698,6 +2782,9 @@
      et le total pompe se désynchronise du repas en mémoire). */
   function save() {
     var failed = false;
+    markEdits(favorites);
+    markEdits(recipes);
+    markEdits(history);
     [[pk('gn_meal'), meal], [pk('gn_favorites'), favorites], [pk('gn_history'), history], [pk('gn_recipes'), recipes]]
       .forEach(function (pair) {
         if (!lsSet(pair[0], JSON.stringify(pair[1]))) failed = true;
@@ -3095,7 +3182,10 @@
       edit.setAttribute('aria-label', 'Modifier le profil ' + prof.name);
       edit.addEventListener('click', function () {
         var name = prompt('Prénom ou surnom :', prof.name);
-        if (name && name.trim()) prof.name = name.trim().slice(0, 30);
+        if (name && name.trim()) {
+          prof.name = name.trim().slice(0, 30);
+          prof.updatedAt = Date.now();
+        }
         var alg = prompt('Allergies et intolérances (laisser vide si aucune) :', prof.allergies || '');
         if (alg !== null) prof.allergies = alg.trim().slice(0, 120);
         saveProfiles();
@@ -3118,6 +3208,7 @@
           var key = prof.id === 'p1' ? base : base + '__' + prof.id;
           try { localStorage.removeItem(key); } catch (e) { /* stockage indisponible */ }
         });
+        forget('profile', prof);
         PROFILES = PROFILES.filter(function (x) { return x.id !== prof.id; });
         saveProfiles();
         if (prof.id === activeProfileId) {
@@ -3138,7 +3229,7 @@
     var name = $('profile-new-name').value.trim().slice(0, 30);
     if (!name) { $('profile-new-name').focus(); return; }
     var id = 'p' + Date.now().toString(36);
-    PROFILES.push({ id: id, name: name, allergies: '' });
+    PROFILES.push({ id: id, name: name, allergies: '', updatedAt: Date.now() });
     saveProfiles();
     $('profile-new-name').value = '';
     renderProfiles();
@@ -3202,6 +3293,7 @@
       del.textContent = '✕';
       del.setAttribute('aria-label', 'Supprimer le favori ' + fav.name);
       del.addEventListener('click', function () {
+        forget('favorite', favorites[i]);
         favorites.splice(i, 1);
         save();
         renderFavorites();
@@ -3222,10 +3314,10 @@
     meal.push(item);
     touchMeal();
     if ($('save-fav').checked) {
-      favorites.push({
+      favorites.push(stamp({
         name: item.name, carbs: item.carbs, fiber: item.fiber,
         polyols: item.polyols, polyolType: item.polyolType
-      });
+      }));
     }
     save();
     renderMeal();
@@ -3298,14 +3390,14 @@
     var polyols = parseFloat($('recipe-polyols').value) || 0;
     if (!name) { $('recipe-name').focus(); return; }
     if (carbs === 0 && fiber === 0 && polyols === 0) { $('recipe-carbs').focus(); return; }
-    recipes.push({
+    recipes.push(stamp({
       name: name,
       carbs: carbs,
       fiber: fiber,
       polyols: polyols,
       polyolType: $('recipe-polyol-type').value,
       photo: pendingPhoto
-    });
+    }));
     save();
     ['recipe-name', 'recipe-carbs', 'recipe-fiber', 'recipe-polyols'].forEach(function (id) { $(id).value = ''; });
     $('recipe-polyol-type').value = 'half';
@@ -3388,6 +3480,7 @@
       del.setAttribute('aria-label', 'Supprimer la recette ' + r.name);
       del.addEventListener('click', function () {
         if (confirm('Supprimer la recette « ' + r.name + ' »?')) {
+          forget('recipe', recipes[i]);
           recipes.splice(i, 1);
           save();
           renderRecipes();
@@ -3703,12 +3796,13 @@
     if (!modalRecipe) return;
     var idx = favIndexOf(modalRecipe.name);
     if (idx === -1) {
-      favorites.push({
+      favorites.push(stamp({
         name: modalRecipe.name, carbs: modalRecipe.carbs, fiber: modalRecipe.fiber,
         polyols: modalRecipe.polyols, polyolType: modalRecipe.polyolType
-      });
+      }));
       toast('♥ ' + modalRecipe.name + ' gardé dans tes favoris');
     } else {
+      forget('favorite', favorites[idx]);
       favorites.splice(idx, 1);
       toast('Retiré des favoris');
     }
@@ -4344,6 +4438,7 @@
     if (!l || typeof l !== 'object') return null;
     if (['name', 'per100', 'grams', 'absent', 'missed', 'note'].indexOf(l.kind) === -1) return null;
     var o = {
+      id: typeof l.id === 'string' && l.id ? l.id : uid(),
       kind: l.kind,
       text: String(l.text || '').slice(0, 160).trim(),
       aiName: String(l.aiName || '').slice(0, 60).trim(),
@@ -4481,7 +4576,7 @@
       forget.setAttribute('aria-label', 'Oublier cette leçon');
       forget.addEventListener('click', function () {
         var i = aiMemory.lessons.indexOf(l);
-        if (i !== -1) aiMemory.lessons.splice(i, 1);
+        if (i !== -1) { forget('lesson', l); aiMemory.lessons.splice(i, 1); }
         saveAiMemory();
       });
       row.appendChild(txt);
@@ -4507,6 +4602,7 @@
   $('ai-memory-clear').addEventListener('click', function () {
     if (aiMemory.lessons.length === 0) return;
     if (!confirm('Effacer les ' + aiMemory.lessons.length + ' leçons apprises de tes corrections ?')) return;
+    aiMemory.lessons.forEach(function (l) { forget('lesson', l); });
     aiMemory.lessons = [];
     saveAiMemory();
     toast('🧠 Mémoire effacée — l’IA repart de zéro.');
@@ -6382,11 +6478,13 @@
       totF += item.fiber * item.ratio;
       totP += item.polyols * item.ratio;
     });
-    history.unshift({
+    history.unshift(stamp({
       ts: Date.now(),
       items: meal.slice(),
       net: round1(totNet), carbs: round1(totC), fiber: round1(totF), polyols: round1(totP)
-    });
+    }));
+    // Plafond du journal : les plus anciens sortent sans laisser de trace,
+    // ce n'est pas une suppression voulue mais un élagage local
     if (history.length > 300) history.length = 300;
     meal = [];
     save();
@@ -6472,6 +6570,7 @@
       del.textContent = '✕';
       del.setAttribute('aria-label', 'Supprimer ce repas du journal');
       del.addEventListener('click', function () {
+        forget('entry', history[idx]);
         history.splice(idx, 1);
         save();
         renderJournal();
@@ -6553,7 +6652,8 @@
       recipes: recipes,
       favorites: favorites,
       history: history,
-      aiMemory: aiMemory.lessons
+      aiMemory: aiMemory.lessons,
+      tombs: tombs
     };
     var blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
     var a = document.createElement('a');
@@ -6589,11 +6689,20 @@
       // Chaque entrée est assainie : un fichier tronqué ou édité ne doit
       // jamais planter le rendu ni afficher des totaux « NaN »
       recipes = (Array.isArray(data.recipes) ? data.recipes : []).map(sanitizeRecipe).filter(Boolean);
-      favorites = (Array.isArray(data.favorites) ? data.favorites : []).map(sanitizeItem).filter(Boolean);
+      favorites = (Array.isArray(data.favorites) ? data.favorites : []).map(sanitizeFav).filter(Boolean);
       history = (Array.isArray(data.history) ? data.history : []).map(sanitizeEntry).filter(Boolean);
       aiMemory.lessons = (Array.isArray(data.aiMemory) ? data.aiMemory : [])
         .map(sanitizeLesson).filter(Boolean).slice(0, AI_MEM_MAX);
       saveAiMemory();
+      // Les suppressions font partie de la sauvegarde : sans elles, un
+      // import ferait réapparaître ce qui avait été effacé ailleurs
+      if (Array.isArray(data.tombs)) {
+        tombs = data.tombs.filter(function (t) {
+          return t && typeof t.id === 'string' && typeof t.kind === 'string' &&
+            Date.now() - num(t.deletedAt) < TOMB_TTL;
+        }).slice(-500);
+        saveTombs();
+      }
       save();
       renderRecipes();
       renderFavorites();
