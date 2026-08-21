@@ -2294,7 +2294,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.18.0</span>
+  <br><span id="app-version">Glucides Nets v2.19.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -2514,6 +2514,7 @@
 
 <div class="toast-zone" id="toast-zone" role="status" aria-live="polite"></div>
 
+<script src="calc.js"></script>
 <script>
 (function () {
   'use strict';
@@ -2857,18 +2858,13 @@
     maybeShowInstallBanner();
   }
 
-  function round1(n) { return Math.round(n * 10) / 10; }
-  function round2(n) { return Math.round(n * 100) / 100; }
-
-  function net100(r) {
-    var ded = r.polyolType === 'full' ? r.polyols : r.polyols / 2;
-    return Math.max(0, r.carbs - r.fiber - ded);
-  }
-
-  function netCarbs(item) {
-    var ded = item.polyolType === 'full' ? item.polyols : item.polyols / 2;
-    return Math.max(0, item.carbs - item.fiber - ded) * item.ratio;
-  }
+  /* Le calcul des glucides nets vit dans calc.js : c'est le chiffre qui
+     entre dans la pompe, il doit être testable hors navigateur. */
+  var round1 = GN_CALC.round1;
+  var round2 = GN_CALC.round2;
+  var net100 = GN_CALC.net100;
+  var netCarbs = GN_CALC.netCarbs;
+  var mealTotals = GN_CALC.mealTotals;
 
   /* Sauvegarde : chaque clé est protégée — un quota plein ne doit jamais
      faire remonter d'exception (sinon le rendu qui suit ne s'exécute pas
@@ -3338,13 +3334,8 @@
   });
 
   function renderTotal() {
-    var totalNet = 0, totalCarbs = 0, totalFiber = 0, totalPolyols = 0;
-    meal.forEach(function (item) {
-      totalNet += netCarbs(item);
-      totalCarbs += item.carbs * item.ratio;
-      totalFiber += item.fiber * item.ratio;
-      totalPolyols += item.polyols * item.ratio;
-    });
+    var t = mealTotals(meal);
+    var totalNet = t.net, totalCarbs = t.carbs, totalFiber = t.fiber, totalPolyols = t.polyols;
     $('total-net').textContent = round1(totalNet);
     $('total-carbs').innerHTML = round1(totalCarbs) + '<small> g</small>';
     $('total-fiber').innerHTML = round1(totalFiber) + '<small> g</small>';
@@ -6617,13 +6608,8 @@
   $('finish-btn').addEventListener('click', function () {
     clearPhotoMeal();
     if (meal.length === 0) return;
-    var totNet = 0, totC = 0, totF = 0, totP = 0;
-    meal.forEach(function (item) {
-      totNet += netCarbs(item);
-      totC += item.carbs * item.ratio;
-      totF += item.fiber * item.ratio;
-      totP += item.polyols * item.ratio;
-    });
+    var tot = mealTotals(meal);
+    var totNet = tot.net, totC = tot.carbs, totF = tot.fiber, totP = tot.polyols;
     history.unshift(stamp({
       ts: Date.now(),
       items: meal.slice(),

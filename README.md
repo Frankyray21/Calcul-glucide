@@ -84,6 +84,16 @@ Glucides nets = Glucides totaux − Fibres − (Polyols ÷ 2)
 - **Érythritol** : non absorbé, soustrait à 100 % (choisir « Érythritol » dans le menu).
 - Ces règles correspondent aux recommandations usuelles de **Diabète Canada** et de l'**American Diabetes Association** pour le calcul des glucides. Certaines équipes de soins recommandent de ne soustraire les fibres que lorsqu'elles dépassent 5 g par portion — suis la méthode enseignée par la tienne.
 
+## Tests
+
+```sh
+node --test tests/calc.test.mjs   # calcul des glucides nets, 14 cas
+```
+
+Le calcul des glucides nets vit dans `calc.js`, sorti d'`index.html` pour
+être vérifiable sans navigateur — c'est le chiffre qui entre dans la
+pompe. Autres suites : [`tests/README.md`](tests/README.md).
+
 ## Sources des données
 
 - Les valeurs nutritionnelles de la base d'aliments proviennent de **USDA FoodData Central** (SR Legacy / Foundation Foods), cohérentes avec le **Fichier canadien sur les éléments nutritifs (FCÉN)** de Santé Canada. Elles sont exprimées par 100 g de l'aliment tel que décrit (cru ou cuit, précisé dans le nom).
