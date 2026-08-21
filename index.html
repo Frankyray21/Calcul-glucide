@@ -1320,6 +1320,15 @@
   .week-chart .bar { fill: var(--chart); }
   .week-chart .bar-label { fill: var(--text); font-weight: 700; }
   .week-chart .baseline { stroke: var(--border); stroke-width: 1; }
+  /* Colonne tappable du graphique : mène aux repas du jour */
+  .week-chart .bar-hit { fill: transparent; cursor: pointer; outline: none; }
+  .week-chart .bar-hit:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+  /* Signal visuel quand une barre amène à sa journée dans la liste */
+  .day-header.flash { animation: day-flash 1.4s ease-out; }
+  @keyframes day-flash {
+    0% { background: var(--accent-light); }
+    100% { background: transparent; }
+  }
 
   /* Ingrédients */
   .ing-item {
@@ -2342,7 +2351,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.20.0</span>
+  <br><span id="app-version">Glucides Nets v2.21.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -6754,6 +6763,8 @@
           .reduce(function (s, e) { return s + e.net; }, 0);
         var head = document.createElement('div');
         head.className = 'day-header';
+        // Repère pour le graphique : une barre touchée retrouve sa journée
+        head.setAttribute('data-day', key);
         var dateEl = document.createElement('span');
         dateEl.className = 'date';
         dateEl.textContent = fmtDay.format(new Date(entry.ts));
@@ -6967,7 +6978,8 @@
     $('week-summary').textContent = mealsCount === 0
       ? 'Enregistre un premier repas pour voir ta semaine ici.'
       : mealsCount + ' repas cette semaine · moyenne ' +
-        round1(weekTotal / Math.max(1, activeDays)) + ' glucides par jour actif';
+        round1(weekTotal / Math.max(1, activeDays)) +
+        ' glucides par jour actif · touche une barre pour le détail';
 
     var W = 340, H = 130, padB = 20, padT = 18;
     var maxV = Math.max(10, Math.ceil(Math.max.apply(null, days.map(function (d) { return d.total; })) / 10) * 10);
@@ -6996,7 +7008,46 @@
       var dn = svgEl('text', { x: x + barW / 2, y: H - 6, 'text-anchor': 'middle' });
       dn.textContent = i === 6 ? 'auj.' : dayNames[d.date.getDay()];
       svg.appendChild(dn);
+      // Toute la colonne est tappable (pas seulement la barre, parfois
+      // minuscule) : elle mène aux repas de ce jour
+      if (d.total > 0) {
+        var hit = svgEl('rect', {
+          x: x - gap / 2, y: 0, width: barW + gap, height: H,
+          'class': 'bar-hit', tabindex: 0, role: 'button',
+          'aria-label': fmtDay.format(d.date) + ' : ' + round1(d.total) +
+            ' glucides — voir les repas de ce jour'
+        });
+        var hitTitle = svgEl('title', {});
+        hitTitle.textContent = 'Voir les repas de ce jour';
+        hit.appendChild(hitTitle);
+        hit.addEventListener('click', function () { openJournalDay(d.key); });
+        hit.addEventListener('keydown', function (e) {
+          if (e.key !== 'Enter' && e.key !== ' ') return;
+          e.preventDefault();
+          openJournalDay(d.key);
+        });
+        svg.appendChild(hit);
+      }
     });
+  }
+
+  /* Une barre du graphique mène aux repas de son jour : directement à la
+     fiche détaillée s'il n'y en a qu'un, sinon à la section de ce jour
+     dans la liste (mise en évidence un instant). */
+  function openJournalDay(key) {
+    var dayMeals = history.filter(function (e) { return dayKey(e.ts) === key; });
+    if (dayMeals.length === 0) return;
+    if (dayMeals.length === 1) {
+      openEntryModal(dayMeals[0]);
+      return;
+    }
+    var head = document.querySelector('.day-header[data-day="' + key + '"]');
+    if (!head) return;
+    scrollToEl(head);
+    head.classList.remove('flash');
+    // Réamorcer l'animation même si elle vient de jouer
+    void head.offsetWidth;
+    head.classList.add('flash');
   }
 
   /* ══════════ Sauvegarde, import et partage ══════════ */

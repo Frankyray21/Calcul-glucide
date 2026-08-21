@@ -51,7 +51,7 @@ Barre du bas à cinq destinations — **Accueil**, **Favoris**, **➕ Calculer**
 
 ### 📅 Journal
 - Chaque repas enregistré est daté et listé par jour, avec le total quotidien.
-- **Graphique des 7 derniers jours** (glucides nets par jour) et moyenne par jour actif — utile pour les rendez-vous en clinique du diabète.
+- **Graphique des 7 derniers jours** (glucides nets par jour) et moyenne par jour actif — utile pour les rendez-vous en clinique du diabète. Le graphique est **interactif** : touche une barre pour aller aux repas de ce jour — directement à la fiche détaillée s'il n'y en a qu'un, sinon à la section du jour dans la liste.
 - **🔎 Fiche détaillée** : touche un repas pour l'ouvrir en plein écran — date et heure, **photo du repas** (quand il venait d'une analyse photo, elle est enregistrée avec l'entrée), chaque aliment avec sa quantité, ses fibres et ses polyols, et le **détail du calcul** (glucides totaux − fibres − polyols = glucides nets). Recharger ou supprimer se fait aussi depuis la fiche. Les photos restent sur l'appareil (les ~20 plus récentes sont conservées pour ménager le stockage) et suivent l'export JSON.
 - **↻ Recharge** un repas passé en un geste (pratique pour les repas récurrents).
 - **💾 Export / import** : sauvegarde toutes tes données (recettes, favoris, journal, leçons apprises) dans un fichier JSON pour les transférer sur un autre appareil.
@@ -59,7 +59,7 @@ Barre du bas à cinq destinations — **Accueil**, **Favoris**, **➕ Calculer**
 
 ## Version de l'app
 
-La version courante est **v2.20.0**, affichée dans le pied de page de l'app (`#app-version` dans `index.html`).
+La version courante est **v2.21.0**, affichée dans le pied de page de l'app (`#app-version` dans `index.html`).
 
 **Règle à chaque mise à jour publiée** : incrémenter le numéro aux **deux** endroits, sinon les utilisateurs installés gardent l'ancienne version en cache :
 1. le pied de page d'`index.html` (`Glucides Nets vX.Y.Z`);
