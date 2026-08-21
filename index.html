@@ -2294,7 +2294,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.16.0</span>
+  <br><span id="app-version">Glucides Nets v2.17.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -2517,8 +2517,13 @@
      Valeurs par 100 g tirées de USDA FoodData Central (base SR Legacy /
      Foundation Foods), cohérentes avec le Fichier canadien sur les éléments
      nutritifs (FCÉN). c = glucides totaux (g), f = fibres (g).
-     Pour les produits emballés, l'étiquette du produit réel a priorité. */
-  var FOOD_DB = [
+     Pour les produits emballés, l'étiquette du produit réel a priorité.
+
+     Ce noyau reste DANS la page : il doit être là au tout premier
+     lancement, avant même que foods.json ait pu être téléchargé, et il
+     alimente le sélecteur de l'outil interactif — une liste déroulante de
+     plusieurs milliers d'entrées ne se parcourt pas. */
+  var FOOD_CORE = [
     { n: 'Pomme, crue, avec pelure', c: 13.8, f: 2.4 },
     { n: 'Banane, crue', c: 22.8, f: 2.6 },
     { n: 'Orange, crue', c: 11.8, f: 2.4 },
@@ -2764,6 +2769,42 @@
     if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
   } catch (e) { /* non supporté */ }
 
+  /* La base réellement fouillée par la recherche : le noyau au départ,
+     complété par foods.json au premier besoin. */
+  var FOOD_DB = FOOD_CORE.slice();
+  var foodsLoaded = false, foodsLoading = null;
+
+  /* Chargement à la demande, pas au démarrage : la plupart des ouvertures
+     de l'app ne touchent jamais la recherche. Le fichier est mis en cache
+     par le service worker, donc hors ligne dès la deuxième fois. Un échec
+     n'est pas grave : le noyau embarqué reste utilisable. */
+  function loadFoods() {
+    if (foodsLoaded) return Promise.resolve();
+    if (foodsLoading) return foodsLoading;
+    foodsLoading = fetch('foods.json')
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) {
+        var list = data && Array.isArray(data.foods) ? data.foods : null;
+        if (!list) return;
+        var vus = {};
+        FOOD_DB.forEach(function (f) { vus[normalize(f.n)] = true; });
+        list.forEach(function (f) {
+          var nom = String(f.n || '').slice(0, 80);
+          var c = num(f.c), fi = num(f.f);
+          // Mêmes garde-fous qu'à la fabrication : un fichier remplacé ou
+          // tronqué ne doit pas introduire de valeur impossible
+          if (!nom || c < 0 || c > 100 || fi < 0 || fi > c + 0.05) return;
+          var cle = normalize(nom);
+          if (vus[cle]) return;
+          vus[cle] = true;
+          FOOD_DB.push({ n: nom, c: c, f: fi });
+        });
+        foodsLoaded = true;
+      })
+      .catch(function () { /* hors ligne au premier lancement : le noyau suffit */ });
+    return foodsLoading;
+  }
+
   var $ = function (id) { return document.getElementById(id); };
 
   /* ── Toasts de confirmation ──
@@ -2921,6 +2962,13 @@
         box.classList.remove('open');
         announce('');
         return;
+      }
+      // La frappe est ce qui déclenche le téléchargement de la base
+      // complète; la recherche se rejoue seule quand elle est arrivée.
+      if (!foodsLoaded) {
+        loadFoods().then(function () {
+          if (foodsLoaded && input.value.trim() === raw) { box.dataset.sig = ''; runSearch(input); }
+        });
       }
       var matches = FOOD_DB.filter(function (f) { return normalize(f.n).indexOf(q) !== -1; }).slice(0, 8);
       // Si la liste raffinée est identique, on ne reconstruit pas le DOM :
@@ -4006,7 +4054,7 @@
     sel.appendChild(ogB);
     var ogF = document.createElement('optgroup');
     ogF.label = '🔍 Base d’aliments (USDA)';
-    FOOD_DB.forEach(function (f, i) {
+    FOOD_CORE.forEach(function (f, i) {
       var o = document.createElement('option');
       o.value = 'f' + i;
       o.textContent = f.n + ' (' + round1(f.c - f.f) + ' glucides/100 grammes)';
@@ -4025,7 +4073,7 @@
       var b = BUILTIN_RECIPES[parseInt(val.slice(1), 10)];
       if (b) TOOL.item = { name: b.n, net100: Math.max(0, b.c - b.f), carbs100: b.c, fiber100: b.f };
     } else {
-      var f = FOOD_DB[parseInt(val.slice(1), 10)];
+      var f = FOOD_CORE[parseInt(val.slice(1), 10)];
       if (f) TOOL.item = { name: f.n, net100: Math.max(0, f.c - f.f), carbs100: f.c, fiber100: f.f };
     }
   }
@@ -5810,6 +5858,7 @@
     }
     var q = normalize(f.name);
     if (q.length < 4) return null;
+    loadFoods(); // le recoupement gagne à porter sur toute la base
     var best = null, bestLen = 0;
     FOOD_DB.forEach(function (d) {
       var base = normalize(d.n.split(',')[0]).trim();

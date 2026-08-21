@@ -1,0 +1,277 @@
+# Base d'aliments courants — valeurs de référence par 100 g
+# nom<TAB>glucides totaux (g)<TAB>fibres (g)
+# Valeurs usuelles de type USDA FoodData Central / FCÉN, arrondies à 0,1 g.
+# Cette liste est un socle de dépannage : pour la base complète, voir
+# build-foods.py, qui convertit le Fichier canadien sur les éléments
+# nutritifs. Pour un produit emballé, l'étiquette a toujours priorité.
+#
+# --- Fruits frais ---
+Pomme, crue, avec pelure	13.8	2.4
+Banane, crue	22.8	2.6
+Orange, crue	11.8	2.4
+Clémentine, crue	12.0	1.7
+Pamplemousse, cru	10.7	1.6
+Citron, cru	9.3	2.8
+Fraises, crues	7.7	2.0
+Framboises, crues	11.9	6.5
+Bleuets, crus	14.5	2.4
+Mûres, crues	9.6	5.3
+Canneberges, crues	12.2	3.6
+Raisins, crus	18.1	0.9
+Poire, crue	15.2	3.1
+Pêche, crue	9.5	1.5
+Nectarine, crue	10.6	1.7
+Prune, crue	11.4	1.4
+Cerises douces, crues	16.0	2.1
+Ananas, cru	13.1	1.4
+Mangue, crue	15.0	1.6
+Kiwi, cru	14.7	3.0
+Melon d'eau, cru	7.6	0.4
+Cantaloup, cru	8.2	0.9
+Melon miel, cru	9.1	0.8
+Avocat, cru	8.5	6.7
+Grenade, crue	18.7	4.0
+Papaye, crue	10.8	1.7
+# --- Fruits séchés et en conserve ---
+Raisins secs	79.2	3.7
+Dattes, dénoyautées	75.0	8.0
+Abricots séchés	62.6	7.3
+Pruneaux	63.9	7.1
+Canneberges séchées, sucrées	82.4	5.7
+Compote de pommes, non sucrée	11.6	1.1
+Pêches en conserve, dans leur jus	11.6	1.3
+Ananas en conserve, dans son jus	16.0	0.8
+# --- Légumes ---
+Carotte, crue	9.6	2.8
+Carotte, bouillie	8.2	3.0
+Brocoli, cru	6.6	2.6
+Brocoli, bouilli	7.2	3.3
+Chou-fleur, cru	5.0	2.0
+Céleri, cru	3.0	1.6
+Concombre, cru, avec pelure	3.6	0.5
+Tomate, crue	3.9	1.2
+Tomates en conserve, en dés	4.0	1.0
+Sauce tomate, en conserve	7.0	1.5
+Laitue romaine, crue	3.3	2.1
+Épinards, crus	3.6	2.2
+Poivron rouge, cru	6.0	2.1
+Poivron vert, cru	4.6	1.7
+Oignon, cru	9.3	1.7
+Ail, cru	33.1	2.1
+Champignons blancs, crus	3.3	1.0
+Courgette, crue	3.1	1.0
+Courge musquée, cuite	11.7	2.8
+Aubergine, cuite	8.7	2.5
+Haricots verts, bouillis	7.9	3.2
+Pois verts, bouillis	15.6	5.5
+Maïs en grains, bouilli	21.0	2.4
+Maïs en conserve, égoutté	17.7	1.8
+Chou vert, cru	5.8	2.5
+Chou de Bruxelles, bouilli	8.9	2.6
+Betterave, bouillie	9.9	2.0
+Navet, bouilli	4.9	2.0
+Panais, bouilli	17.0	3.6
+Patate douce, au four, avec pelure	20.7	3.3
+Pomme de terre, bouillie, sans pelure	20.0	1.8
+Pomme de terre, au four, avec pelure	21.2	2.2
+Purée de pommes de terre, préparée	11.5	1.0
+Frites (restauration rapide)	41.4	3.8
+# --- Pains et produits de boulangerie ---
+Pain blanc, tranché	49.4	2.7
+Pain de blé entier	43.1	6.0
+Pain multigrain	43.3	7.4
+Pain de seigle	48.3	5.8
+Baguette	55.0	2.6
+Bagel, nature	53.0	2.3
+Tortilla de blé	49.0	2.9
+Tortilla de maïs	44.6	5.2
+Pita, blé entier	55.9	7.4
+Muffin anglais	46.3	2.7
+Croissant, au beurre	45.8	2.6
+Biscotte	73.3	4.6
+Craquelins de type soda	71.5	2.8
+Chapelure, nature	71.9	4.5
+Pain naan	50.4	2.2
+# --- Céréales, grains et pâtes ---
+Riz blanc, grain long, cuit	28.2	0.4
+Riz brun, grain long, cuit	23.0	1.8
+Riz basmati, cuit	25.2	0.6
+Riz arborio (risotto), cuit	28.0	0.5
+Pâtes (spaghetti), cuites	30.9	1.8
+Pâtes de blé entier, cuites	26.5	4.5
+Pâtes, sèches, non cuites	74.7	3.2
+Nouilles aux œufs, cuites	25.2	1.2
+Quinoa, cuit	21.3	2.8
+Couscous, cuit	23.2	1.4
+Orge perlé, cuit	28.2	3.8
+Boulgour, cuit	18.6	4.5
+Millet, cuit	23.7	1.3
+Sarrasin (kasha), cuit	19.9	2.7
+Gruau (avoine), cuit à l'eau	12.0	1.7
+Flocons d'avoine, secs	67.7	10.1
+Céréales de son (type All-Bran)	80.0	29.3
+Céréales de maïs (type corn flakes)	84.1	3.3
+Céréales de riz croustillant	87.2	1.0
+Céréales de blé filamenté	78.2	11.0
+Céréales de blé glacées (type mini-wheats)	78.0	9.0
+Granola, avec avoine et miel	64.3	7.0
+Farine tout usage, blanche	76.3	2.7
+Farine de blé entier	72.0	10.7
+Fécule de maïs	91.3	0.9
+Semoule de maïs (polenta), cuite	14.0	0.7
+# --- Légumineuses et noix ---
+Lentilles, cuites	20.1	7.9
+Pois chiches, cuits	27.4	7.6
+Haricots noirs, cuits	23.7	8.7
+Haricots rouges, cuits	22.8	7.4
+Haricots blancs, cuits	25.1	10.5
+Fèves au lard, en conserve	21.6	4.1
+Pois cassés, cuits	21.1	8.3
+Edamame, cuit	11.0	5.2
+Tofu ferme	2.8	0.9
+Houmous (hummus)	14.3	6.0
+Amandes	21.6	12.5
+Arachides, rôties	16.1	8.4
+Beurre d'arachide	22.3	5.0
+Noix de Grenoble	13.7	6.7
+Noix de cajou	30.2	3.3
+Pacanes	13.9	9.6
+Pistaches	27.2	10.6
+Graines de tournesol	20.0	8.6
+Graines de citrouille	10.7	6.0
+Graines de chia	42.1	34.4
+Graines de lin, moulues	28.9	27.3
+# --- Produits laitiers et substituts ---
+Lait 3,25 %	4.6	0.0
+Lait 2 %	4.7	0.0
+Lait 1 %	5.0	0.0
+Lait écrémé	4.9	0.0
+Lait au chocolat 1 %	10.3	0.8
+Boisson de soya, non sucrée	1.3	0.4
+Boisson d'amande, non sucrée	0.6	0.4
+Boisson d'avoine, non sucrée	7.0	0.8
+Yogourt nature 2 %	4.7	0.0
+Yogourt grec nature 0 %	3.6	0.0
+Yogourt aux fruits, sucré	15.7	0.0
+Kéfir nature	4.5	0.0
+Fromage cheddar	3.1	0.0
+Fromage mozzarella partiellement écrémé	3.7	0.0
+Fromage cottage 2 %	4.8	0.0
+Fromage à la crème	5.5	0.0
+Fromage suisse	5.4	0.0
+Crème 15 %	4.3	0.0
+Crème sure 14 %	4.6	0.0
+Crème glacée à la vanille	23.6	0.7
+Yogourt glacé à la vanille	24.2	0.0
+Beurre	0.1	0.0
+# --- Viandes, volailles, poissons, œufs ---
+Poitrine de poulet, rôtie, sans peau	0.0	0.0
+Cuisse de poulet, rôtie	0.0	0.0
+Bœuf haché, mi-maigre, cuit	0.0	0.0
+Steak de bœuf, grillé	0.0	0.0
+Porc, longe, rôtie	0.0	0.0
+Jambon, cuit, tranché	1.5	0.0
+Bacon, cuit	1.4	0.0
+Saucisse de porc, cuite	1.4	0.0
+Saumon de l'Atlantique, cuit	0.0	0.0
+Thon pâle en conserve, dans l'eau	0.0	0.0
+Tilapia, cuit	0.0	0.0
+Crevettes, cuites	0.2	0.0
+Œuf entier, cuit dur	1.1	0.0
+Poitrine de dinde, rôtie, sans peau	0.0	0.0
+Bâtonnets de poisson panés, cuits	20.4	1.2
+# --- Sucres, sirops et condiments ---
+Sucre blanc granulé	100.0	0.0
+Cassonade	98.1	0.0
+Sucre à glacer	99.8	0.0
+Miel	82.4	0.2
+Sirop d'érable	67.0	0.0
+Confiture de fraises	65.0	1.1
+Sirop de maïs	77.6	0.0
+Mélasse	74.7	0.0
+Ketchup	25.8	0.3
+Moutarde jaune	5.8	3.3
+Mayonnaise	2.7	0.0
+Vinaigrette ranch	7.0	0.0
+Sauce barbecue	40.8	0.8
+Sauce soya	4.9	0.8
+Sauce à spaghetti, en pot	9.0	1.8
+Beurre d'érable	72.0	0.0
+Tartinade au chocolat et noisettes	57.5	3.4
+Cacao en poudre, non sucré	57.9	33.2
+# --- Collations, sucreries, desserts ---
+Biscuits secs type petit-beurre	72.0	2.5
+Biscuits aux brisures de chocolat	68.0	2.7
+Biscuits sablés	64.4	1.8
+Barre tendre à l'avoine	64.8	4.6
+Craquelins de blé entier	70.5	9.4
+Croustilles de pomme de terre	53.0	4.4
+Bretzels	80.4	3.0
+Maïs soufflé, nature	77.9	14.5
+Chocolat au lait	59.4	3.4
+Chocolat noir 70 %	45.9	10.9
+Bonbons durs	98.0	0.0
+Bonbons gélifiés	77.0	0.1
+Gâteau au chocolat, glacé	50.7	1.8
+Gâteau des anges	57.6	0.5
+Tarte aux pommes	34.0	1.6
+Beigne glacé	51.3	1.6
+Muffin aux bleuets	51.0	1.8
+Brownie	63.9	2.5
+Croustade aux pommes	38.0	2.0
+Pouding au chocolat, prêt à servir	22.5	0.9
+Jell-O, préparé	14.2	0.0
+Barre de chocolat au caramel	64.0	1.5
+# --- Boissons ---
+Jus d'orange, non sucré	10.4	0.2
+Jus de pomme, non sucré	11.3	0.2
+Jus de raisin, non sucré	14.8	0.2
+Jus de canneberge, sucré	13.5	0.1
+Boisson gazeuse au cola	10.6	0.0
+Boisson gazeuse, sans sucre	0.0	0.0
+Boisson pour sportifs	6.0	0.0
+Limonade, préparée	10.6	0.0
+Café, infusé, noir	0.0	0.0
+Thé, infusé, nature	0.1	0.0
+Bière, régulière	3.6	0.0
+Vin rouge, sec	2.6	0.0
+# --- Plats et mets préparés ---
+Pizza au fromage, croûte régulière	28.3	2.0
+Macaroni au fromage, préparé	17.0	1.0
+Lasagne à la viande	14.0	1.5
+Pâté chinois	13.5	1.8
+Poutine	18.0	1.6
+Hamburger, simple, avec pain	28.0	1.5
+Hot-dog, avec pain	20.0	1.0
+Sandwich au jambon et fromage	25.0	1.6
+Soupe aux légumes, prête à servir	6.5	1.0
+Soupe poulet et nouilles, prête à servir	5.0	0.4
+Chili con carne	9.0	2.5
+Sauté de légumes et poulet	7.0	1.5
+Riz frit au poulet	21.0	1.0
+Sushi maki au saumon	28.0	1.0
+Pâté à la viande (tourtière)	22.0	1.3
+Crêpes, préparées	28.3	0.9
+Gaufres, préparées	32.9	1.6
+Pain doré	21.0	1.2
+Quiche lorraine	16.0	0.8
+Salade de pommes de terre	13.0	1.3
+Salade de chou crémeuse	14.9	1.5
+Macaroni à la viande	15.0	1.4
+# --- Ajouts québécois et orthographes courantes ---
+Cretons de porc	1.5	0.0
+Fromage en grains (skouik-skouik)	3.1	0.0
+Pouding chômeur	55.0	0.8
+Tarte au sucre	56.0	0.7
+Bleuets sauvages, surgelés	12.2	3.3
+Smoothie aux fruits	13.0	1.2
+Barre de céréales aux fruits	70.0	2.0
+Galette à la mélasse	62.0	1.5
+Sauce brune, préparée	5.0	0.3
+Croquettes de poulet, cuites	16.0	1.0
+Grilled cheese (sandwich au fromage fondant)	28.0	1.4
+Céréales sucrées pour enfants	85.0	2.5
+Boisson de riz, non sucrée	9.6	0.3
+Nouilles ramen instantanées, préparées	13.0	0.6
+Pain hamburger	50.0	2.3
+Pain hot-dog	50.0	2.0
