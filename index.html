@@ -7687,11 +7687,14 @@
     var email = $('sync-email').value.trim();
     if (!/.+@.+\..+/.test(email)) { $('sync-email').focus(); return; }
     signinMsg('Envoi…');
-    fetch(SB.url + '/auth/v1/otp', {
+    // L'adresse de retour se passe en PARAMÈTRE D'URL, pas dans le corps :
+    // dans le corps, elle est ignorée et le lien reçu renvoie vers le
+    // « Site URL » du projet — réglé sur localhost par défaut.
+    var retour = encodeURIComponent(location.href.split('#')[0]);
+    fetch(SB.url + '/auth/v1/otp?redirect_to=' + retour, {
       method: 'POST',
       headers: { 'content-type': 'application/json', apikey: SB.key },
-      body: JSON.stringify({ email: email, create_user: true,
-        options: { email_redirect_to: location.href.split('#')[0] } })
+      body: JSON.stringify({ email: email, create_user: true })
     }).then(function (r) {
       signinMsg(r.ok
         ? '📬 Lien envoyé à ' + email + '. Ouvre-le sur CET appareil.'
