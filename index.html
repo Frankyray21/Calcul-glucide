@@ -1268,6 +1268,54 @@
   }
   .journal-meal .icon-btn:active { transform: scale(0.96); }
   .journal-meal .icon-btn.del { color: var(--danger); }
+  /* Rangée tappable : heure, photo, noms et total ouvrent la fiche
+     détaillée du repas; les boutons ↻ et ✕ restent des actions à part */
+  .journal-meal .open-entry {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: none;
+    border: none;
+    padding: 0;
+    margin: 0;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    min-height: 48px;
+    border-radius: 12px;
+    transition: transform 150ms ease-out;
+  }
+  .journal-meal .open-entry:active { transform: scale(0.98); }
+  /* Noms au-dessus, total en dessous : les noms gardent toute la largeur
+     même quand la miniature photo s'ajoute à la rangée */
+  .journal-meal .jm-txt {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .journal-meal .jm-txt .net { font-size: 0.9rem; }
+  .journal-meal .thumb {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    object-fit: cover;
+    flex-shrink: 0;
+    border: 1px solid var(--border);
+  }
+  /* Fiche détaillée d'un repas du journal */
+  .entry-photo {
+    width: 100%;
+    max-height: 280px;
+    object-fit: cover;
+    border-radius: 16px;
+    border: 1px solid var(--border);
+    margin: 0 0 12px;
+  }
   .week-chart text { fill: var(--muted); font-size: 10px; font-family: inherit; }
   .week-chart .bar { fill: var(--chart); }
   .week-chart .bar-label { fill: var(--text); font-weight: 700; }
@@ -2141,7 +2189,7 @@
 
     <div class="card">
       <h2>📅 Repas enregistrés</h2>
-      <p class="hint" style="margin:0 0 8px;">Termine un repas avec « Confirmer le repas » dans l'onglet Calculer. Touche ↻ pour recharger un repas passé.</p>
+      <p class="hint" style="margin:0 0 8px;">Termine un repas avec « Confirmer le repas » dans l'onglet Calculer. Touche un repas pour voir sa fiche — photo, aliments et détail du calcul — ou ↻ pour le recharger.</p>
       <div id="journal-list"><p class="empty"><span class="illus" aria-hidden="true">📅</span>Ton journal est vide. Enregistre ton premier repas pour le retrouver ici!</p></div>
     </div>
 
@@ -2294,7 +2342,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.17.0</span>
+  <br><span id="app-version">Glucides Nets v2.18.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -2459,6 +2507,34 @@
     <div class="actions">
       <button class="btn btn-secondary" id="cons-cancel" type="button">Annuler</button>
       <button class="btn btn--action" id="cons-apply" type="button">Mettre à jour le repas</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal : fiche détaillée d'un repas enregistré au journal -->
+<div class="modal-overlay full" id="entry-modal" role="dialog" aria-modal="true" aria-labelledby="entry-title">
+  <div class="modal modal--full">
+    <div class="fiche-topbar">
+      <button class="circle-btn" id="entry-back" type="button" aria-label="Fermer la fiche du repas">‹</button>
+    </div>
+    <h3 id="entry-title">Repas</h3>
+    <div class="hero-card">
+      <div class="hero-label">Glucides du repas</div>
+      <div class="live-net" id="entry-net">0 <small>g</small></div>
+      <div class="hero-sub" id="entry-sub"></div>
+    </div>
+    <img id="entry-photo" class="entry-photo" alt="Photo du repas" style="display:none;">
+    <div class="sec-label">Aliments du repas</div>
+    <div id="entry-items"></div>
+    <div class="ref-card">
+      <div class="ref-head">
+        <span class="ref-head-title"><span class="acc-ico" aria-hidden="true">📊</span> Détail du calcul</span>
+      </div>
+      <div class="ref-rows" id="entry-totals"></div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-secondary" id="entry-delete" type="button">🗑️ Supprimer</button>
+      <button class="btn btn--action" id="entry-reload" type="button">↻ Recharger ce repas</button>
     </div>
   </div>
 </div>
@@ -2640,11 +2716,15 @@
   }
   function sanitizeEntry(e) {
     if (!e || typeof e !== 'object') return null;
-    return stamp({
+    var s = stamp({
       ts: num(e.ts) || 0,
       items: (Array.isArray(e.items) ? e.items : []).map(sanitizeItem).filter(Boolean),
       net: num(e.net), carbs: num(e.carbs), fiber: num(e.fiber), polyols: num(e.polyols)
     }, e);
+    // La photo du repas (base64, sans préfixe) suit l'entrée dans le
+    // stockage local et l'export — absente, la fiche s'affiche sans image
+    if (typeof e.photo === 'string' && e.photo) s.photo = e.photo;
+    return s;
   }
   /* ── Identité des enregistrements ──
      Préalable à toute synchronisation entre appareils : sans identifiant
@@ -6566,6 +6646,10 @@
 
   /* ══════════ Journal des repas ══════════ */
   $('finish-btn').addEventListener('click', function () {
+    // La photo du repas analysé (si récente) suit le repas au journal :
+    // on la retient AVANT de l'effacer de l'onglet Calculer
+    var snap = photoMeal && photoMeal.img &&
+      Date.now() - num(photoMeal.ts) <= PHOTO_MEAL_TTL ? photoMeal.img : null;
     clearPhotoMeal();
     if (meal.length === 0) return;
     var totNet = 0, totC = 0, totF = 0, totP = 0;
@@ -6575,11 +6659,19 @@
       totF += item.fiber * item.ratio;
       totP += item.polyols * item.ratio;
     });
-    history.unshift(stamp({
+    var entry = stamp({
       ts: Date.now(),
       items: meal.slice(),
       net: round1(totNet), carbs: round1(totC), fiber: round1(totF), polyols: round1(totP)
-    }));
+    });
+    if (snap) entry.photo = snap;
+    history.unshift(entry);
+    // Une photo pèse 40-80 Ko en stockage local : seules les plus
+    // récentes sont gardées en image, le repas lui-même reste
+    var kept = 0;
+    history.forEach(function (e) {
+      if (e.photo && ++kept > 20) delete e.photo;
+    });
     // Plafond du journal : les plus anciens sortent sans laisser de trace,
     // ce n'est pas une suppression voulue mais un élagage local
     if (history.length > 300) history.length = 300;
@@ -6639,48 +6731,182 @@
       }
       var row = document.createElement('div');
       row.className = 'journal-meal';
+      // Toute la rangée (heure, photo, noms, total) ouvre la fiche
+      // détaillée; ↻ et ✕ restent des boutons distincts à côté
+      var open = document.createElement('button');
+      open.type = 'button';
+      open.className = 'open-entry';
+      open.setAttribute('aria-label', 'Voir le détail de ce repas');
+      open.title = 'Voir le détail de ce repas';
       var time = document.createElement('span');
       time.className = 'time';
       time.textContent = fmtTime.format(new Date(entry.ts));
+      open.appendChild(time);
+      if (entry.photo) {
+        var thumb = document.createElement('img');
+        thumb.className = 'thumb';
+        thumb.alt = '';
+        thumb.src = 'data:image/jpeg;base64,' + entry.photo;
+        open.appendChild(thumb);
+      }
+      var txt = document.createElement('span');
+      txt.className = 'jm-txt';
       var foods = document.createElement('span');
       foods.className = 'foods';
       foods.textContent = entry.items.map(function (it) { return it.name; }).join(', ');
       var net = document.createElement('span');
       net.className = 'net';
       net.textContent = entry.net + ' glucides';
+      txt.appendChild(foods);
+      txt.appendChild(net);
+      open.appendChild(txt);
+      open.addEventListener('click', function () { openEntryModal(entry); });
       var reload = document.createElement('button');
       reload.className = 'icon-btn';
       reload.textContent = '↻';
       reload.setAttribute('aria-label', 'Recharger ce repas');
       reload.title = 'Recharger ce repas';
-      reload.addEventListener('click', function () {
-        meal = meal.concat(entry.items.map(function (it) {
-          return JSON.parse(JSON.stringify(it));
-        }));
-        touchMeal();
-        save();
-        renderMeal();
-        switchTab('meal');
-      });
+      reload.addEventListener('click', function () { reloadEntry(entry); });
       var del = document.createElement('button');
       del.className = 'icon-btn del';
       del.textContent = '✕';
       del.setAttribute('aria-label', 'Supprimer ce repas du journal');
-      del.addEventListener('click', function () {
-        forget('entry', history[idx]);
-        history.splice(idx, 1);
-        save();
-        renderJournal();
-      });
-      row.appendChild(time);
-      row.appendChild(foods);
-      row.appendChild(net);
+      del.addEventListener('click', function () { removeEntry(entry); });
+      row.appendChild(open);
       row.appendChild(reload);
       row.appendChild(del);
       list.appendChild(row);
     });
     renderWeekChart();
   }
+
+  /* Recharger et supprimer servent depuis la rangée ET depuis la fiche
+     détaillée : une seule définition, aucun écart de comportement. */
+  function reloadEntry(entry) {
+    meal = meal.concat(entry.items.map(function (it) {
+      return JSON.parse(JSON.stringify(it));
+    }));
+    touchMeal();
+    save();
+    renderMeal();
+    switchTab('meal');
+  }
+  function removeEntry(entry) {
+    var i = history.indexOf(entry);
+    if (i === -1) return;
+    forget('entry', entry);
+    history.splice(i, 1);
+    save();
+    renderJournal();
+  }
+
+  /* ── Fiche détaillée d'un repas du journal ──
+     Date et heure, photo du repas (si l'entrée venait d'une analyse
+     photo), chaque aliment avec sa quantité, ses fibres et ses polyols,
+     puis le détail du calcul — et les mêmes actions que la rangée. */
+  var entryShown = null;
+  function openEntryModal(entry) {
+    entryShown = entry;
+    var d = new Date(entry.ts);
+    var day = fmtDay.format(d);
+    $('entry-title').textContent = day.charAt(0).toUpperCase() + day.slice(1) + ' · ' + fmtTime.format(d);
+    $('entry-net').innerHTML = entry.net + ' <small>g</small>';
+    $('entry-sub').textContent = entry.items.length +
+      (entry.items.length > 1 ? ' aliments' : ' aliment') + ' — glucides à entrer dans la pompe';
+    var photo = $('entry-photo');
+    if (entry.photo) {
+      photo.src = 'data:image/jpeg;base64,' + entry.photo;
+      photo.style.display = 'block';
+    } else {
+      photo.style.display = 'none';
+      photo.removeAttribute('src');
+    }
+    var list = $('entry-items');
+    list.innerHTML = '';
+    entry.items.forEach(function (item) {
+      // Même carte que le repas en cours, sans le bouton retirer
+      var div = document.createElement('div');
+      div.className = 'food-item';
+      var ico = document.createElement('div');
+      ico.className = 'f-ico';
+      ico.setAttribute('aria-hidden', 'true');
+      ico.textContent = foodEmoji(item.name);
+      var info = document.createElement('div');
+      info.className = 'info';
+      var nameEl = document.createElement('div');
+      nameEl.className = 'name';
+      nameEl.textContent = item.name;
+      var detail = document.createElement('div');
+      detail.className = 'detail';
+      var parts = [];
+      if (item.grams) parts.push(item.grams + ' g');
+      else if (item.ratio !== 1) parts.push('portion ×' + round2(item.ratio));
+      parts.push('Fibres ' + round1(item.fiber * item.ratio) + ' g');
+      if (item.polyols > 0) parts.push('Polyols ' + round1(item.polyols * item.ratio) + ' g');
+      detail.textContent = parts.join(' · ');
+      info.appendChild(nameEl);
+      info.appendChild(detail);
+      var netEl = document.createElement('div');
+      netEl.className = 'net';
+      netEl.innerHTML = round1(netCarbs(item)) + ' g<small>glucides</small>';
+      div.appendChild(ico);
+      div.appendChild(info);
+      div.appendChild(netEl);
+      list.appendChild(div);
+    });
+    var totals = $('entry-totals');
+    totals.innerHTML = '';
+    function refRow(ico, lbl, sub, val) {
+      var rowEl = document.createElement('div');
+      rowEl.className = 'ref-item';
+      var icoEl = document.createElement('span');
+      icoEl.className = 'ref-ico';
+      icoEl.setAttribute('aria-hidden', 'true');
+      icoEl.textContent = ico;
+      var lblEl = document.createElement('span');
+      lblEl.className = 'ref-lbl';
+      lblEl.textContent = lbl;
+      if (sub) {
+        var subEl = document.createElement('small');
+        subEl.textContent = sub;
+        lblEl.appendChild(subEl);
+      }
+      var valEl = document.createElement('span');
+      valEl.className = 'ref-val';
+      valEl.textContent = val;
+      rowEl.appendChild(icoEl);
+      rowEl.appendChild(lblEl);
+      rowEl.appendChild(valEl);
+      totals.appendChild(rowEl);
+    }
+    refRow('🍞', 'Glucides totaux', '', round1(entry.carbs) + ' g');
+    refRow('🌾', 'Fibres', 'soustraites du total', '− ' + round1(entry.fiber) + ' g');
+    if (entry.polyols > 0) refRow('🍬', 'Polyols', 'déduits selon leur type (50 ou 100 %)', round1(entry.polyols) + ' g');
+    refRow('🎯', 'Glucides nets', 'la valeur entrée dans la pompe', entry.net + ' g');
+    openModal('entry-modal', '#entry-back');
+  }
+  function closeEntryModal() {
+    entryShown = null;
+    closeModal('entry-modal');
+  }
+  trapModal('entry-modal', closeEntryModal);
+  $('entry-back').addEventListener('click', closeEntryModal);
+  $('entry-modal').addEventListener('click', function (e) {
+    if (e.target === $('entry-modal')) closeEntryModal();
+  });
+  $('entry-reload').addEventListener('click', function () {
+    if (!entryShown) return;
+    var entry = entryShown;
+    closeEntryModal();
+    reloadEntry(entry);
+  });
+  $('entry-delete').addEventListener('click', function () {
+    if (!entryShown) return;
+    var entry = entryShown;
+    closeEntryModal();
+    removeEntry(entry);
+    toast('Repas supprimé du journal');
+  });
 
   function renderWeekChart() {
     var svg = $('week-chart');
@@ -7231,6 +7457,9 @@
           if (here && here.photo && here.photoPath === rec.photoPath) rec.photo = here.photo;
           else pending.push(rec);
         }
+        // La photo d'un repas du journal reste sur l'appareil (elle ne
+        // part pas au serveur) : une version reçue ne doit pas l'effacer
+        if (tab.name === 'entries' && here && here.photo) rec.photo = here.photo;
         if (here) local.splice(local.indexOf(here), 1, rec);
         else local.push(rec);
         byId[row.id] = rec;
