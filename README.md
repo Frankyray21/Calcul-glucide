@@ -36,6 +36,7 @@ Barre du bas à cinq destinations — **Accueil**, **Favoris**, **➕ Calculer**
 5. Quand le repas est terminé : **✅ Enregistrer au journal**.
 
 ### 📖 Recettes
+- **🔍 Base d'aliments** : plus de 250 aliments courants cherchables par leur nom français (fruits, légumes, pains, céréales, pâtes, légumineuses, produits laitiers, collations, boissons, plats préparés et quelques classiques d'ici — cretons, poutine, pouding chômeur). Valeurs par 100 g; pour un produit emballé, fie-toi d'abord à son étiquette.
 - **⭐ Recettes populaires intégrées** : 14 plats courants (spaghetti sauce à la viande, pâté chinois, tourtière, poutine, macaroni au fromage, chili, sushi…) avec valeurs moyennes par 100 g issues des plats composés USDA/FCÉN — touche, entre le poids de la portion, c'est ajouté au repas. Ta version maison peut différer : pour un calcul exact, utilise la recette par ingrédients.
 - **🧑‍🍳 Recette par ingrédients** : ajoute chaque ingrédient pesé (depuis la base ou à la main), indique le poids final du plat cuit, et l'app calcule elle-même les valeurs par 100 g (en tenant compte de l'évaporation à la cuisson).
 - Crée tes recettes avec **photo** (prise directement avec la caméra, compressée et stockée localement).
@@ -85,7 +86,8 @@ Glucides nets = Glucides totaux − Fibres − (Polyols ÷ 2)
 
 ## Sources des données
 
-- Les valeurs nutritionnelles de la base d'aliments intégrée proviennent de **USDA FoodData Central** (SR Legacy / Foundation Foods), cohérentes avec le **Fichier canadien sur les éléments nutritifs (FCÉN)** de Santé Canada. Elles sont exprimées par 100 g de l'aliment tel que décrit (cru ou cuit, précisé dans le nom).
+- Les valeurs nutritionnelles de la base d'aliments proviennent de **USDA FoodData Central** (SR Legacy / Foundation Foods), cohérentes avec le **Fichier canadien sur les éléments nutritifs (FCÉN)** de Santé Canada. Elles sont exprimées par 100 g de l'aliment tel que décrit (cru ou cuit, précisé dans le nom).
+- La base vit dans `foods.json`, téléchargé à la première recherche puis mis en cache (hors ligne ensuite). Un noyau d'une quarantaine d'aliments reste dans la page pour répondre au tout premier lancement. Pour la régénérer — ou la remplacer par le FCÉN complet en une commande — voir [`tools/README.md`](tools/README.md).
 - Le scan de code-barres interroge **Open Food Facts**, base collaborative mondiale de produits alimentaires. Les données proviennent des étiquettes soumises par la communauté : vérifie-les contre l'étiquette réelle du produit.
 - Pour un produit emballé, **l'étiquette du produit réel a toujours priorité** sur toute base de données (les recettes varient d'une marque à l'autre et changent avec le temps).
 
