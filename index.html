@@ -2294,7 +2294,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.17.0</span>
+  <br><span id="app-version">Glucides Nets v2.18.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -2467,6 +2467,11 @@
 <div class="modal-overlay" id="key-modal" role="dialog" aria-modal="true" aria-labelledby="key-title">
   <div class="modal">
     <h3 id="key-title">✨ Lecture IA (optionnelle)</h3>
+    <p class="stats-line" id="key-invited" style="display:none;">
+      ✅ <strong>Tu es invité·e</strong> : la lecture IA fonctionne déjà sans clé, sur le compte
+      du propriétaire de l’app. Tu peux quand même ajouter la tienne — elle prendra le relais
+      si l’accès partagé s’arrête ou si son plafond mensuel est atteint.
+    </p>
     <p class="stats-line">
       La lecture d'étiquette de base se fait <strong>gratuitement sur ton appareil</strong>,
       sans compte ni clé. Pour les photos difficiles (étiquette froissée, floue, mal
@@ -4900,6 +4905,9 @@
     $('api-key-input').placeholder = lsGet('gn_api_key')
       ? 'Une clé est déjà enregistrée — entre-en une nouvelle'
       : 'sk-ant-…';
+    // Quelqu'un dont les analyses passent déjà par l'accès partagé n'a
+    // aucune raison de croire qu'il lui faut une clé et une carte de crédit
+    $('key-invited').style.display = proxyState === true ? 'block' : 'none';
     openModal('key-modal', '#api-key-input');
   }
   function closeKeyModal() {
@@ -4982,7 +4990,7 @@
     }, function () {
       // Échec du chargement du lecteur (probablement hors ligne à la
       // première utilisation)
-      if (lsGet('gn_api_key') && navigator.onLine) { analyzeLabel(b64); return; }
+      if (aiAvailable() && navigator.onLine) { analyzeLabel(b64); return; }
       labelError('Le lecteur d’étiquette n’a pas pu se télécharger (≈ 5 Mo, une seule fois) — vérifie ta connexion et réessaie. Ensuite, il fonctionne même hors ligne.', true);
     });
   }
@@ -4990,7 +4998,7 @@
   /* L'OCR local n'a rien tiré de la photo : Claude si une clé est
      configurée, sinon message d'aide avec l'option lecture IA. */
   function fallbackOrError() {
-    if (lsGet('gn_api_key')) { analyzeLabel(lastLabelImage); return; }
+    if (aiAvailable()) { analyzeLabel(lastLabelImage); return; }
     labelError('Je n’ai pas réussi à lire cette photo sur l’appareil — rapproche-toi, éclaire bien et cadre le tableau de valeur nutritive (ou le code-barres) bien à plat. Pour analyser une assiette ou un plat en photo, active la lecture IA ci-dessous.', true);
     var ai = document.createElement('button');
     ai.className = 'link-btn';
@@ -5002,6 +5010,72 @@
     });
     $('label-analysis').appendChild(ai);
   }
+
+  /* ── Un seul point de passage vers l'IA ──
+     Deux chemins possibles, et l'app ne doit pas avoir à savoir lequel à
+     chaque appel :
+
+     • Le PROXY, quand la personne est connectée et sur la liste d'invités.
+       La clé vit alors sur le serveur, jamais dans le navigateur, et c'est
+       le propriétaire de l'app qui paie.
+     • Sa PROPRE CLÉ, sinon. C'est le mode historique : chacun paie ses
+       analyses, la clé reste sur son appareil.
+
+     Le proxy est tenté d'abord dès qu'une session existe. Un refus 403
+     (pas invité) bascule sur la clé personnelle sans rien dire de plus :
+     mieux vaut une analyse qui marche qu'un message d'erreur exact. */
+  var proxyState = null; // null = inconnu, true = invité, false = refusé
+
+  function proxyUsable() {
+    return sbConfigured() && sbSignedIn() && proxyState !== false;
+  }
+
+  function aiFetch(body) {
+    var payload = JSON.stringify(body);
+    if (!proxyUsable()) return aiFetchDirect(payload);
+    return sbFetch('/functions/v1/analyze', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: payload
+    }).then(function (r) {
+      if (r.status === 403 || r.status === 404 || r.status === 401) {
+        // Pas (ou plus) invité, plafond atteint, proxy non déployé, ou
+        // session expirée. Avec une clé personnelle on bascule dessus
+        // pour cette analyse et les suivantes.
+        if (lsGet('gn_api_key')) {
+          proxyState = false;
+          return aiFetchDirect(payload);
+        }
+        // Sans clé personnelle, enchaîner sur un appel direct ne donnerait
+        // qu'un « clé refusée » incompréhensible. La réponse du proxy, elle,
+        // explique la vraie raison : on la laisse passer telle quelle.
+        return r;
+      }
+      proxyState = true;
+      return r;
+    }, function () {
+      // Proxy injoignable : la clé personnelle reste une porte de sortie
+      if (lsGet('gn_api_key')) return aiFetchDirect(payload);
+      throw new Error('proxy injoignable');
+    });
+  }
+
+  function aiFetchDirect(payload) {
+    return fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-api-key': lsGet('gn_api_key') || '',
+        'anthropic-version': '2023-06-01',
+        'anthropic-dangerous-direct-browser-access': 'true'
+      },
+      body: payload
+    });
+  }
+
+  /* L'analyse est possible si l'un des deux chemins l'est. Sans ça, l'app
+     réclamerait une clé API à quelqu'un qui n'en a pas besoin. */
+  function aiAvailable() { return proxyUsable() || !!lsGet('gn_api_key'); }
 
   /* Photos de la dernière analyse de repas : gardées pour pouvoir ajouter
      un 2e angle ou répondre à une question de clarification sans reprendre
@@ -5024,27 +5098,25 @@
       text: LABEL_PROMPT + aiMemoryPrompt() +
         (extraNote ? '\n\nCONTEXTE SUPPLÉMENTAIRE : ' + extraNote : '')
     });
-    fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': lsGet('gn_api_key') || '',
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
+    aiFetch({
+      model: 'claude-opus-5',
+      max_tokens: 4096,
+      output_config: {
+        effort: 'low',
+        format: { type: 'json_schema', schema: LABEL_SCHEMA }
       },
-      body: JSON.stringify({
-        model: 'claude-opus-5',
-        max_tokens: 4096,
-        output_config: {
-          effort: 'low',
-          format: { type: 'json_schema', schema: LABEL_SCHEMA }
-        },
-        messages: [{ role: 'user', content: content }]
-      })
+      messages: [{ role: 'user', content: content }]
     })
       .then(function (r) {
         if (r.status === 401) throw { kind: 'auth' };
         if (r.status === 429) throw { kind: 'rate' };
+        // 403 vient du proxy : ni la faute du réseau, ni de la photo.
+        // Réessayer n'y changerait rien, autant dire quoi faire.
+        if (r.status === 403) {
+          return r.json().then(function (e) {
+            throw { kind: 'invite', message: e && e.error && e.error.message };
+          }, function () { throw { kind: 'invite' }; });
+        }
         if (!r.ok) {
           // Lire le message d'erreur de l'API : un 400 (requête invalide)
           // n'est pas un problème de connexion et mérite son vrai message.
@@ -5072,6 +5144,10 @@
           retry = false;
         } else if (kind === 'rate') {
           msg = 'Trop de demandes d’un coup — attends un instant, puis réessaie.';
+        } else if (kind === 'invite') {
+          msg = err.message ||
+            'Ce compte n’a pas accès à la lecture IA partagée. Ajoute ta propre clé avec le bouton ✨.';
+          retry = false;
         } else if (kind === 'refusal' || kind === 'parse') {
           msg = 'L’analyse n’a pas fonctionné sur cette image — réessaie avec une photo plus proche du tableau.';
         } else if (kind === 'api') {
@@ -5359,7 +5435,7 @@
   }
 
   function mpSendChat(message) {
-    if (!lsGet('gn_api_key')) {
+    if (!aiAvailable()) {
       toast('⚠️ La discussion demande la lecture IA — active-la avec le bouton ✨ de l’onglet Calculer.', { type: 'error', duration: 6000 });
       return;
     }
@@ -5404,23 +5480,14 @@
         aiMemoryPrompt()
     });
 
-    fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': lsGet('gn_api_key') || '',
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
+    aiFetch({
+      model: 'claude-opus-5',
+      max_tokens: 2048,
+      output_config: {
+        effort: 'low',
+        format: { type: 'json_schema', schema: MP_DISCUSS_SCHEMA }
       },
-      body: JSON.stringify({
-        model: 'claude-opus-5',
-        max_tokens: 2048,
-        output_config: {
-          effort: 'low',
-          format: { type: 'json_schema', schema: MP_DISCUSS_SCHEMA }
-        },
-        messages: [{ role: 'user', content: content }]
-      })
+      messages: [{ role: 'user', content: content }]
     })
       .then(function (r) {
         if (r.status === 401) throw { msg: 'Ta clé API a été refusée — vérifie-la avec le bouton 🔑.' };
@@ -5527,35 +5594,26 @@
     var served = mpFoods.map(function (f) {
       return '« ' + f.name + ' » (' + round1(f.grams) + ' g servis)';
     }).join('; ');
-    fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': lsGet('gn_api_key') || '',
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
+    aiFetch({
+      model: 'claude-opus-5',
+      max_tokens: 2048,
+      output_config: {
+        effort: 'low',
+        format: { type: 'json_schema', schema: LEFTOVER_SCHEMA }
       },
-      body: JSON.stringify({
-        model: 'claude-opus-5',
-        max_tokens: 2048,
-        output_config: {
-          effort: 'low',
-          format: { type: 'json_schema', schema: LEFTOVER_SCHEMA }
-        },
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } },
-            {
-              type: 'text',
-              text: 'Voici la photo des RESTES d’un repas terminé. Le repas servi contenait : ' + served +
-                '. Pour CHAQUE aliment de cette liste, estime le poids RESTANT en grammes visible sur la ' +
-                'photo — 0 si entièrement mangé, le poids servi si non touché. Reprends exactement les noms ' +
-                'fournis et n’ajoute aucun autre aliment.'
-            }
-          ]
-        }]
-      })
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } },
+          {
+            type: 'text',
+            text: 'Voici la photo des RESTES d’un repas terminé. Le repas servi contenait : ' + served +
+              '. Pour CHAQUE aliment de cette liste, estime le poids RESTANT en grammes visible sur la ' +
+              'photo — 0 si entièrement mangé, le poids servi si non touché. Reprends exactement les noms ' +
+              'fournis et n’ajoute aucun autre aliment.'
+          }
+        ]
+      }]
     })
       .then(function (r) {
         if (r.status === 401) throw { msg: 'Ta clé API a été refusée — vérifie-la avec le bouton 🔑.' };
@@ -5661,7 +5719,7 @@
     var file = this.files && this.files[0];
     this.value = '';
     if (!file || !photoMeal) return;
-    if (!lsGet('gn_api_key')) {
+    if (!aiAvailable()) {
       toast('⚠️ La comparaison des deux photos demande la lecture IA — active-la avec le bouton ✨ de l’onglet Calculer.', { type: 'error', duration: 6000 });
       return;
     }
@@ -5684,37 +5742,28 @@
     var served = photoMeal.foods.map(function (f) {
       return '« ' + f.name + ' » (' + round1(f.grams) + ' g servis)';
     }).join('; ');
-    fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': lsGet('gn_api_key') || '',
-        'anthropic-version': '2023-06-01',
-        'anthropic-dangerous-direct-browser-access': 'true'
+    aiFetch({
+      model: 'claude-opus-5',
+      max_tokens: 2048,
+      output_config: {
+        effort: 'low',
+        format: { type: 'json_schema', schema: LEFTOVER_SCHEMA }
       },
-      body: JSON.stringify({
-        model: 'claude-opus-5',
-        max_tokens: 2048,
-        output_config: {
-          effort: 'low',
-          format: { type: 'json_schema', schema: LEFTOVER_SCHEMA }
-        },
-        messages: [{
-          role: 'user',
-          content: [
-            { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: photoMeal.img } },
-            { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: afterB64 } },
-            {
-              type: 'text',
-              text: 'La PREMIÈRE image montre un repas au moment d’être SERVI. Il contenait : ' + served +
-                '. La SECONDE image montre le MÊME repas plus tard — ce sont les restes. Pour CHAQUE ' +
-                'aliment de la liste, estime le poids RESTANT en grammes visible sur la seconde image — ' +
-                '0 si entièrement mangé, le poids servi si non touché. Reprends exactement les noms ' +
-                'fournis et n’ajoute aucun autre aliment.'
-            }
-          ]
-        }]
-      })
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: photoMeal.img } },
+          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: afterB64 } },
+          {
+            type: 'text',
+            text: 'La PREMIÈRE image montre un repas au moment d’être SERVI. Il contenait : ' + served +
+              '. La SECONDE image montre le MÊME repas plus tard — ce sont les restes. Pour CHAQUE ' +
+              'aliment de la liste, estime le poids RESTANT en grammes visible sur la seconde image — ' +
+              '0 si entièrement mangé, le poids servi si non touché. Reprends exactement les noms ' +
+              'fournis et n’ajoute aucun autre aliment.'
+          }
+        ]
+      }]
     })
       .then(function (r) {
         if (r.status === 401) throw { msg: 'Ta clé API a été refusée — vérifie-la avec le bouton 🔑.' };
@@ -6844,8 +6893,10 @@
   var sbSession = null;
   try { sbSession = JSON.parse(lsGet('gn_sb_session') || 'null'); } catch (e) { sbSession = null; }
 
-  function sbConfigured() { return !!(SB.url && SB.key); }
+  // SB est initialisé plus bas dans le script : ne pas supposer qu'il existe
+  function sbConfigured() { return !!(SB && SB.url && SB.key); }
   function sbSignedIn() { return !!(sbSession && sbSession.access_token && sbSession.user_id); }
+
 
   function saveSbSession() {
     if (sbSession) lsSet('gn_sb_session', JSON.stringify(sbSession));

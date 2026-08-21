@@ -51,6 +51,90 @@ accès à rien, c'est RLS qui décide. La clé `service_role` contourne RLS —
 si elle se retrouve dans le navigateur, n'importe qui peut lire les
 données de tous les comptes. Ne la copie nulle part.
 
+## 5. (Facultatif) Offrir la lecture IA à des invités
+
+Par défaut, chaque personne doit fournir **sa propre clé API Anthropic**
+pour l'analyse photo — compte développeur, carte de crédit, clé à copier.
+Personne ne le fera à part toi.
+
+Le proxy déplace la clé sur le serveur : les invités n'ont plus rien à
+configurer. En échange, **c'est toi qui paies leurs analyses** (1 à 3 ¢
+chacune), d'où la liste d'invités et les plafonds.
+
+```sh
+# 1. Les tables : liste d'invités, consommation, plafonds
+#    (éditeur SQL → colle ai-proxy.sql → Run)
+
+# 2. Ta clé, côté serveur — elle ne sort plus jamais de Supabase
+supabase secrets set ANTHROPIC_API_KEY=sk-ant-…
+
+# 3. La fonction
+supabase functions deploy analyze
+```
+
+### Inviter quelqu'un
+
+La personne doit d'abord **s'être connectée une fois** à l'app : c'est ce
+qui crée son compte. Ensuite, dans l'éditeur SQL :
+
+```sql
+insert into public.ai_allowlist (user_id, note, monthly_cap)
+select id, 'Grand-maman', 200 from auth.users
+ where email = 'exemple@courriel.com';
+```
+
+Retirer quelqu'un sans perdre son historique :
+
+```sql
+update public.ai_allowlist set active = false
+ where user_id = (select id from auth.users where email = '…');
+```
+
+Voir la consommation du mois :
+
+```sql
+select u.email, a.note, x.calls, a.monthly_cap
+  from public.ai_usage x
+  join auth.users u on u.id = x.user_id
+  left join public.ai_allowlist a on a.user_id = x.user_id
+ where x.month = to_char(now(), 'YYYY-MM')
+ order by x.calls desc;
+```
+
+Il n'y a pas d'écran d'administration dans l'app, et c'est voulu : la
+liste d'invités n'est **jamais** lisible ni modifiable depuis le
+navigateur. Les deux tables ont RLS active et aucune politique — le rôle
+`authenticated` n'y a strictement aucun accès. Seule la fonction Edge, qui
+détient la clé `service_role`, les touche.
+
+### Ce que la fonction refuse
+
+Un invité ne doit pas pouvoir se servir de ta clé pour autre chose que
+l'app. La requête est validée contre une **liste blanche stricte** — tout
+ce qui n'est pas explicitement prévu est refusé :
+
+| Refusé | Pourquoi |
+|---|---|
+| Un autre modèle que `claude-opus-5` | un modèle plus cher, ou que l'app ne sait pas lire |
+| `max_tokens` au-delà de 4096 | borne le coût d'un appel isolé |
+| `effort` `xhigh` ou `max` | nettement plus cher |
+| `tools`, `system`, `thinking`, `task_budget` | l'app n'en envoie pas; un invité non plus |
+| Images par URL | ferait télécharger n'importe quoi par le serveur d'Anthropic |
+| Documents PDF, blocs inconnus | hors du besoin de l'app |
+| Plus de 4 images, plus de 8 messages, plus de 12 Mo | bornes de taille |
+
+Ces règles sont dans `functions/analyze/guard.ts`, à part du reste pour
+être testables seules : `node --experimental-strip-types` suffit à les
+rejouer, 22 cas y passent.
+
+### Côté app
+
+Rien à régler. Dès qu'une personne est connectée, l'app tente le proxy;
+un refus la fait retomber sur sa clé personnelle si elle en a une, sans
+message inutile. Si elle n'en a pas, c'est le message du proxy qui
+s'affiche — « pas sur la liste des invités », ou « plafond mensuel
+atteint » — plutôt qu'une erreur de clé incompréhensible.
+
 ## Vérifier que l'isolation tient
 
 Le schéma a été testé sur PostgreSQL 16 avec deux comptes :
