@@ -1939,13 +1939,13 @@
           </svg>
         </div>
         <div>
-          <h2>Scanner un produit</h2>
-          <p class="feat-sub">Code-barres ou étiquette</p>
+          <h2>Évaluer un repas</h2>
+          <p class="feat-sub">Assiette, étiquette ou code-barres</p>
         </div>
       </div>
       <button class="btn" id="home-scan" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-        Scanner / photographier
+        Évaluer un nouveau repas
       </button>
     </div>
 
@@ -1978,8 +1978,8 @@
     <!-- Épuré : l'action principale d'abord, les explications longues
          vivent dans les accordéons ou les écrans contextuels -->
     <div class="card">
-      <button class="btn" id="scan-open-btn" type="button">📷 Scanner / photographier</button>
-      <p class="hint" style="margin:10px 0 0; text-align:center;">Code-barres, étiquette ou assiette — l'app reconnaît toute seule.</p>
+      <button class="btn" id="scan-open-btn" type="button">📸 Évaluer un nouveau repas</button>
+      <p class="hint" style="margin:10px 0 0; text-align:center;">Photographie l'assiette, l'étiquette ou le code-barres — l'app calcule les glucides.</p>
       <input type="file" id="label-photo-input" accept="image/*" capture="environment" style="display:none;">
       <div id="label-analysis" role="status" aria-live="polite"></div>
       <button class="btn btn-secondary" id="leftover-btn" type="button" style="display:none; margin-top:10px;">🍽️ Photographie les restes — voir ce qui a été consommé</button>
@@ -2358,7 +2358,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.22.0</span>
+  <br><span id="app-version">Glucides Nets v2.23.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -7875,7 +7875,7 @@
       btn.classList.add('gn-pulse');
       setTimeout(function () { btn.classList.remove('gn-pulse'); }, 4000);
       btn.scrollIntoView({ block: 'center' });
-      toast('📷 Touche « Scanner / photographier » pour analyser ton repas');
+      toast('📸 Touche « Évaluer un nouveau repas » pour photographier ton assiette');
       return;
     }
     if (action === 'discuss') {
