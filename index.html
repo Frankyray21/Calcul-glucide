@@ -1693,6 +1693,20 @@
     stroke-width: 4;
     vector-effect: non-scaling-stroke;
   }
+  .mp-conf-legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px 14px;
+    margin: 0 0 10px;
+    font-size: 0.78rem;
+    color: var(--muted);
+    font-weight: 600;
+  }
+  .mp-conf-legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .mp-conf-legend i {
+    width: 12px; height: 12px; border-radius: 50%;
+    display: inline-block; flex: none;
+  }
   .mp-crumb-line {
     fill: none;
     stroke: #fff;
@@ -2384,7 +2398,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.29.0</span>
+  <br><span id="app-version">Glucides Nets v2.30.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -2461,6 +2475,7 @@
       <div class="card">
         <p>Un seul bouton, trois cas : un <strong>code-barres</strong> est cherché sur Open Food Facts; une <strong>étiquette nutritionnelle</strong> est lue directement sur ton appareil (rien n'est envoyé); une <strong>assiette</strong> est estimée par l'IA — chaque aliment reçoit son contour, son poids et ses glucides, à vérifier avant d'ajouter.</p>
         <p>L'estimation visuelle reste approximative : en cas de doute, pèse. Le poids est la valeur à vérifier en premier.</p>
+        <p>Chaque aliment est <strong>encadré selon la confiance</strong> : 🟢 vert fiable, 🟡 jaune à vérifier, 🔴 rouge incertain (pèse-le). Touche le numéro d'un encadré pour voir son détail sous la photo.</p>
         <p>La lecture IA demande soit une clé API personnelle (bouton ✨), soit un accès partagé si le propriétaire de l'app t'a invité.</p>
       </div>
     </details>
@@ -2573,6 +2588,11 @@
     </div>
     <div class="mp-photos" id="mp-photos" style="display:none;"></div>
     <p class="hint" style="margin:8px 0 8px;">Estimations de l'IA d'après ta photo — <strong>vérifie et ajuste</strong> chaque aliment (le poids surtout). En cas de doute, pèse : l'estimation visuelle reste approximative.</p>
+    <div class="mp-conf-legend" id="mp-conf-legend" style="display:none;">
+      <span><i style="background:#22C55E"></i>fiable</span>
+      <span><i style="background:#F59E0B"></i>à vérifier</span>
+      <span><i style="background:#EF4444"></i>incertain — pèse</span>
+    </div>
     <p class="mp-scale" id="mp-scale" style="display:none;"></p>
     <div id="mp-list"></div>
     <!-- Discuter du résultat : préciser (« c'est du couscous », « la portion
@@ -4986,6 +5006,10 @@
       carbsMin: { type: ['number', 'null'], description: 'Bas de la fourchette réaliste de glucides pour cette portion, en grammes' },
       carbsMax: { type: ['number', 'null'], description: 'Haut de la fourchette réaliste de glucides pour cette portion, en grammes' },
       fiber: { type: 'number', description: 'Fibres estimées pour cette portion, en grammes' },
+      confidence: {
+        anyOf: [ { type: 'string', enum: ['bonne', 'moyenne', 'faible'] }, { type: 'null' } ],
+        description: 'Ta confiance dans l’estimation des glucides de CET aliment précis : bonne (aliment net, standard, portion claire), moyenne, faible (aliment composé, caché, portion très incertaine). null si tu ne sais pas.'
+      },
       x: { type: ['number', 'null'], description: 'Position approximative du CENTRE de cet aliment sur la première photo : % de la largeur, 0-100. null si impossible à situer' },
       y: { type: ['number', 'null'], description: 'Position approximative du CENTRE de cet aliment sur la première photo : % de la hauteur, 0-100. null si impossible à situer' },
       w: { type: ['number', 'null'], description: 'Largeur du rectangle qui entoure cet aliment (TOUS ses morceaux compris) sur la première photo : % de la largeur de l’image, 0-100. null si impossible à cadrer' },
@@ -5006,7 +5030,7 @@
         }
       }
     },
-    required: ['name', 'grams', 'measure', 'carbs', 'carbsMin', 'carbsMax', 'fiber', 'x', 'y', 'w', 'h', 'pieces'],
+    required: ['name', 'grams', 'measure', 'carbs', 'carbsMin', 'carbsMax', 'fiber', 'confidence', 'x', 'y', 'w', 'h', 'pieces'],
     additionalProperties: false
   };
 
@@ -5077,6 +5101,8 @@
     '« 6 fraises »); sinon la mesure maison équivalente quand elle est parlante (« ¾ tasse », ' +
     '« 2 c. à soupe »; tasse canadienne de 250 ml); sinon null. Ajoute enfin les glucides ' +
     'totaux et fibres estimés pour cette portion (bases de référence usuelles type USDA/FCÉN), ' +
+    'et dans confidence ta confiance PAR ALIMENT (bonne / moyenne / faible) dans l’estimation de ses ' +
+    'glucides — un contour vert/jaune/rouge la montrera à l’utilisateur pour qu’il sache lequel peser. ' +
     'et dans carbsMin/carbsMax une FOURCHETTE réaliste des glucides (l’intervalle où tu es ' +
     'raisonnablement sûr que la vraie valeur se trouve — étroit si l’aliment est standard, ' +
     'large si le plat est composé ou la portion incertaine). ' +
@@ -5521,6 +5547,7 @@
       maxPerGram: grams > 0 && cMax != null ? cMax / grams : null,
       measure: parseMeasure(f.measure),
       origGrams: grams,
+      confidence: (['bonne', 'moyenne', 'faible'].indexOf(f.confidence) !== -1) ? f.confidence : null,
       x: f.x == null ? null : Math.min(96, Math.max(4, num(f.x))),
       y: f.y == null ? null : Math.min(90, Math.max(10, num(f.y))),
       w: f.w == null ? null : Math.min(100, Math.max(5, num(f.w))),
@@ -5546,6 +5573,7 @@
   }
 
   function openMealPhotoModal(foods, scaleRef, confidence, question, crumbs) {
+    mpMealConfidence = (['bonne', 'moyenne', 'faible'].indexOf(confidence) !== -1) ? confidence : null;
     mpCrumbs = crumbs && crumbs.x != null && crumbs.y != null
       ? { x: Math.min(100, Math.max(0, num(crumbs.x))), y: Math.min(100, Math.max(0, num(crumbs.y))) }
       : null;
@@ -6266,6 +6294,30 @@
      sinon on croit qu'elles ont été oubliées. Sans découpe par morceau,
      un seul contour entoure l'aliment. Mis à jour en direct quand on
      corrige un poids ou des glucides. */
+  // Couleurs de confiance : vert = fiable, ambre = à vérifier, rouge =
+  // incertain (pèse-le). Choisies lisibles sur photo et hors thème.
+  var MP_CONF_COLOR = { bonne: '#22C55E', moyenne: '#F59E0B', faible: '#EF4444' };
+
+  /* Confiance dans l'estimation des glucides d'un aliment, du plus fiable
+     au plus incertain. On préfère le jugement de l'IA (f.confidence);
+     sinon on le déduit de la largeur de sa fourchette rapportée à
+     l'estimation centrale — une fourchette large = grande incertitude;
+     à défaut, la confiance globale de la photo (mpMealConfidence). */
+  function mpConfidence(f) {
+    if (f.confidence) return f.confidence;
+    var net = mpNet(f);
+    var r = mpRange(f);
+    if (r && net > 0) {
+      var rel = (r[1] - r[0]) / net;
+      if (rel <= 0.35) return 'bonne';
+      if (rel <= 0.9) return 'moyenne';
+      return 'faible';
+    }
+    return mpMealConfidence || 'moyenne';
+  }
+  function mpConfColor(f) { return MP_CONF_COLOR[mpConfidence(f)] || MP_CONF_COLOR.moyenne; }
+
+  var mpMealConfidence = null; // confiance globale de la dernière analyse
   var mpOutlines = [];   // contours tracés, en % — obstacles au placement
 
   /* Tap sur un numéro de la photo : montrer l'aliment sans le cacher —
@@ -6301,12 +6353,13 @@
       var pieces = f.pieces && f.pieces.length >= 2 ? f.pieces : null;
       var n = pieces ? pieces.length : mpPieceCount(f);
 
+      var col = mpConfColor(f);
       if (pieces) {
         var sx = 0, sy = 0;
         pieces.forEach(function (pc) { sx += pc.x; sy += pc.y; });
         ax = sx / pieces.length; ay = sy / pieces.length;
         pieces.forEach(function (pc, i) {
-          outline(pc.x, pc.y, pc.w, pc.h);
+          outline(pc.x, pc.y, pc.w, pc.h, col);
           var pip = document.createElement('div');
           pip.className = 'mp-pip';
           var no = document.createElement('span');
@@ -6324,7 +6377,7 @@
           cards.appendChild(pip);
         });
       } else if (f.x != null && f.y != null) {
-        outline(f.x, f.y, f.w != null ? f.w : 24, f.h != null ? f.h : 24);
+        outline(f.x, f.y, f.w != null ? f.w : 24, f.h != null ? f.h : 24, col);
       }
 
       // Numéro cliquable au coin du contour : il ne cache pas l'aliment
@@ -6334,14 +6387,16 @@
         var onum = document.createElement('div');
         onum.className = 'mp-onum';
         onum.textContent = numero;
+        onum.style.background = col;
         onum.dataset.bx = ax;
         onum.dataset.by = ay;
         onum.dataset.bh = ah;
         var label = String(f.name || 'Aliment').replace(/\s*\(.*$/, '');
         var value = fr1(net);
+        var confLabel = { bonne: 'confiance bonne', moyenne: 'confiance moyenne', faible: 'confiance faible — à peser' }[mpConfidence(f)] || '';
         onum.setAttribute('role', 'button');
         onum.setAttribute('tabindex', '0');
-        onum.setAttribute('aria-label', label + ' : environ ' + value + ' g nets. Toucher pour ajuster.');
+        onum.setAttribute('aria-label', label + ' : environ ' + value + ' g nets, ' + confLabel + '. Toucher pour ajuster.');
         var reveal = function () { mpRevealFood(fi, label, value); };
         onum.addEventListener('click', reveal);
         onum.addEventListener('keydown', function (e) {
@@ -6363,9 +6418,11 @@
 
     tot.style.display = mpFoods.length > 0 ? 'block' : 'none';
     tot.innerHTML = '≈ <b>' + fr1(total) + ' g</b> de glucides à entrer dans la pompe';
+    var leg = $('mp-conf-legend');
+    if (leg) leg.style.display = mpFoods.length > 0 ? 'flex' : 'none';
     layoutMpCards();
 
-    function outline(x, y, w, h) {
+    function outline(x, y, w, h, col) {
       var attrs = {
         x: Math.max(0, Math.min(100 - w, x - w / 2)),
         y: Math.max(0, Math.min(100 - h, y - h / 2)),
@@ -6374,7 +6431,11 @@
       mpOutlines.push({ x: attrs.x, y: attrs.y, w: w, h: h });
       attrs['class'] = 'mp-shape-halo';
       shapes.appendChild(svgEl('rect', attrs));
+      // Couleur de confiance posée en inline : elle prime sur le cyan du CSS
       attrs['class'] = 'mp-shape';
+      attrs.stroke = col;
+      attrs.fill = col;
+      attrs['fill-opacity'] = '0.12';
       shapes.appendChild(svgEl('rect', attrs));
     }
   }
