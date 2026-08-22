@@ -1979,7 +1979,6 @@
          vivent dans les accordéons ou les écrans contextuels -->
     <div class="card">
       <button class="btn" id="scan-open-btn" type="button">📸 Évaluer un nouveau repas</button>
-      <p class="hint" style="margin:10px 0 0; text-align:center;">Photographie l'assiette, l'étiquette ou le code-barres — l'app calcule les glucides.</p>
       <input type="file" id="label-photo-input" accept="image/*" capture="environment" style="display:none;">
       <div id="label-analysis" role="status" aria-live="polite"></div>
       <button class="btn btn-secondary" id="leftover-btn" type="button" style="display:none; margin-top:10px;">🍽️ Photographie les restes — voir ce qui a été consommé</button>
@@ -1991,7 +1990,6 @@
       <h2>🔍 Chercher un aliment</h2>
       <input type="search" id="db-search" placeholder="Chercher… (ex. : riz, pomme, pain)" autocomplete="off">
       <div class="search-results" id="db-results"></div>
-      <p class="hint" style="margin-top:8px;">Valeurs par 100 g (USDA/FCÉN) — pour un produit emballé, son étiquette a priorité.</p>
     </div>
 
     <details class="help" id="manual-details">
@@ -2044,8 +2042,7 @@
     </details>
 
     <div class="card">
-      <h2 style="margin-bottom:0;">🍽️ Repas actuel</h2>
-      <p class="hint" style="margin:0 0 10px;">Calcul glucides</p>
+      <h2>🍽️ Repas actuel</h2>
       <div class="sec-label" id="meal-sec-label" style="display:none;">Aliments</div>
       <div id="meal-list"><p class="empty"><span class="illus" aria-hidden="true">🍽️</span>Ton repas est vide. Ajoute ton premier aliment ci-dessus!</p></div>
       <div class="meal-duo" id="meal-duo" style="display:none;">
@@ -2071,17 +2068,6 @@
       </div>
       <button class="btn btn-secondary" id="home-share" type="button" style="margin-top:10px;">📤 Partager le repas</button>
     </div>
-
-    <details class="help">
-      <summary>ℹ️ Comment sont calculés les glucides nets?</summary>
-      <div class="card">
-        <p><strong>Glucides nets = Glucides totaux − Fibres − (Polyols ÷ 2)</strong></p>
-        <p>Au Canada et aux États-Unis, les fibres sont incluses dans les glucides totaux sur l'étiquette nutritionnelle. Comme les fibres ne font pas monter la glycémie, on les soustrait.</p>
-        <p>Les polyols (sucres-alcools : maltitol, sorbitol, xylitol…) sont absorbés à environ 50 %, on soustrait donc la moitié. Exception : l'érythritol n'est pas absorbé du tout — choisis « Érythritol » pour le soustraire à 100 %. Ces règles correspondent aux recommandations usuelles de Diabète Canada et de l'American Diabetes Association pour le calcul des glucides à la pompe.</p>
-        <p>Certaines équipes de soins recommandent de ne soustraire les fibres que lorsqu'elles dépassent 5 g par portion — suis la méthode enseignée par la tienne.</p>
-        <p>Entre le total affiché en bas dans ta pompe pour le calcul du bolus.</p>
-      </div>
-    </details>
 
   </section>
 
@@ -2346,6 +2332,12 @@
     </details>
 
     <div class="card">
+      <h2>❓ Aide</h2>
+      <p class="hint" style="margin:0 0 10px;">Le tour de bienvenue et les réponses aux questions courantes.</p>
+      <button class="btn btn-secondary" id="help-open-plus" type="button">Ouvrir l'aide et la FAQ</button>
+    </div>
+
+    <div class="card">
       <h2>ℹ️ À propos</h2>
       <p class="hint">Glucides Nets est une <strong>aide au calcul des glucides seulement</strong>. Elle ne recommande jamais de dose d'insuline, ne calcule pas de bolus et ne remplace pas ton équipe de soins en diabète. Toutes tes données restent sur cet appareil — sauvegarde et transfert dans l'onglet Journal.</p>
     </div>
@@ -2358,7 +2350,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.23.0</span>
+  <br><span id="app-version">Glucides Nets v2.24.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -2407,6 +2399,80 @@
 <!-- Modal : fiche produit / quantité consommée (pleine hauteur).
      Structure inspirée de la maquette : le résultat calculé en vedette
      tout en haut, la quantité dessous, les références en carte discrète. -->
+<!-- Aide : le tour de bienvenue et la FAQ — les explications retirées des
+     écrans vivent ici, à un tap du bouton ⓘ -->
+<div class="modal-overlay full" id="help-modal" role="dialog" aria-modal="true" aria-labelledby="help-title">
+  <div class="modal modal--full">
+    <div class="fiche-topbar">
+      <button class="circle-btn" id="help-back" type="button" aria-label="Fermer l'aide">‹</button>
+      <h3 id="help-title" style="margin:0;">❓ Aide</h3>
+      <span style="width:48px;" aria-hidden="true"></span>
+    </div>
+
+    <button class="btn btn-secondary" id="help-tour" type="button" style="margin-bottom:14px;">🔁 Revoir le tour de bienvenue</button>
+
+    <details class="help">
+      <summary>🧮 Comment sont calculés les glucides nets?</summary>
+      <div class="card">
+        <p><strong>Glucides nets = Glucides totaux − Fibres − (Polyols ÷ 2)</strong></p>
+        <p>Au Canada et aux États-Unis, les fibres sont incluses dans les glucides totaux sur l'étiquette nutritionnelle. Comme les fibres ne font pas monter la glycémie, on les soustrait.</p>
+        <p>Les polyols (sucres-alcools : maltitol, sorbitol, xylitol…) sont absorbés à environ 50 %, on soustrait donc la moitié. Exception : l'érythritol n'est pas absorbé du tout — choisis « Érythritol » pour le soustraire à 100 %. Ces règles correspondent aux recommandations usuelles de Diabète Canada et de l'American Diabetes Association pour le calcul des glucides à la pompe.</p>
+        <p>Certaines équipes de soins recommandent de ne soustraire les fibres que lorsqu'elles dépassent 5 g par portion — suis la méthode enseignée par la tienne.</p>
+        <p>Entre le total affiché dans ta pompe pour le calcul du bolus.</p>
+      </div>
+    </details>
+
+    <details class="help">
+      <summary>📸 Comment marche l'évaluation par photo?</summary>
+      <div class="card">
+        <p>Un seul bouton, trois cas : un <strong>code-barres</strong> est cherché sur Open Food Facts; une <strong>étiquette nutritionnelle</strong> est lue directement sur ton appareil (rien n'est envoyé); une <strong>assiette</strong> est estimée par l'IA — chaque aliment reçoit son contour, son poids et ses glucides, à vérifier avant d'ajouter.</p>
+        <p>L'estimation visuelle reste approximative : en cas de doute, pèse. Le poids est la valeur à vérifier en premier.</p>
+        <p>La lecture IA demande soit une clé API personnelle (bouton ✨), soit un accès partagé si le propriétaire de l'app t'a invité.</p>
+      </div>
+    </details>
+
+    <details class="help">
+      <summary>🔍 D'où viennent les valeurs des aliments?</summary>
+      <div class="card">
+        <p>La recherche puise dans une base de plus de 250 aliments courants, valeurs par 100 g de type USDA / Fichier canadien sur les éléments nutritifs.</p>
+        <p>Pour un produit emballé, <strong>l'étiquette du produit réel a toujours priorité</strong> — les bases donnent des moyennes.</p>
+      </div>
+    </details>
+
+    <details class="help">
+      <summary>📅 Le repas et le journal</summary>
+      <div class="card">
+        <p>Chaque repas entre au journal <strong>dès son premier aliment</strong> et se met à jour tout seul — rien à confirmer.</p>
+        <p>« ✅ Terminer le repas » ferme le repas pour que le prochain reparte à zéro. « Vider » jette le repas, journal compris (annulable). Un repas laissé plus de 3 h se termine tout seul — il reste au journal.</p>
+        <p>Touche un repas du journal pour sa fiche complète, ou ↻ pour le recharger.</p>
+      </div>
+    </details>
+
+    <details class="help">
+      <summary>💬 Discuter d'un résultat et leçons de l'IA</summary>
+      <div class="card">
+        <p>Sous chaque analyse photo, « 💬 Discuter du résultat » permet de <strong>préciser</strong> (« c'est du couscous, pas du riz ») — l'estimation se corrige aussitôt — ou de <strong>comprendre</strong> (« pourquoi ce total? »).</p>
+        <p>Chaque correction faite avant d'ajouter le repas devient une <strong>leçon</strong> que l'IA relit à toutes les analyses suivantes. Les leçons se consultent, s'ajoutent et s'oublient dans l'onglet Plus.</p>
+      </div>
+    </details>
+
+    <details class="help">
+      <summary>☁️ Mes données et la synchronisation</summary>
+      <div class="card">
+        <p>Par défaut, <strong>tout reste sur cet appareil</strong> — rien n'est envoyé nulle part. L'export (onglet Plus) crée un fichier de sauvegarde complet.</p>
+        <p>En option, un compte (connexion par lien courriel, sans mot de passe) synchronise journal, recettes, favoris, leçons et photos entre tes appareils, via ton propre projet Supabase. Un bouton supprime définitivement le compte et tout son contenu.</p>
+      </div>
+    </details>
+
+    <details class="help">
+      <summary>⚠️ Ce que l'app ne fait pas</summary>
+      <div class="card">
+        <p>Elle ne recommande <strong>jamais de dose d'insuline</strong> et ne calcule pas de bolus. C'est une aide au calcul des glucides seulement — vérifie les valeurs entrées dans ta pompe et suis les recommandations de ton équipe de soins en diabète.</p>
+      </div>
+    </details>
+  </div>
+</div>
+
 <div class="modal-overlay full" id="qty-modal" role="dialog" aria-modal="true" aria-labelledby="qty-title">
   <div class="modal modal--full">
     <div class="fiche-topbar">
@@ -3403,7 +3469,19 @@
     switchTab('meal');
     startScanner();
   });
-  $('info-btn').addEventListener('click', function () { switchTab('plus'); });
+  $('info-btn').addEventListener('click', function () { openModal('help-modal', '#help-back'); });
+  trapModal('help-modal', function () { closeModal('help-modal'); });
+  $('help-back').addEventListener('click', function () { closeModal('help-modal'); });
+  $('help-modal').addEventListener('click', function (e) {
+    if (e.target === this) closeModal('help-modal');
+  });
+  $('help-open-plus').addEventListener('click', function () { openModal('help-modal', '#help-back'); });
+  $('help-tour').addEventListener('click', function () {
+    // Revoir le tour : on efface le drapeau d'accueil et on repart —
+    // l'app rejoue exactement la première ouverture
+    try { localStorage.removeItem('gn_onboarded'); } catch (e) {}
+    location.reload();
+  });
 
   /* ── Gestion des profils (onglet Plus) ── */
   function renderProfiles() {
