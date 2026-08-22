@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Glucides Nets</string>
+    <string name="widget_label">Glucides Nets — raccourcis</string>
+    <!-- Lien vers le site : permet le plein écran quand assetlinks.json
+         est aussi publié à la racine de frankyray21.github.io -->
+    <string name="asset_statements">
+        [{ \"relation\": [\"delegate_permission/common.handle_all_urls\"],
+           \"target\": { \"namespace\": \"web\", \"site\": \"https://frankyray21.github.io\" } }]
+    </string>
+</resources>

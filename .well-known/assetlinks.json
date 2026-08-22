@@ -1,0 +1,10 @@
+[{
+  "relation": ["delegate_permission/common.handle_all_urls"],
+  "target": {
+    "namespace": "android_app",
+    "package_name": "com.frankyray.glucidesnets",
+    "sha256_cert_fingerprints": [
+      "30:6F:CD:04:2E:1B:4E:98:E0:26:B5:C6:9D:E3:75:04:71:37:09:69:FE:EA:06:94:28:4C:AC:6C:55:07:2C:4D"
+    ]
+  }
+}]
