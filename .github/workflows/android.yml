@@ -1,0 +1,52 @@
+name: Construire l'APK Android
+
+# L'APK ne se construit pas sur l'appareil du développeur : GitHub le
+# fabrique et l'attache à la version « apk-latest », toujours à jour.
+on:
+  push:
+    branches: [main]
+    paths: ['android/**', '.github/workflows/android.yml']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.9'
+
+      - name: Construire l'APK signé
+        run: gradle -p android assembleRelease
+
+      - name: Renommer
+        run: cp android/app/build/outputs/apk/release/app-release.apk GlucidesNets.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GlucidesNets-apk
+          path: GlucidesNets.apk
+
+      # Une « release » fixe : le téléphone télécharge toujours la même
+      # adresse, qui pointe vers le dernier APK construit.
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: apk-latest
+          name: "📱 APK Android (dernière version)"
+          body: |
+            APK signé, construit automatiquement depuis `main`.
+
+            **Installation** : télécharge `GlucidesNets.apk` sur ton téléphone,
+            ouvre-le, accepte « installer des applications inconnues » pour ton
+            navigateur si demandé. Les mises à jour s'installent par-dessus.
+          files: GlucidesNets.apk

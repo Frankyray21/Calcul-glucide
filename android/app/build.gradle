@@ -1,0 +1,37 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'com.frankyray.glucidesnets'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId "com.frankyray.glucidesnets"
+        minSdk 21
+        targetSdk 35
+        versionCode 1
+        versionName "2.21.0"
+    }
+
+    signingConfigs {
+        release {
+            // Clé committée volontairement : app personnelle hors Play Store.
+            // Quiconque a le dépôt peut signer une « mise à jour » — accepté
+            // tant que la distribution passe par ce même dépôt.
+            storeFile file("../keystore/glucides-nets.keystore")
+            storePassword "glucides-nets-2026"
+            keyAlias "glucides"
+            keyPassword "glucides-nets-2026"
+        }
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+            signingConfig signingConfigs.release
+        }
+    }
+}
+
+dependencies {
+    implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.5.0'
+}

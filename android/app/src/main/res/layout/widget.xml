@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal"
+    android:background="@drawable/widget_bg"
+    android:padding="8dp"
+    android:gravity="center">
+
+    <TextView android:id="@+id/btn_photo"
+        android:layout_width="0dp" android:layout_height="match_parent"
+        android:layout_weight="1" android:layout_marginEnd="6dp"
+        android:background="@drawable/widget_btn"
+        android:gravity="center" android:textColor="#EAF2FF" android:textSize="13sp"
+        android:text="📷\nPhoto" />
+
+    <TextView android:id="@+id/btn_calc"
+        android:layout_width="0dp" android:layout_height="match_parent"
+        android:layout_weight="1" android:layout_marginEnd="6dp"
+        android:background="@drawable/widget_btn"
+        android:gravity="center" android:textColor="#EAF2FF" android:textSize="13sp"
+        android:text="➕\nRepas" />
+
+    <TextView android:id="@+id/btn_discuss"
+        android:layout_width="0dp" android:layout_height="match_parent"
+        android:layout_weight="1" android:layout_marginEnd="6dp"
+        android:background="@drawable/widget_btn"
+        android:gravity="center" android:textColor="#EAF2FF" android:textSize="13sp"
+        android:text="💬\nDiscuter" />
+
+    <TextView android:id="@+id/btn_journal"
+        android:layout_width="0dp" android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:background="@drawable/widget_btn"
+        android:gravity="center" android:textColor="#EAF2FF" android:textSize="13sp"
+        android:text="📅\nGlucides" />
+</LinearLayout>

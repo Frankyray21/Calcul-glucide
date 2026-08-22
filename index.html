@@ -884,6 +884,13 @@
     font-weight: 700;
   }
   .mp-scale--warn { background: var(--warm-soft); color: var(--warm-text); }
+  /* Bouton mis en évidence par un lancement dirigé (?action=photo) */
+  @keyframes gn-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(37, 99, 235, 0.7); }
+    50% { box-shadow: 0 0 0 12px rgba(37, 99, 235, 0); }
+  }
+  .gn-pulse { animation: gn-pulse 1.2s ease-out 3; }
+
   /* Leçons tirées des corrections, relues par l'IA à chaque analyse */
   .lesson {
     display: flex;
@@ -7720,7 +7727,7 @@
       refresh_token: p.get('refresh_token') || '',
       user_id: '', email: ''
     };
-    history.replaceState(null, '', location.pathname + location.search);
+    window.history.replaceState(null, '', location.pathname + location.search);
     saveSbSession();
     fetchMe().then(function (ok) {
       if (ok) { toast('✓ Connecté — synchronisation en cours'); syncNow(true); }
@@ -7799,6 +7806,51 @@
     if (!document.hidden) syncNow(true);
   });
   renderSync();
+
+  /* ══════════ Lancement dirigé (?action=…) ══════════
+     Le widget Android et les raccourcis d'icône ouvrent l'app directement
+     sur un geste : photographier, nouveau repas, discuter du dernier
+     repas analysé, journal. Le paramètre est retiré de l'adresse aussitôt
+     traité, sinon un rechargement rejouerait l'action. */
+  function handleLaunchAction() {
+    var m = location.search.match(/[?&]action=([a-z]+)/);
+    if (!m) return;
+    var action = m[1];
+    // window.history : la variable « history » de l'app (le journal des
+    // repas) masque l'objet du navigateur dans cette portée
+    window.history.replaceState(null, '', location.pathname);
+    if (action === 'journal') { switchTab('journal'); return; }
+    if (action === 'meal') { switchTab('meal'); return; }
+    if (action === 'photo') {
+      switchTab('meal');
+      // Ouvrir le sélecteur de fichier sans geste de l'utilisateur est
+      // bloqué par le navigateur : on met le bouton en évidence à la place.
+      var btn = $('scan-open-btn');
+      btn.classList.add('gn-pulse');
+      setTimeout(function () { btn.classList.remove('gn-pulse'); }, 4000);
+      btn.scrollIntoView({ block: 'center' });
+      toast('📷 Touche « Scanner / photographier » pour analyser ton repas');
+      return;
+    }
+    if (action === 'discuss') {
+      switchTab('meal');
+      // La photo et les portions du dernier repas analysé sont gardées
+      // 6 h : de quoi rouvrir l'analyse et sa discussion.
+      if (photoMeal && Date.now() - num(photoMeal.ts) <= PHOTO_MEAL_TTL) {
+        lastAnalyzedImages = [photoMeal.img];
+        openMealPhotoModal(photoMeal.foods.map(function (f) {
+          return { name: f.name, grams: f.grams, carbs: f.carbs, fiber: f.fiber,
+            measure: null, carbsMin: null, carbsMax: null,
+            x: null, y: null, w: null, h: null, pieces: null };
+        }), null, null, null, null);
+        $('mp-chat').open = true;
+        toast('💬 Ton dernier repas photographié — écris ta question dans « Discuter du résultat »');
+      } else {
+        toast('💬 Photographie d’abord un repas — la discussion s’ouvre sur son analyse');
+      }
+    }
+  }
+  handleLaunchAction();
 
   /* ══════════ PWA : service worker ══════════ */
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
