@@ -8,7 +8,7 @@
    affiché dans le pied de page d'index.html (#app-version). L'incrémenter
    à CHAQUE mise à jour publiée, sinon les utilisateurs installés gardent
    l'ancienne version en cache. */
-var CACHE = 'glucides-nets-v2.26.0';
+var CACHE = 'glucides-nets-v2.27.0';
 var ASSETS = [
   '.',
   'index.html',
@@ -66,8 +66,12 @@ self.addEventListener('fetch', function (event) {
     // Page : réseau d'abord, cache en secours (fonctionne hors ligne)
     event.respondWith(
       fetch(event.request).then(function (resp) {
-        var copy = resp.clone();
-        caches.open(CACHE).then(function (cache) { cache.put(event.request, copy); });
+        // Ne mettre en cache qu'une vraie page : un 404, un 5xx ou un portail
+        // captif ne doit pas remplacer la version hors-ligne qui marche.
+        if (resp && resp.ok) {
+          var copy = resp.clone();
+          caches.open(CACHE).then(function (cache) { cache.put(event.request, copy); });
+        }
         return resp;
       }).catch(function () {
         return caches.match(event.request).then(function (cached) {
@@ -83,8 +87,10 @@ self.addEventListener('fetch', function (event) {
     event.respondWith(
       caches.match(event.request).then(function (cached) {
         return cached || fetch(event.request).then(function (resp) {
-          var copy = resp.clone();
-          caches.open(CACHE).then(function (cache) { cache.put(event.request, copy); });
+          if (resp && resp.ok) {
+            var copy = resp.clone();
+            caches.open(CACHE).then(function (cache) { cache.put(event.request, copy); });
+          }
           return resp;
         });
       })

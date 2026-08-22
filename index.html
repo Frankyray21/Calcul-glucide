@@ -2351,7 +2351,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.26.0</span>
+  <br><span id="app-version">Glucides Nets v2.27.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -2664,9 +2664,9 @@
   <div class="inner">
     <div class="label">TOTAL À ENTRER DANS LA POMPE</div>
     <div class="tb-row">
-      <div class="tb-mini"><span>Glucides</span><b class="tb-carb" id="total-carbs">0<small> g</small></b></div>
+      <div class="tb-mini"><span>Glucides totaux</span><b class="tb-carb" id="total-carbs">0<small> g</small></b></div>
       <div class="tb-mini"><span>Fibres</span><b id="total-fiber">0<small> g</small></b></div>
-      <div class="value"><span class="big" id="total-net">0</span><small>glucides</small></div>
+      <div class="value"><span class="big" id="total-net">0</span><small>g nets</small></div>
     </div>
   </div>
 </div>
@@ -5371,7 +5371,7 @@
         var kind = err && err.kind;
         var msg, retry = true;
         if (kind === 'auth') {
-          msg = 'Ta clé API a été refusée — vérifie-la avec le bouton 🔑 ci-dessous.';
+          msg = 'Ta clé API a été refusée — vérifie-la dans « ✨ Lecture IA ».';
           retry = false;
         } else if (kind === 'rate') {
           msg = 'Trop de demandes d’un coup — attends un instant, puis réessaie.';
@@ -5431,7 +5431,10 @@
       qty += symbols[m[2]] || 0;
     }
     if (!(qty > 0)) return null;
-    return { qty: qty, unit: m[3].trim() };
+    // L'unité vient de l'IA : on n'y laisse que lettres, chiffres, espaces,
+    // fractions et ponctuation douce — aucun < > & susceptible d'injection.
+    var unit = m[3].trim().replace(/[^0-9A-Za-zÀ-ÿ¼½¾⅓⅔⅛.'’ /()-]/g, '').slice(0, 24);
+    return { qty: qty, unit: unit };
   }
   function fmtMeasureQty(q) {
     var whole = Math.floor(q + 1e-6);
@@ -5721,7 +5724,7 @@
       messages: [{ role: 'user', content: content }]
     })
       .then(function (r) {
-        if (r.status === 401) throw { msg: 'Ta clé API a été refusée — vérifie-la avec le bouton 🔑.' };
+        if (r.status === 401) throw { msg: 'Ta clé API a été refusée — vérifie-la dans « ✨ Lecture IA ».' };
         if (r.status === 429) throw { msg: 'Trop de demandes d’un coup — attends un instant, puis réessaie.' };
         if (!r.ok) {
           return r.json().then(function (e) {
@@ -5847,7 +5850,7 @@
       }]
     })
       .then(function (r) {
-        if (r.status === 401) throw { msg: 'Ta clé API a été refusée — vérifie-la avec le bouton 🔑.' };
+        if (r.status === 401) throw { msg: 'Ta clé API a été refusée — vérifie-la dans « ✨ Lecture IA ».' };
         if (!r.ok) {
           return r.json().then(function (e) {
             throw { msg: 'Le service IA a refusé la demande' + (e && e.error && e.error.message ? ' : ' + e.error.message : '') + '.' };
@@ -5997,7 +6000,7 @@
       }]
     })
       .then(function (r) {
-        if (r.status === 401) throw { msg: 'Ta clé API a été refusée — vérifie-la avec le bouton 🔑.' };
+        if (r.status === 401) throw { msg: 'Ta clé API a été refusée — vérifie-la dans « ✨ Lecture IA ».' };
         if (!r.ok) {
           return r.json().then(function (e) {
             throw { msg: 'Le service IA a refusé la demande' + (e && e.error && e.error.message ? ' : ' + e.error.message : '') + '.' };
@@ -6278,8 +6281,15 @@
       card.appendChild(nm);
       var qty = document.createElement('span');
       qty.className = 'qty';
-      qty.innerHTML = (n >= 2 ? n + ' ' + mpUnit(f, n) + ' · total ' : '')
-        + '≈ <b>' + fr1(net) + ' g</b> nets';
+      // Jamais innerHTML ici : l'unité vient de la réponse de l'IA (mpUnit →
+      // f.measure.unit), donc d'un contenu potentiellement piégé sur la
+      // photo. On assemble en nœuds texte + un <b> à contenu textuel.
+      if (n >= 2) qty.appendChild(document.createTextNode(n + ' ' + mpUnit(f, n) + ' · total '));
+      qty.appendChild(document.createTextNode('≈ '));
+      var qb = document.createElement('b');
+      qb.textContent = fr1(net) + ' g';
+      qty.appendChild(qb);
+      qty.appendChild(document.createTextNode(' nets'));
       card.appendChild(qty);
       cards.appendChild(card);
     });
@@ -6552,6 +6562,9 @@
         inp.min = '0';
         inp.step = '0.1';
         inp.value = round1(value);
+        // Nom accessible : le label n'est pas associé par « for », on le
+        // relie donc explicitement pour les lecteurs d'écran.
+        inp.setAttribute('aria-label', labelTxt);
         inp.addEventListener('input', function () { onInput(num(this.value), inp); });
         wrap.appendChild(lab);
         wrap.appendChild(inp);
@@ -6961,6 +6974,13 @@
   /* Recharger et supprimer servent depuis la rangée ET depuis la fiche
      détaillée : une seule définition, aucun écart de comportement. */
   function reloadEntry(entry) {
+    // L'entrée-miroir du repas en cours EST déjà le repas ouvert :
+    // la recharger doublerait chaque aliment (et le total pompe).
+    if (entry.id === lsGet(pk('gn_meal_entry'))) {
+      switchTab('meal');
+      toast('Ce repas est déjà en cours');
+      return;
+    }
     meal = meal.concat(entry.items.map(function (it) {
       return JSON.parse(JSON.stringify(it));
     }));
@@ -6972,6 +6992,14 @@
   function removeEntry(entry) {
     var i = history.indexOf(entry);
     if (i === -1) return;
+    // Supprimer l'entrée-miroir du repas en cours = vider le repas :
+    // sinon mirrorMeal la recrée aussitôt et sa trace de suppression, une
+    // fois le repas terminé, effacerait le repas à la prochaine synchro.
+    if (entry.id === lsGet(pk('gn_meal_entry'))) {
+      switchTab('meal');
+      $('clear-btn').click();
+      return;
+    }
     forget('entry', entry);
     history.splice(i, 1);
     save();
@@ -7447,6 +7475,12 @@
       var target = tab.name === 'recipes' ? recipes : tab.name === 'favorites' ? favorites : history;
       target.length = 0;
       Array.prototype.push.apply(target, copy);
+      // Ces lignes viennent d'être reçues du serveur : elles sont la
+      // nouvelle référence. Sans ça, markEdits (dans save()) verrait un
+      // corps différent de l'ancien shadow et les ré-estamperait comme des
+      // éditions locales — réécrasant plus tard une version distante plus
+      // récente (perte silencieuse d'une correction de glucides).
+      copy.forEach(function (rec) { if (rec && rec.id) shadow[rec.id] = bodyOf(rec); });
       save();
       return;
     }
@@ -7711,7 +7745,10 @@
   };
   function tombRow(t) {
     var when = new Date(num(t.deletedAt) || Date.now()).toISOString();
-    var row = { id: t.id, user_id: sbSession.user_id, deleted_at: when };
+    // Pour un profil, l'id distant est l'UUID dérivé, pas l'« p1 » local —
+    // sinon le serveur rejette la ligne et le profil ressuscite au pull.
+    var row = { id: t.kind === 'profile' ? remoteProfileId(t.id) : t.id,
+                user_id: sbSession.user_id, deleted_at: when };
     if (t.kind !== 'profile') row.profile_id = remoteProfileId(t.pid || activeProfileId);
     if (t.kind === 'entry') row.eaten_at = when;
     else if (t.kind === 'lesson') row.kind = 'note';
@@ -7860,16 +7897,25 @@
   })();
 
   function fetchMe() {
-    return sbJson('/auth/v1/user').then(function (u) {
-      if (!u || !u.id) throw new Error('session invalide');
-      sbSession.user_id = u.id;
-      sbSession.email = u.email || '';
-      saveSbSession();
-      renderSync();
-      return true;
+    return sbFetch('/auth/v1/user').then(function (r) {
+      // 401/403 = session vraiment refusée (sbFetch a déjà tenté un refresh) :
+      // là seulement on déconnecte. Une panne réseau ou un 5xx ne doit PAS
+      // effacer la session — sinon le moindre démarrage hors ligne déconnecte.
+      if (r.status === 401 || r.status === 403) {
+        sbSession = null; saveSbSession(); renderSync();
+        return false;
+      }
+      if (!r.ok) return false; // transitoire : on garde la session, on réessaiera
+      return r.json().then(function (u) {
+        if (!u || !u.id) return false;
+        sbSession.user_id = u.id;
+        sbSession.email = u.email || '';
+        saveSbSession();
+        renderSync();
+        return true;
+      });
     }).catch(function () {
-      sbSession = null; saveSbSession(); renderSync();
-      return false;
+      return false; // réseau indisponible : session conservée
     });
   }
 
