@@ -13,7 +13,8 @@
         <!-- L'app web, en plein écran (Trusted Web Activity) -->
         <activity
             android:name="com.google.androidbrowserhelper.trusted.LauncherActivity"
-            android:exported="true">
+            android:exported="true"
+            android:launchMode="singleTask">
             <meta-data
                 android:name="android.support.customtabs.trusted.DEFAULT_URL"
                 android:value="https://frankyray21.github.io/Calcul-glucide/" />
@@ -27,7 +28,7 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https"
                       android:host="frankyray21.github.io"
-                      android:pathPrefix="/Calcul-glucide/" />
+                      android:pathPrefix="/Calcul-glucide" />
             </intent-filter>
         </activity>
 
