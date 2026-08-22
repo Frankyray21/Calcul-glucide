@@ -1720,19 +1720,29 @@
      entouré à son étiquette, même si l'étiquette a dû être déplacée */
   .mp-onum {
     position: absolute;
-    min-width: 20px;
-    height: 20px;
-    padding: 0 5px;
+    min-width: 26px;
+    height: 26px;
+    padding: 0 7px;
     border-radius: 999px;
     background: var(--cyan);
     color: #071120;
-    font-size: 0.72rem;
+    font-size: 0.8rem;
     font-weight: 800;
     display: flex;
     align-items: center;
     justify-content: center;
     box-shadow: 0 0 0 1.5px rgba(7, 17, 31, 0.6);
+    /* Seul élément cliquable du calque : voir l'aliment sans le cacher */
+    pointer-events: auto;
+    cursor: pointer;
   }
+  .mp-onum:active { transform: scale(0.9); }
+  /* Rangée d'aliment mise en avant après un tap sur son numéro */
+  @keyframes mp-flash {
+    0%, 100% { background: var(--card); }
+    30% { background: var(--accent-light); }
+  }
+  .mp-row--flash { animation: mp-flash 1.4s ease-out; }
   /* Récapitulatif d'un aliment, ancré près de son contour */
   .mp-card {
     position: absolute;
@@ -2374,7 +2384,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.28.0</span>
+  <br><span id="app-version">Glucides Nets v2.29.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -6258,6 +6268,19 @@
      corrige un poids ou des glucides. */
   var mpOutlines = [];   // contours tracés, en % — obstacles au placement
 
+  /* Tap sur un numéro de la photo : montrer l'aliment sans le cacher —
+     un aperçu bref, puis on amène sa carte modifiable à l'écran et on la
+     fait clignoter. La photo, elle, reste dégagée. */
+  function mpRevealFood(i, label, value) {
+    toast(label + ' · ≈ ' + value + ' g nets', { duration: 3500 });
+    var row = document.getElementById('mp-row-' + i);
+    if (!row) return;
+    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    row.classList.remove('mp-row--flash');
+    void row.offsetWidth; // relance l'animation même sur un second tap
+    row.classList.add('mp-row--flash');
+  }
+
   function renderMpOverlay(total) {
     var shapes = $('mp-shapes'), cards = $('mp-cards'), tot = $('mp-photo-total');
     if (!shapes || !cards || !tot) return;
@@ -6304,47 +6327,28 @@
         outline(f.x, f.y, f.w != null ? f.w : 24, f.h != null ? f.h : 24);
       }
 
-      // Badge numéro au coin haut-gauche du contour de l'aliment
-      if (multi && ax != null && ay != null) {
+      // Numéro cliquable au coin du contour : il ne cache pas l'aliment
+      // (petit) et, touché, révèle le détail sans rien poser sur la photo.
+      // Le nom et les glucides vivent dans la carte modifiable en dessous.
+      if (ax != null && ay != null) {
         var onum = document.createElement('div');
         onum.className = 'mp-onum';
         onum.textContent = numero;
         onum.dataset.bx = ax;
         onum.dataset.by = ay;
         onum.dataset.bh = ah;
+        var label = String(f.name || 'Aliment').replace(/\s*\(.*$/, '');
+        var value = fr1(net);
+        onum.setAttribute('role', 'button');
+        onum.setAttribute('tabindex', '0');
+        onum.setAttribute('aria-label', label + ' : environ ' + value + ' g nets. Toucher pour ajuster.');
+        var reveal = function () { mpRevealFood(fi, label, value); };
+        onum.addEventListener('click', reveal);
+        onum.addEventListener('keydown', function (e) {
+          if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); reveal(); }
+        });
         cards.appendChild(onum);
       }
-
-      var card = document.createElement('div');
-      card.className = 'mp-card';
-      if (ax != null && ay != null) {
-        card.dataset.ax = ax;
-        card.dataset.ay = ay;
-        card.dataset.ah = ah;
-      }
-      if (multi) {
-        var cno = document.createElement('span');
-        cno.className = 'cardno';
-        cno.textContent = numero;
-        card.appendChild(cno);
-      }
-      var nm = document.createElement('span');
-      nm.className = 'nm';
-      nm.textContent = String(f.name || 'Aliment').replace(/\s*\(.*$/, '');
-      card.appendChild(nm);
-      var qty = document.createElement('span');
-      qty.className = 'qty';
-      // Jamais innerHTML ici : l'unité vient de la réponse de l'IA (mpUnit →
-      // f.measure.unit), donc d'un contenu potentiellement piégé sur la
-      // photo. On assemble en nœuds texte + un <b> à contenu textuel.
-      if (n >= 2) qty.appendChild(document.createTextNode(n + ' ' + mpUnit(f, n) + ' · total '));
-      qty.appendChild(document.createTextNode('≈ '));
-      var qb = document.createElement('b');
-      qb.textContent = fr1(net) + ' g';
-      qty.appendChild(qb);
-      qty.appendChild(document.createTextNode(' nets'));
-      card.appendChild(qty);
-      cards.appendChild(card);
     });
 
     // Miettes : signalées à leur place, reliées à leur étiquette
@@ -6451,41 +6455,10 @@
 
     var onums = layer.querySelectorAll('.mp-onum');
     var pips = layer.querySelectorAll('.mp-pip');
-    var cards = layer.querySelectorAll('.mp-card');
     var crumbs = layer.querySelector('.mp-crumbs');
 
-    /* Cherche la meilleure place pour une étiquette autour d'un point
-       d'ancrage (ax,ay au centre du contour, demi-hauteur bh) : dessus,
-       dessous, puis les côtés; à défaut, la place libre la plus proche en
-       balayant la photo. Rien ne se pose sur un aliment entouré ni sur le
-       bandeau du total, et deux étiquettes ne se chevauchent jamais. */
-    function anchor(el, ax, ay, bh) {
-      var w = el.offsetWidth, h = el.offsetHeight;
-      var cx = ax / 100 * W, cy = ay / 100 * H, half = bh / 100 * H / 2;
-      var cands = [
-        [cx - w / 2, cy - half - h - 3], [cx - w / 2, cy + half + 3],
-        [cx + half + 4, cy - h / 2], [cx - w - half - 4, cy - h / 2]
-      ];
-      var i, l, t;
-      for (i = 0; i < cands.length; i++) {
-        l = Math.round(cands[i][0]); t = Math.round(cands[i][1]);
-        if (free(l, t, w, h) && clearOfFood(l, t, w, h)) { put(el, l, t); return; }
-      }
-      // rien d'idéal : la place libre la plus proche du point d'ancrage
-      var best = null;
-      for (var ty = 4; ty < H - h - 4; ty += 8) {
-        for (var lx = 4; lx < W - w - 4; lx += 10) {
-          if (!free(lx, ty, w, h)) continue;
-          var d = Math.abs(lx + w / 2 - cx) + Math.abs(ty + h / 2 - cy);
-          if (!best || d < best.d) best = { l: lx, t: ty, d: d };
-        }
-      }
-      if (best) put(el, best.l, best.t);
-      else put(el, 4, 4); // photo saturée : au moins visible
-    }
-
-    // 1. Les badges numéro se collent au coin de leur contour, en premier :
-    //    ils sont petits, prioritaires, et servent de repère aux cartes.
+    // Les badges numéro se collent au coin de leur contour : petits, ils
+    // ne cachent pas l'aliment; c'est le seul repère laissé sur la photo.
     Array.prototype.forEach.call(onums, function (b) {
       var bx = num(b.dataset.bx), by = num(b.dataset.by), bh = num(b.dataset.bh);
       var w = b.offsetWidth, h = b.offsetHeight;
@@ -6493,19 +6466,6 @@
       var t = Math.round(Math.max(2, Math.min((by - bh / 2) / 100 * H - 2, H - h - 2)));
       put(b, l, t);
     });
-
-    // 2. Chaque récapitulatif ancré près de SON aliment, plus empilé à gauche
-    Array.prototype.forEach.call(cards, function (card) {
-      if (card.dataset.ax === undefined) {
-        // aliment non situé sur la photo : coin haut-gauche, empilé
-        var w = card.offsetWidth, h = card.offsetHeight, t = 4;
-        while (!free(4, t, w, h) && t < H - h - 4) t += h + 4;
-        put(card, 4, Math.min(t, H - h - 4));
-        return;
-      }
-      anchor(card, num(card.dataset.ax), num(card.dataset.ay), num(card.dataset.ah));
-    });
-
 
     // 2. Chaque pastille au plus près de son morceau : au-dessus, sinon
     //    dessous, sinon décalée sur le côté
@@ -6616,6 +6576,7 @@
     mpFoods.forEach(function (f, i) {
       var row = document.createElement('div');
       row.className = 'mp-row';
+      row.id = 'mp-row-' + i; // cible du tap sur le numéro de la photo
 
       var head = document.createElement('div');
       head.className = 'mp-row-head';
