@@ -1943,8 +1943,8 @@
           <p class="feat-sub">Assiette, étiquette ou code-barres</p>
         </div>
       </div>
-      <button class="btn" id="home-scan" type="button">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+      <button class="btn btn--action" id="home-scan" type="button">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         Calculer les glucides du repas
       </button>
     </div>
@@ -1979,7 +1979,7 @@
          vivent dans les accordéons ou les écrans contextuels -->
     <div class="card">
       <h2>🧮 Calcul des glucides</h2>
-      <button class="btn" id="scan-open-btn" type="button">📸 Calculer les glucides du repas</button>
+      <button class="btn btn--action" id="scan-open-btn" type="button">➕ Calculer les glucides du repas</button>
       <input type="file" id="label-photo-input" accept="image/*" capture="environment" style="display:none;">
       <div id="label-analysis" role="status" aria-live="polite"></div>
       <button class="btn btn-secondary" id="leftover-btn" type="button" style="display:none; margin-top:10px;">🍽️ Photographie les restes — voir ce qui a été consommé</button>
@@ -2351,7 +2351,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.25.0</span>
+  <br><span id="app-version">Glucides Nets v2.26.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -7954,7 +7954,7 @@
       btn.classList.add('gn-pulse');
       setTimeout(function () { btn.classList.remove('gn-pulse'); }, 4000);
       btn.scrollIntoView({ block: 'center' });
-      toast('📸 Touche « Calculer les glucides du repas » pour photographier ton assiette');
+      toast('➕ Touche « Calculer les glucides du repas » pour photographier ton assiette');
       return;
     }
     if (action === 'discuss') {
