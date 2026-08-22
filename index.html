@@ -2067,7 +2067,7 @@
       </div>
       <div class="btn-row" style="margin-top:12px; display:none;" id="meal-actions">
         <button class="btn btn-secondary" id="clear-btn">Vider</button>
-        <button class="btn btn--action" id="finish-btn">Confirmer le repas</button>
+        <button class="btn btn--action" id="finish-btn">✅ Terminer le repas</button>
       </div>
       <button class="btn btn-secondary" id="home-share" type="button" style="margin-top:10px;">📤 Partager le repas</button>
     </div>
@@ -2205,7 +2205,7 @@
 
     <div class="card">
       <h2>📅 Repas enregistrés</h2>
-      <p class="hint" style="margin:0 0 8px;">Termine un repas avec « Confirmer le repas » dans l'onglet Calculer. Touche un repas pour voir sa fiche — photo, aliments et détail du calcul — ou ↻ pour le recharger.</p>
+      <p class="hint" style="margin:0 0 8px;">Chaque repas entre au journal dès son premier aliment et se met à jour tout seul. Touche un repas pour voir sa fiche — photo, aliments et détail du calcul — ou ↻ pour le recharger.</p>
       <div id="journal-list"><p class="empty"><span class="illus" aria-hidden="true">📅</span>Ton journal est vide. Enregistre ton premier repas pour le retrouver ici!</p></div>
     </div>
 
@@ -2358,7 +2358,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.21.0</span>
+  <br><span id="app-version">Glucides Nets v2.22.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -2965,8 +2965,55 @@
   /* Sauvegarde : chaque clé est protégée — un quota plein ne doit jamais
      faire remonter d'exception (sinon le rendu qui suit ne s'exécute pas
      et le total pompe se désynchronise du repas en mémoire). */
+  /* ── Le repas en cours vit AU JOURNAL ──
+     Dès le premier aliment, le repas devient une entrée de journal, mise à
+     jour à chaque changement — plus rien à confirmer. L'entrée garde le
+     même identifiant tant que le repas est ouvert : la synchronisation la
+     voit comme un seul enregistrement qui évolue, jamais des doublons. */
+  function mealEntryId() {
+    var id = lsGet(pk('gn_meal_entry'));
+    if (!id) { id = uid(); lsSet(pk('gn_meal_entry'), id); }
+    return id;
+  }
+  function resetMealEntryId() {
+    try { localStorage.removeItem(pk('gn_meal_entry')); } catch (e) {}
+  }
+  function findEntry(id) {
+    for (var i = 0; i < history.length; i++) { if (history[i].id === id) return history[i]; }
+    return null;
+  }
+  function mirrorMeal() {
+    if (meal.length === 0) return;
+    var id = mealEntryId();
+    var entry = findEntry(id);
+    if (!entry) {
+      entry = stamp({ ts: Date.now() });
+      entry.id = id;
+      history.unshift(entry);
+      if (history.length > 300) history.length = 300;
+    }
+    var tot = mealTotals(meal);
+    entry.items = meal.slice();
+    entry.net = round1(tot.net);
+    entry.carbs = round1(tot.carbs);
+    entry.fiber = round1(tot.fiber);
+    entry.polyols = round1(tot.polyols);
+    // La photo du repas analysé (si récente) suit le repas au journal
+    if (photoMeal && photoMeal.img && Date.now() - num(photoMeal.ts) <= PHOTO_MEAL_TTL) {
+      entry.photo = photoMeal.img;
+    }
+    // Une photo pèse 40-80 Ko : seules les plus récentes restent en image
+    var kept = 0;
+    history.forEach(function (e) {
+      if (e.photo && ++kept > 20) delete e.photo;
+    });
+    renderJournal();
+    renderWeekChart();
+  }
+
   function save() {
     var failed = false;
+    mirrorMeal();
     markEdits(favorites);
     markEdits(recipes);
     markEdits(history);
@@ -2993,14 +3040,19 @@
     if (!ts) { touchMeal(); return; } // repas hérité d'une version sans horodatage
     if (Date.now() - ts <= MEAL_TTL) return;
     var backup = meal.slice();
+    var oldId = lsGet(pk('gn_meal_entry'));
+    // Repas expiré = repas mangé : son entrée reste au journal, seul le
+    // calculateur repart à zéro
     meal = [];
+    resetMealEntryId();
     save();
     renderMeal();
-    toast('🕐 Repas précédent vidé — son heure est passée', {
+    toast('🕐 Repas précédent terminé — il est au journal', {
       duration: 8000,
       action: {
         label: 'Annuler',
         fn: function () {
+          if (oldId) lsSet(pk('gn_meal_entry'), oldId);
           meal = backup.concat(meal);
           touchMeal();
           save();
@@ -3521,14 +3573,27 @@
     clearPhotoMeal();
     if (meal.length === 0) return;
     var backup = meal.slice();
+    // Vider, c'est jeter : l'entrée que le miroir tenait au journal part
+    // avec, sinon un repas abandonné resterait compté dans la journée
+    var oldId = mealEntryId();
+    var entry = findEntry(oldId);
+    if (entry) { forget('entry', entry); history.splice(history.indexOf(entry), 1); }
+    resetMealEntryId();
     meal = [];
     save();
     renderMeal();
+    renderJournal();
+    renderWeekChart();
     toast('Repas vidé', {
       duration: 6000,
       action: {
         label: 'Annuler',
         fn: function () {
+          // Reprendre la MÊME entrée : on efface sa trace de suppression
+          // avant que la synchro ne l'ait propagée
+          tombs = tombs.filter(function (t) { return t.id !== oldId; });
+          saveTombs();
+          lsSet(pk('gn_meal_entry'), oldId);
           meal = backup.concat(meal);
           touchMeal();
           save();
@@ -6702,36 +6767,17 @@
 
   /* ══════════ Journal des repas ══════════ */
   $('finish-btn').addEventListener('click', function () {
-    // La photo du repas analysé (si récente) suit le repas au journal :
-    // on la retient AVANT de l'effacer de l'onglet Calculer
-    var snap = photoMeal && photoMeal.img &&
-      Date.now() - num(photoMeal.ts) <= PHOTO_MEAL_TTL ? photoMeal.img : null;
-    clearPhotoMeal();
+    // Le repas est déjà au journal (miroir en continu) : terminer, c'est
+    // seulement fermer ce repas pour que le prochain reparte à zéro.
     if (meal.length === 0) return;
-    var tot = mealTotals(meal);
-    var totNet = tot.net, totC = tot.carbs, totF = tot.fiber, totP = tot.polyols;
-    var entry = stamp({
-      ts: Date.now(),
-      items: meal.slice(),
-      net: round1(totNet), carbs: round1(totC), fiber: round1(totF), polyols: round1(totP)
-    });
-    if (snap) entry.photo = snap;
-    history.unshift(entry);
-    // Une photo pèse 40-80 Ko en stockage local : seules les plus
-    // récentes sont gardées en image, le repas lui-même reste
-    var kept = 0;
-    history.forEach(function (e) {
-      if (e.photo && ++kept > 20) delete e.photo;
-    });
-    // Plafond du journal : les plus anciens sortent sans laisser de trace,
-    // ce n'est pas une suppression voulue mais un élagage local
-    if (history.length > 300) history.length = 300;
+    save(); // dernier miroir, photo comprise
+    clearPhotoMeal();
     meal = [];
+    resetMealEntryId();
     save();
     renderMeal();
-    renderJournal();
     switchTab('journal');
-    toast('✓ Repas enregistré au journal');
+    toast('✓ Repas au journal — le prochain repart à zéro');
   });
 
   function dayKey(ts) {
