@@ -2466,7 +2466,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.33.0</span>
+  <br><span id="app-version">Glucides Nets v2.34.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -6075,6 +6075,11 @@
         foods: snapshot
       };
       savePhotoMeal();
+      // La photo arrive APRÈS le save() qui a ajouté les aliments (décodage
+      // d'image asynchrone) : sans ce nouveau miroir, l'entrée du journal
+      // resterait sans photo tant qu'aucun autre changement ne survient —
+      // et un repas qu'on ne retouche plus n'en aurait jamais.
+      save();
     };
     img.src = 'data:image/jpeg;base64,' + src;
   }
