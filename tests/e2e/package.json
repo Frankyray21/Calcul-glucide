@@ -1,0 +1,8 @@
+{
+  "name": "glucides-nets-e2e",
+  "private": true,
+  "description": "Tests bout-en-bout de Glucides Nets (Playwright)",
+  "dependencies": {
+    "playwright": "^1.49.0"
+  }
+}
