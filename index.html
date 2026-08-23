@@ -1316,6 +1316,11 @@
     flex-shrink: 0;
     border: 1px solid var(--border);
   }
+  /* Rapport pour la clinique : troisième ligne datée d'un repas marquant,
+     et compte de repas à côté du total d'une journée */
+  .journal-meal .when { font-size: 0.8rem; color: var(--muted); font-weight: 600; }
+  .day-header .nb { color: var(--muted); font-weight: 700; font-size: 0.8rem; margin-right: 6px; }
+  #report-chart-note { text-align: center; margin: 2px 0 0; }
   /* Fiche détaillée d'un repas du journal */
   .entry-photo {
     width: 100%;
@@ -1915,6 +1920,64 @@
   #label-analysis { margin-top: 10px; }
   #label-analysis .msg { font-size: 0.94rem; color: var(--muted); }
   #label-analysis .btn { margin-top: 10px; }
+
+  /* ── Rapport en PDF ──
+     window.print() n'imprime QUE le rapport reconstruit en clair — le
+     dialogue du téléphone ou de l'ordinateur propose « Enregistrer en
+     PDF ». Noir sur blanc quel que soit le thème : un PDF sombre gaspille
+     l'encre et se lit mal en clinique. */
+  #print-report { display: none; }
+  @media print {
+    body > *:not(#print-report) { display: none !important; }
+    body { background: #fff !important; }
+    #print-report {
+      display: block !important;
+      color: #111;
+      background: #fff;
+      font-size: 11pt;
+      line-height: 1.45;
+    }
+    #print-report h1 { font-size: 16pt; margin: 0 0 2pt; }
+    #print-report .pr-sub { color: #555; margin: 0 0 10pt; font-size: 9.5pt; }
+    #print-report .pr-note { color: #555; font-size: 9.5pt; margin: 2pt 0 8pt; }
+    #print-report .pr-hero {
+      border: 1pt solid #bbb;
+      border-radius: 6pt;
+      padding: 8pt;
+      margin: 0 0 10pt;
+      text-align: center;
+    }
+    #print-report .pr-hero b { font-size: 20pt; display: block; margin: 2pt 0; }
+    #print-report h2 {
+      font-size: 12pt;
+      margin: 12pt 0 4pt;
+      border-bottom: 1pt solid #ccc;
+      padding-bottom: 2pt;
+    }
+    #print-report table { width: 100%; border-collapse: collapse; }
+    #print-report th, #print-report td {
+      text-align: left;
+      padding: 3pt 6pt;
+      border-bottom: 0.5pt solid #ddd;
+      font-size: 10pt;
+    }
+    #print-report th { color: #555; font-weight: 700; }
+    #print-report td.num, #print-report th.num {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    #print-report .pr-top { display: flex; gap: 8pt; margin: 4pt 0 8pt; align-items: flex-start; }
+    #print-report .pr-top img {
+      width: 70pt;
+      height: 70pt;
+      object-fit: cover;
+      border-radius: 4pt;
+      flex: none;
+    }
+    #print-report .pr-top .t { font-size: 10pt; }
+    #print-report .pr-foot { margin-top: 14pt; color: #555; font-size: 8.5pt; }
+  }
 </style>
 </head>
 <body>
@@ -2303,6 +2366,7 @@
       <p class="hint" style="margin:0 0 8px;" id="week-summary">Enregistre un premier repas pour voir ta semaine ici.</p>
       <svg class="week-chart" id="week-chart" viewBox="0 0 340 130" role="img"
            aria-label="Glucides nets par jour, 7 derniers jours"></svg>
+      <button class="btn btn-secondary" id="report-open" type="button" style="margin-top:10px;">🩺 Rapport pour la clinique</button>
     </div>
 
     <div class="card">
@@ -2717,6 +2781,60 @@
   </div>
 </div>
 
+<!-- Modal : rapport périodique du journal, à montrer en clinique.
+     Placé AVANT la fiche d'un repas dans le DOM : un repas ouvert depuis
+     le rapport s'affiche ainsi par-dessus (l'empilement des modals suit
+     l'ordre du document). -->
+<div class="modal-overlay full" id="report-modal" role="dialog" aria-modal="true" aria-labelledby="report-title">
+  <div class="modal modal--full">
+    <div class="fiche-topbar">
+      <button class="circle-btn" id="report-back" type="button" aria-label="Fermer le rapport">‹</button>
+    </div>
+    <h3 id="report-title">🩺 Rapport pour la clinique</h3>
+    <div class="qty-portions" id="report-periods" role="group" aria-label="Période du rapport"></div>
+    <p class="hint" id="report-coverage" style="margin:8px 0 0;"></p>
+    <div class="hero-card">
+      <div class="hero-label">Glucides nets — moyenne par jour consigné</div>
+      <div class="live-net" id="report-avg">0 <small>g</small></div>
+      <div class="hero-sub" id="report-sub"></div>
+      <div class="hero-badge">✓ Faits calculés — aucune recommandation ni cible</div>
+    </div>
+    <svg class="week-chart" id="report-chart" viewBox="0 0 340 130" role="img"
+         aria-label="Glucides nets par jour sur la période"></svg>
+    <p class="hint" id="report-chart-note"></p>
+    <div class="ref-card" style="margin-top:12px;">
+      <div class="ref-head">
+        <span class="ref-head-title"><span class="acc-ico" aria-hidden="true">📌</span> Chiffres clés</span>
+      </div>
+      <div class="ref-cols" id="report-keys"></div>
+      <div class="ref-cols" id="report-keys2" style="border-top:1px solid var(--border);"></div>
+    </div>
+    <div class="ref-card" style="margin-top:12px;">
+      <div class="ref-head">
+        <span class="ref-head-title"><span class="acc-ico" aria-hidden="true">🕐</span> Par moment de la journée</span>
+      </div>
+      <div class="ref-rows" id="report-moments"></div>
+    </div>
+    <div class="ref-card" style="margin-top:12px;">
+      <div class="ref-head">
+        <span class="ref-head-title"><span class="acc-ico" aria-hidden="true">📊</span> Détail du calcul — moyennes par jour consigné</span>
+      </div>
+      <div class="ref-rows" id="report-calc"></div>
+    </div>
+    <div class="sec-label" style="margin-top:14px;">Repas les plus élevés de la période</div>
+    <div id="report-top"></div>
+    <details class="acc" style="margin-top:10px;">
+      <summary><span class="acc-ico" aria-hidden="true">📅</span>Détail jour par jour</summary>
+      <div id="report-days" style="padding:0 16px 12px;"></div>
+    </details>
+    <div class="actions">
+      <button class="btn btn-secondary" id="report-pdf" type="button">🖨️ Créer un PDF</button>
+      <button class="btn btn--action" id="report-share" type="button">📤 Partager</button>
+    </div>
+    <p class="hint" id="report-foot" style="text-align:center; margin-top:8px;"></p>
+  </div>
+</div>
+
 <!-- Modal : fiche détaillée d'un repas enregistré au journal -->
 <div class="modal-overlay full" id="entry-modal" role="dialog" aria-modal="true" aria-labelledby="entry-title">
   <div class="modal modal--full">
@@ -2795,6 +2913,11 @@
 </div>
 
 <div class="toast-zone" id="toast-zone" role="status" aria-live="polite"></div>
+
+<!-- Rendu d'impression du rapport pour la clinique : rempli au moment de
+     « Créer un PDF », seul élément visible en média print (enfant direct
+     de body — la règle @media print s'appuie là-dessus) -->
+<div id="print-report"></div>
 
 <script src="calc.js"></script>
 <script>
@@ -4026,6 +4149,10 @@
       var opens = document.querySelectorAll('.modal-overlay.open');
       if (opens[opens.length - 1] !== ov) return;
       e.preventDefault();
+      // Un seul modal par appui : sans ça, le gestionnaire d'un modal
+      // resté ouvert DESSOUS verrait « son tour » arriver sur le même
+      // événement et fermerait aussi (fiche par-dessus le rapport)
+      e.stopImmediatePropagation();
       onClose();
     });
     ov.addEventListener('keydown', function (e) {
@@ -7337,34 +7464,38 @@
     });
     var totals = $('entry-totals');
     totals.innerHTML = '';
-    function refRow(ico, lbl, sub, val) {
-      var rowEl = document.createElement('div');
-      rowEl.className = 'ref-item';
-      var icoEl = document.createElement('span');
-      icoEl.className = 'ref-ico';
-      icoEl.setAttribute('aria-hidden', 'true');
-      icoEl.textContent = ico;
-      var lblEl = document.createElement('span');
-      lblEl.className = 'ref-lbl';
-      lblEl.textContent = lbl;
-      if (sub) {
-        var subEl = document.createElement('small');
-        subEl.textContent = sub;
-        lblEl.appendChild(subEl);
-      }
-      var valEl = document.createElement('span');
-      valEl.className = 'ref-val';
-      valEl.textContent = val;
-      rowEl.appendChild(icoEl);
-      rowEl.appendChild(lblEl);
-      rowEl.appendChild(valEl);
-      totals.appendChild(rowEl);
-    }
-    refRow('🍞', 'Glucides totaux', '', round1(entry.carbs) + ' g');
-    refRow('🌾', 'Fibres', 'soustraites du total', '− ' + round1(entry.fiber) + ' g');
-    if (entry.polyols > 0) refRow('🍬', 'Polyols', 'déduits selon leur type (50 ou 100 %)', round1(entry.polyols) + ' g');
-    refRow('🎯', 'Glucides nets', 'la valeur entrée dans la pompe', entry.net + ' g');
+    refRowInto(totals, '🍞', 'Glucides totaux', '', round1(entry.carbs) + ' g');
+    refRowInto(totals, '🌾', 'Fibres', 'soustraites du total', '− ' + round1(entry.fiber) + ' g');
+    if (entry.polyols > 0) refRowInto(totals, '🍬', 'Polyols', 'déduits selon leur type (50 ou 100 %)', round1(entry.polyols) + ' g');
+    refRowInto(totals, '🎯', 'Glucides nets', 'la valeur entrée dans la pompe', entry.net + ' g');
     openModal('entry-modal', '#entry-back');
+  }
+
+  /* Une ligne icône / libellé / valeur du patron .ref-rows — partagée par
+     la fiche d'un repas et le rapport pour la clinique. */
+  function refRowInto(target, ico, lbl, sub, val) {
+    var rowEl = document.createElement('div');
+    rowEl.className = 'ref-item';
+    var icoEl = document.createElement('span');
+    icoEl.className = 'ref-ico';
+    icoEl.setAttribute('aria-hidden', 'true');
+    icoEl.textContent = ico;
+    var lblEl = document.createElement('span');
+    lblEl.className = 'ref-lbl';
+    lblEl.textContent = lbl;
+    if (sub) {
+      var subEl = document.createElement('small');
+      subEl.textContent = sub;
+      lblEl.appendChild(subEl);
+    }
+    var valEl = document.createElement('span');
+    valEl.className = 'ref-val';
+    valEl.textContent = val;
+    rowEl.appendChild(icoEl);
+    rowEl.appendChild(lblEl);
+    rowEl.appendChild(valEl);
+    target.appendChild(rowEl);
+    return rowEl;
   }
   function closeEntryModal() {
     entryShown = null;
@@ -7379,14 +7510,507 @@
     if (!entryShown) return;
     var entry = entryShown;
     closeEntryModal();
+    // Fiche ouverte depuis le rapport : l'action quitte le rapport, qui ne
+    // refléterait plus le journal
+    closeReportModal();
     reloadEntry(entry);
   });
   $('entry-delete').addEventListener('click', function () {
     if (!entryShown) return;
     var entry = entryShown;
     closeEntryModal();
+    closeReportModal();
     removeEntry(entry);
     toast('Repas supprimé du journal');
+  });
+
+  /* ══════════ Rapport pour la clinique ══════════
+     Un résumé factuel du journal sur 7 / 14 / 30 / 90 jours, à montrer ou
+     envoyer à l'équipe de soins : moyennes par jour CONSIGNÉ (jamais par
+     jour calendaire — un jour sans saisie n'est pas un jour sans manger),
+     répartition par moment de la journée, détail du calcul et repas
+     marquants. Des faits, aucune cible ni jugement : l'équipe interprète.
+     Le rapport agrège les champs stockés (net/carbs/fiber/polyols), il ne
+     recalcule jamais — tout écart avec la fiche d'un repas détruirait la
+     confiance en clinique. */
+  var REPORT_PERIODS = [7, 14, 30, 90];
+  var reportDays = num(lsGet('gn_report_period'));
+  if (REPORT_PERIODS.indexOf(reportDays) === -1) reportDays = 14;
+
+  var fmtRange = new Intl.DateTimeFormat('fr-CA', { day: 'numeric', month: 'long' });
+  var fmtTopDay = new Intl.DateTimeFormat('fr-CA', { weekday: 'short', day: 'numeric', month: 'short' });
+
+  function median(sorted) {
+    var mid = Math.floor(sorted.length / 2);
+    return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+  }
+
+  /* Créneaux horaires GÉNÉREUX, bornes affichées : l'app ne sait pas ce
+     qu'était vraiment le repas, elle classe l'heure d'enregistrement. */
+  function reportBucket(ts) {
+    var h = new Date(ts).getHours();
+    if (h >= 4 && h < 11) return 0;
+    if (h >= 11 && h < 16) return 1;
+    if (h >= 16 && h < 21) return 2;
+    return 3;
+  }
+  var REPORT_BUCKETS = [
+    { ico: '🌅', lbl: 'Déjeuner et matin', bornes: '4 h à 11 h' },
+    { ico: '☀️', lbl: 'Dîner et après-midi', bornes: '11 h à 16 h' },
+    { ico: '🌆', lbl: 'Souper et soirée', bornes: '16 h à 21 h' },
+    { ico: '🌙', lbl: 'Nuit', bornes: '21 h à 4 h' }
+  ];
+
+  /* Le même calcul pour l'écran, le texte partagé et le PDF : trois vues
+     qui divergeraient d'un gramme suffiraient à faire douter de tout. */
+  function computeReport() {
+    var now = new Date();
+    var start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (reportDays - 1));
+    var slice = history.filter(function (e) { return num(e.ts) >= start.getTime(); });
+    var oldest = Infinity;
+    history.forEach(function (e) { if (num(e.ts) < oldest) oldest = num(e.ts); });
+    var byDay = {};
+    var totNet = 0, totCarbs = 0, totFiber = 0, totPolyols = 0;
+    slice.forEach(function (e) {
+      var k = dayKey(e.ts);
+      if (!byDay[k]) byDay[k] = { total: 0, count: 0 };
+      byDay[k].total += e.net;
+      byDay[k].count++;
+      totNet += e.net;
+      totCarbs += e.carbs;
+      totFiber += e.fiber;
+      totPolyols += e.polyols;
+    });
+    var dayKeys = Object.keys(byDay);
+    var dayTotals = dayKeys.map(function (k) { return byDay[k].total; }).sort(function (a, b) { return a - b; });
+    var buckets = [[], [], [], []];
+    slice.forEach(function (e) { buckets[reportBucket(e.ts)].push(e.net); });
+    return {
+      now: now, start: start, slice: slice, oldest: oldest,
+      truncated: history.length > 0 && oldest > start.getTime(),
+      byDay: byDay, dayKeys: dayKeys, dayTotals: dayTotals,
+      joursActifs: dayKeys.length, nbRepas: slice.length,
+      totNet: totNet, totCarbs: totCarbs, totFiber: totFiber, totPolyols: totPolyols,
+      avg: dayKeys.length > 0 ? totNet / dayKeys.length : 0,
+      buckets: buckets,
+      top: slice.slice().sort(function (a, b) { return b.net - a.net; }).slice(0, 3)
+    };
+  }
+
+  function renderReport() {
+    // Pilules de période
+    var pills = $('report-periods');
+    pills.innerHTML = '';
+    REPORT_PERIODS.forEach(function (n) {
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.textContent = n + ' j';
+      b.setAttribute('aria-pressed', n === reportDays ? 'true' : 'false');
+      if (n === reportDays) b.className = 'sel';
+      b.addEventListener('click', function () {
+        reportDays = n;
+        lsSet('gn_report_period', String(n));
+        renderReport();
+      });
+      pills.appendChild(b);
+    });
+
+    var R = computeReport();
+    var joursActifs = R.joursActifs, nbRepas = R.nbRepas, avg = R.avg;
+
+    // Couverture réelle : app récente ou plafond de 300 repas atteint —
+    // les moyennes ne portent alors que sur les jours réellement couverts
+    var coverage = $('report-coverage');
+    if (R.truncated) {
+      coverage.textContent = 'Données consignées depuis le ' + fmtRange.format(new Date(R.oldest)) +
+        ' — les moyennes portent sur les jours couverts.';
+    } else {
+      coverage.textContent = 'Du ' + fmtRange.format(R.start) + ' au ' + fmtRange.format(R.now) + '.';
+    }
+
+    // En vedette : moyenne par jour consigné
+    $('report-avg').innerHTML = round1(avg) + ' <small>g</small>';
+    $('report-sub').textContent = nbRepas === 0
+      ? 'Aucun repas consigné sur cette période.'
+      : nbRepas + ' repas · ' + joursActifs + (joursActifs > 1 ? ' jours consignés' : ' jour consigné') +
+        ' sur ' + reportDays;
+
+    renderReportChart(R.slice, R.start, R.byDay);
+
+    // Chiffres clés — le n accompagne toujours la statistique : une
+    // « médiane » sur 3 jours ne doit pas avoir l'air d'une certitude
+    var keys = $('report-keys'), keys2 = $('report-keys2');
+    keys.innerHTML = '';
+    keys2.innerHTML = '';
+    function keyStat(target, val, lbl) {
+      var d = document.createElement('div');
+      d.className = 'ref-item';
+      var b = document.createElement('b');
+      b.textContent = val;
+      var s = document.createElement('span');
+      s.textContent = lbl;
+      d.appendChild(b);
+      d.appendChild(s);
+      target.appendChild(d);
+    }
+    keyStat(keys, joursActifs ? round1(median(R.dayTotals)) + ' g' : '—',
+      'médiane par jour (' + joursActifs + (joursActifs > 1 ? ' jours' : ' jour') + ')');
+    keyStat(keys, nbRepas ? round1(R.totNet / nbRepas) + ' g' : '—', 'moyenne par repas');
+    keyStat(keys2, joursActifs ? round1(nbRepas / joursActifs) : '—', 'repas par jour consigné');
+    keyStat(keys2, joursActifs ? round1(R.dayTotals[R.dayTotals.length - 1]) + ' g' : '—', 'jour le plus élevé');
+
+    // Par moment de la journée : moyenne (jamais le total, qui ferait
+    // paraître « pire » le moment le plus fréquent)
+    var moments = $('report-moments');
+    moments.innerHTML = '';
+    REPORT_BUCKETS.forEach(function (bk, i) {
+      var list = R.buckets[i];
+      if (list.length === 0 && i === 3) return; // la nuit, seulement si vécue
+      var sub, val;
+      if (list.length === 0) {
+        sub = '(' + bk.bornes + ') · aucun repas consigné';
+        val = '—';
+      } else {
+        var sum = 0;
+        list.forEach(function (v) { sum += v; });
+        sub = '(' + bk.bornes + ') · ' + list.length + ' repas';
+        val = 'moy. ' + round1(sum / list.length) + ' g';
+      }
+      refRowInto(moments, bk.ico, bk.lbl, sub, val);
+    });
+
+    // Détail du calcul : sommes des champs stockés, arrondi à l'affichage
+    var calc = $('report-calc');
+    calc.innerHTML = '';
+    var ja = Math.max(1, joursActifs);
+    refRowInto(calc, '🍞', 'Glucides totaux', 'moyenne par jour consigné', round1(R.totCarbs / ja) + ' g');
+    refRowInto(calc, '🌾', 'Fibres', 'soustraites du total', '− ' + round1(R.totFiber / ja) + ' g');
+    if (R.totPolyols > 0) refRowInto(calc, '🍬', 'Polyols', 'déduits selon leur type (50 ou 100 %)', round1(R.totPolyols / ja) + ' g');
+    refRowInto(calc, '🎯', 'Glucides nets', 'la moyenne en vedette ci-dessus', round1(avg) + ' g');
+
+    // Repas les plus élevés : rangées tappables vers la fiche existante,
+    // SANS les boutons recharger/supprimer — le rapport se passe de main
+    // en main en clinique, il reste en lecture seule
+    var top = $('report-top');
+    top.innerHTML = '';
+    if (nbRepas === 0) {
+      var empty = document.createElement('p');
+      empty.className = 'hint';
+      empty.textContent = 'Rien à montrer — enregistre des repas sur cette période.';
+      top.appendChild(empty);
+    }
+    R.top.forEach(function (entry) {
+      var row = document.createElement('div');
+      row.className = 'journal-meal';
+      var open = document.createElement('button');
+      open.type = 'button';
+      open.className = 'open-entry';
+      open.setAttribute('aria-label', 'Voir le détail de ce repas');
+      if (entry.photo) {
+        var thumb = document.createElement('img');
+        thumb.className = 'thumb';
+        thumb.alt = '';
+        thumb.src = 'data:image/jpeg;base64,' + entry.photo;
+        open.appendChild(thumb);
+      }
+      var txt = document.createElement('span');
+      txt.className = 'jm-txt';
+      var foods = document.createElement('span');
+      foods.className = 'foods';
+      foods.textContent = entry.items.map(function (it) { return it.name; }).join(', ');
+      var net = document.createElement('span');
+      net.className = 'net';
+      net.textContent = entry.net + ' glucides';
+      var when = document.createElement('span');
+      when.className = 'when';
+      when.textContent = fmtTopDay.format(new Date(entry.ts)) + ' · ' + fmtTime.format(new Date(entry.ts));
+      txt.appendChild(foods);
+      txt.appendChild(net);
+      txt.appendChild(when);
+      open.appendChild(txt);
+      open.addEventListener('click', function () { openEntryModal(entry); });
+      row.appendChild(open);
+      top.appendChild(row);
+    });
+
+    // Détail jour par jour, du plus récent au plus ancien
+    var daysEl = $('report-days');
+    daysEl.innerHTML = '';
+    var byDay = R.byDay;
+    R.dayKeys.slice().sort().reverse().forEach(function (k) {
+      var head = document.createElement('div');
+      head.className = 'day-header';
+      var dateEl = document.createElement('span');
+      dateEl.className = 'date';
+      // k = « AAAA-MM-JJ » local : reconstruire la date à midi évite tout
+      // glissement de fuseau
+      var parts = k.split('-');
+      dateEl.textContent = fmtDay.format(new Date(+parts[0], +parts[1] - 1, +parts[2], 12));
+      var right = document.createElement('span');
+      var nb = document.createElement('span');
+      nb.className = 'nb';
+      nb.textContent = byDay[k].count + ' repas ·';
+      var tot = document.createElement('span');
+      tot.className = 'day-total';
+      tot.textContent = ' ' + round1(byDay[k].total) + ' glucides';
+      right.appendChild(nb);
+      right.appendChild(tot);
+      head.appendChild(dateEl);
+      head.appendChild(right);
+      daysEl.appendChild(head);
+    });
+
+    $('report-foot').textContent = 'Ce rapport résume ce qui a été consigné au journal. Il ne mesure pas la ' +
+      'glycémie et ne remplace pas l’évaluation de ton équipe de soins. Généré le ' +
+      new Intl.DateTimeFormat('fr-CA', { day: 'numeric', month: 'long', year: 'numeric' }).format(R.now) + '.';
+  }
+
+  /* Graphique de la période : barres quotidiennes tappables jusqu'à
+     30 jours; à 90 jours, une barre par semaine (moyenne par jour
+     consigné de la semaine) — 90 barres de 2 px seraient illisibles. */
+  function renderReportChart(slice, start, byDay) {
+    var svg = $('report-chart');
+    svg.innerHTML = '';
+    var W = 340, H = 130, padB = 20, padT = 18;
+    var weekly = reportDays > 30;
+    var bars = [];
+    var d, k, i;
+    if (!weekly) {
+      for (i = 0; i < reportDays; i++) {
+        d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+        k = dayKey(d.getTime());
+        bars.push({ key: k, date: d, total: byDay[k] ? byDay[k].total : 0,
+          count: byDay[k] ? byDay[k].count : 0 });
+      }
+    } else {
+      for (i = 0; i < reportDays; i += 7) {
+        var wTot = 0, wDays = 0;
+        var from = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+        for (var j = i; j < Math.min(i + 7, reportDays); j++) {
+          d = new Date(start.getFullYear(), start.getMonth(), start.getDate() + j);
+          k = dayKey(d.getTime());
+          if (byDay[k]) { wTot += byDay[k].total; wDays++; }
+        }
+        bars.push({ date: from, total: wDays > 0 ? wTot / wDays : 0, count: wDays });
+      }
+    }
+    $('report-chart-note').textContent = weekly
+      ? 'Une barre par semaine : moyenne par jour consigné de la semaine.'
+      : 'Une barre par jour · touche une barre pour voir ces repas.';
+
+    var maxV = 10;
+    bars.forEach(function (b) { if (b.total > maxV) maxV = b.total; });
+    maxV = Math.ceil(maxV / 10) * 10;
+    var n = bars.length;
+    var gap = n <= 7 ? 10 : n <= 14 ? 6 : n <= 31 ? 2 : 6;
+    var barW = (W - gap * (n + 1)) / n;
+    var maxIdx = bars.reduce(function (best, b, bi) { return b.total > bars[best].total ? bi : best; }, 0);
+    var lastIdx = -1;
+    bars.forEach(function (b, bi) { if (b.total > 0) lastIdx = bi; });
+    var tickEvery = n <= 7 ? 1 : n <= 14 ? 2 : n <= 31 ? 5 : 3;
+    var dayNames = ['di', 'lu', 'ma', 'me', 'je', 've', 'sa'];
+
+    svg.appendChild(svgEl('line', { x1: 0, y1: H - padB, x2: W, y2: H - padB, 'class': 'baseline' }));
+    bars.forEach(function (b, bi) {
+      var x = gap + bi * (barW + gap);
+      var h = b.total > 0 ? Math.max(3, (b.total / maxV) * (H - padB - padT)) : 0;
+      var y = H - padB - h;
+      if (b.total > 0) {
+        var bar = svgEl('rect', { x: x, y: y, width: barW, height: h, rx: Math.min(4, barW / 2), 'class': 'bar' });
+        var title = svgEl('title', {});
+        title.textContent = weekly
+          ? 'Semaine du ' + fmtRange.format(b.date) + ' : moyenne ' + round1(b.total) +
+            ' glucides sur ' + b.count + (b.count > 1 ? ' jours consignés' : ' jour consigné')
+          : fmtDay.format(b.date) + ' : ' + round1(b.total) + ' glucides (' + b.count +
+            ' repas)';
+        bar.appendChild(title);
+        svg.appendChild(bar);
+      }
+      if (b.total > 0 && (bi === maxIdx || bi === lastIdx) && n <= 31) {
+        var lbl = svgEl('text', { x: x + barW / 2, y: y - 5, 'text-anchor': 'middle', 'class': 'bar-label' });
+        lbl.textContent = round1(b.total);
+        svg.appendChild(lbl);
+      }
+      if (bi % tickEvery === 0) {
+        var dn = svgEl('text', { x: x + barW / 2, y: H - 6, 'text-anchor': 'middle' });
+        dn.textContent = n <= 7 ? dayNames[b.date.getDay()] : b.date.getDate();
+        svg.appendChild(dn);
+      }
+      // Colonne tappable (barres quotidiennes seulement) : mène aux repas
+      // de ce jour — ferme d'abord le rapport, sinon le journal défilerait
+      // derrière lui sans qu'on le voie
+      if (!weekly && b.total > 0) {
+        var hit = svgEl('rect', {
+          x: x - gap / 2, y: 0, width: barW + gap, height: H,
+          'class': 'bar-hit', tabindex: 0, role: 'button',
+          'aria-label': fmtDay.format(b.date) + ' : ' + round1(b.total) +
+            ' glucides — voir les repas de ce jour'
+        });
+        var go = function () {
+          closeReportModal();
+          switchTab('journal');
+          openJournalDay(b.key);
+        };
+        hit.addEventListener('click', go);
+        hit.addEventListener('keydown', function (e) {
+          if (e.key !== 'Enter' && e.key !== ' ') return;
+          e.preventDefault();
+          go();
+        });
+        svg.appendChild(hit);
+      }
+    });
+  }
+
+  function reportSummaryText() {
+    var p = activeProfile();
+    var R = computeReport();
+    var ja = R.joursActifs;
+    var lines = ['🩺 Rapport glucides de ' + p.name + ' — du ' + fmtRange.format(R.start) +
+      ' au ' + fmtRange.format(R.now)];
+    lines.push('Journal : ' + R.nbRepas + ' repas · ' + ja + (ja > 1 ? ' jours consignés' : ' jour consigné') +
+      ' sur ' + reportDays);
+    if (ja > 0) {
+      lines.push('Moyenne : ' + round1(R.avg) + ' glucides nets par jour consigné');
+      lines.push('Médiane quotidienne : ' + round1(median(R.dayTotals)) +
+        ' · Par repas : ' + round1(R.totNet / Math.max(1, R.nbRepas)) + ' glucides');
+      REPORT_BUCKETS.forEach(function (bk, i) {
+        if (R.buckets[i].length === 0) return;
+        var sum = 0;
+        R.buckets[i].forEach(function (v) { sum += v; });
+        lines.push(bk.ico + ' ' + bk.lbl + ' (' + bk.bornes + ') : moy. ' +
+          round1(sum / R.buckets[i].length) + ' glucides · ' + R.buckets[i].length + ' repas');
+      });
+    }
+    lines.push('Nets = glucides − fibres − polyols (érythritol en entier, autres à moitié)');
+    lines.push('Généré par Glucides Nets — faits calculés, aucune recommandation. Valeurs à vérifier.');
+    return lines.join('\n');
+  }
+
+  /* Le PDF : le même rapport, reconstruit en noir sur blanc dans
+     #print-report, puis window.print() — le dialogue d'impression du
+     téléphone ou de l'ordinateur propose « Enregistrer en PDF ». */
+  function escHtml(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
+    });
+  }
+  function buildPrintReport() {
+    var p = activeProfile();
+    var R = computeReport();
+    var ja = Math.max(1, R.joursActifs);
+    var fmtFull = new Intl.DateTimeFormat('fr-CA', { day: 'numeric', month: 'long', year: 'numeric' });
+    var h = [];
+    h.push('<h1>Rapport glucides — ' + escHtml(p.name) + '</h1>');
+    h.push('<p class="pr-sub">Du ' + fmtRange.format(R.start) + ' au ' + fmtRange.format(R.now) +
+      ' (' + reportDays + ' jours) · généré le ' + fmtFull.format(R.now) + ' · Glucides Nets</p>');
+    if (R.truncated) {
+      h.push('<p class="pr-note">Données consignées depuis le ' + fmtRange.format(new Date(R.oldest)) +
+        ' — les moyennes portent sur les jours couverts.</p>');
+    }
+    h.push('<div class="pr-hero"><span>Glucides nets — moyenne par jour consigné</span><b>' +
+      round1(R.avg) + ' g</b><span>' + R.nbRepas + ' repas · ' + R.joursActifs +
+      (R.joursActifs > 1 ? ' jours consignés' : ' jour consigné') + ' sur ' + reportDays + '</span></div>');
+
+    h.push('<h2>Chiffres clés</h2><table>');
+    h.push('<tr><td>Médiane par jour (' + R.joursActifs + (R.joursActifs > 1 ? ' jours' : ' jour') +
+      ')</td><td class="num">' + (R.joursActifs ? round1(median(R.dayTotals)) + ' g' : '—') + '</td></tr>');
+    h.push('<tr><td>Moyenne par repas</td><td class="num">' +
+      (R.nbRepas ? round1(R.totNet / R.nbRepas) + ' g' : '—') + '</td></tr>');
+    h.push('<tr><td>Repas par jour consigné</td><td class="num">' +
+      (R.joursActifs ? round1(R.nbRepas / R.joursActifs) : '—') + '</td></tr>');
+    h.push('<tr><td>Jour le plus élevé</td><td class="num">' +
+      (R.joursActifs ? round1(R.dayTotals[R.dayTotals.length - 1]) + ' g' : '—') + '</td></tr>');
+    h.push('</table>');
+
+    h.push('<h2>Par moment de la journée</h2><table>');
+    h.push('<tr><th>Moment</th><th class="num">Repas</th><th class="num">Moyenne</th></tr>');
+    REPORT_BUCKETS.forEach(function (bk, i) {
+      var list = R.buckets[i];
+      if (list.length === 0 && i === 3) return;
+      var sum = 0;
+      list.forEach(function (v) { sum += v; });
+      h.push('<tr><td>' + bk.lbl + ' (' + bk.bornes + ')</td><td class="num">' + list.length +
+        '</td><td class="num">' + (list.length ? round1(sum / list.length) + ' g' : '—') + '</td></tr>');
+    });
+    h.push('</table>');
+
+    h.push('<h2>Détail du calcul — moyennes par jour consigné</h2><table>');
+    h.push('<tr><td>Glucides totaux</td><td class="num">' + round1(R.totCarbs / ja) + ' g</td></tr>');
+    h.push('<tr><td>Fibres (soustraites du total)</td><td class="num">− ' + round1(R.totFiber / ja) + ' g</td></tr>');
+    if (R.totPolyols > 0) {
+      h.push('<tr><td>Polyols (déduits selon leur type, 50 ou 100 %)</td><td class="num">' +
+        round1(R.totPolyols / ja) + ' g</td></tr>');
+    }
+    h.push('<tr><td><strong>Glucides nets</strong></td><td class="num"><strong>' +
+      round1(R.avg) + ' g</strong></td></tr>');
+    h.push('</table>');
+
+    if (R.top.length > 0) {
+      h.push('<h2>Repas les plus élevés de la période</h2>');
+      R.top.forEach(function (entry) {
+        var d = new Date(entry.ts);
+        h.push('<div class="pr-top">' +
+          (entry.photo ? '<img src="data:image/jpeg;base64,' + entry.photo + '" alt="">' : '') +
+          '<div class="t"><strong>' + round1(entry.net) + ' glucides</strong> · ' +
+          escHtml(fmtTopDay.format(d)) + ' ' + fmtTime.format(d) + '<br>' +
+          escHtml(entry.items.map(function (it) { return it.name; }).join(', ')) + '</div></div>');
+      });
+    }
+
+    if (R.joursActifs > 0) {
+      h.push('<h2>Jour par jour</h2><table>');
+      h.push('<tr><th>Date</th><th class="num">Repas</th><th class="num">Glucides nets</th></tr>');
+      R.dayKeys.slice().sort().reverse().forEach(function (k) {
+        var parts = k.split('-');
+        h.push('<tr><td>' + escHtml(fmtDay.format(new Date(+parts[0], +parts[1] - 1, +parts[2], 12))) +
+          '</td><td class="num">' + R.byDay[k].count + '</td><td class="num">' +
+          round1(R.byDay[k].total) + ' g</td></tr>');
+      });
+      h.push('</table>');
+    }
+
+    h.push('<p class="pr-foot">Nets = glucides − fibres − polyols (érythritol soustrait en entier, ' +
+      'autres polyols à moitié). Ce rapport résume ce qui a été consigné au journal de l’app ' +
+      'Glucides Nets : des faits calculés, sans avis médical ni recommandation de dose. ' +
+      'Il ne mesure pas la glycémie et ne remplace pas l’évaluation de l’équipe de soins. ' +
+      'Valeurs déclaratives, à vérifier.</p>');
+    $('print-report').innerHTML = h.join('');
+  }
+
+  function openReportModal() {
+    renderReport();
+    openModal('report-modal', '#report-back');
+  }
+  function closeReportModal() {
+    closeModal('report-modal');
+  }
+  // Rendu à jour si une synchro ravive le journal pendant que le rapport
+  // est ouvert
+  function renderReportIfOpen() {
+    if ($('report-modal').classList.contains('open')) renderReport();
+  }
+  trapModal('report-modal', closeReportModal);
+  $('report-open').addEventListener('click', openReportModal);
+  $('report-back').addEventListener('click', closeReportModal);
+  $('report-modal').addEventListener('click', function (e) {
+    if (e.target === $('report-modal')) closeReportModal();
+  });
+  $('report-pdf').addEventListener('click', function () {
+    buildPrintReport();
+    window.print();
+  });
+  $('report-share').addEventListener('click', function () {
+    var text = reportSummaryText();
+    if (navigator.share) {
+      navigator.share({ title: 'Rapport glucides', text: text }).catch(function () { /* annulé */ });
+    } else if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(function () {
+        toast('✓ Rapport copié — colle-le dans un courriel à la clinique');
+      });
+    } else {
+      alert(text);
+    }
   });
 
   function renderWeekChart() {
@@ -8061,6 +8685,7 @@
     renderRecipes();
     renderJournal();
     renderWeekChart();
+    renderReportIfOpen();
     renderAiMemory();
     renderProfiles();
     renderHome();
