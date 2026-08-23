@@ -2029,7 +2029,9 @@
     <div class="card">
       <h2>🧮 Calcul des glucides</h2>
       <button class="btn btn--action" id="scan-open-btn" type="button">➕ Calculer les glucides du repas</button>
-      <input type="file" id="label-photo-input" accept="image/*" capture="environment" style="display:none;">
+      <!-- Import : PAS de capture → ouvre la galerie/les fichiers, pas la
+           caméra (la caméra en direct est le scanner). -->
+      <input type="file" id="label-photo-input" accept="image/*" style="display:none;">
       <div id="label-analysis" role="status" aria-live="polite"></div>
       <button class="btn btn-secondary" id="leftover-btn" type="button" style="display:none; margin-top:10px;">🍽️ Photographie les restes — voir ce qui a été consommé</button>
       <input type="file" id="leftover-input" accept="image/*" capture="environment" hidden>
@@ -2400,7 +2402,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.31.0</span>
+  <br><span id="app-version">Glucides Nets v2.32.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
