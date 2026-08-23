@@ -56,9 +56,28 @@ const RESULT = {
   check('info-bulle ouverte', await page.locator('#mp-info').count() === 1);
   check('info-bulle : nom', (await page.locator('#mp-info .t').textContent()).includes('Riz'));
   check('info-bulle : confiance', (await page.locator('#mp-info .conf').textContent()).includes('à vérifier'));
+  // Le bandeau vit SOUS la photo (jamais par-dessus) et seule la
+  // sélection garde ses contours pleins
+  check('bandeau hors des calques photo',
+    await page.evaluate(() => !document.getElementById('mp-info').closest('#mp-cards') &&
+      !document.getElementById('mp-info').closest('#mp-photos')));
+  check('autres contours estompés',
+    await page.evaluate(() => {
+      const els = document.querySelectorAll('#mp-shapes [data-fi], #mp-cards [data-fi]');
+      let selPlein = false, autresEstompes = true;
+      els.forEach(el => {
+        if (el.getAttribute('data-fi') === '0') { if (el.style.opacity === '') selPlein = true; }
+        else if (el.style.opacity !== '0.15') autresEstompes = false;
+      });
+      return selPlein && autresEstompes;
+    }));
   await page.locator('.mp-onum').first().click();
   await page.waitForTimeout(200);
   check('second tap referme', await page.locator('#mp-info').count() === 0);
+  check('contours restaurés à la fermeture',
+    await page.evaluate(() =>
+      Array.prototype.every.call(document.querySelectorAll('#mp-shapes [data-fi]'),
+        el => el.style.opacity === '')));
   await page.locator('.mp-onum').nth(2).click();
   await page.waitForTimeout(200);
   check('confiance faible affichée', (await page.locator('#mp-info .conf').textContent()).includes('incertain'));
