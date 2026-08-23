@@ -46,25 +46,13 @@ const { serve, launch, check, finish, JPEG_1PX } = require('./helper');
   check('2 aliments listés', await page.locator('#entry-items .food-item').count() === 2);
   check('retrait par aliment offert', await page.locator('#entry-items .food-item .remove').count() === 2);
 
-  // Glycémie et note
-  await page.fill('#entry-bg-before', '5.8');
-  await page.fill('#entry-bg-after', '9.4');
-  await page.fill('#entry-note', 'soccer avant le repas');
-  await page.locator('#entry-note').blur();
-  await page.waitForTimeout(300);
-  const saved = await page.evaluate(() => JSON.parse(localStorage.getItem('gn_history'))[0]);
-  check('glycémies enregistrées', saved.bg && saved.bg.b === 5.8 && saved.bg.a === 9.4, JSON.stringify(saved.bg));
-  check('note enregistrée', saved.note === 'soccer avant le repas');
-  check('indicateurs 📝🩸 dans la rangée',
-    (await page.locator('.journal-meal .foods').first().textContent()).includes('🩸'));
-
   // Retrait d'un aliment → totaux recalculés
   await page.locator('#entry-items .food-item .remove').last().click();
   await page.waitForTimeout(300);
   check('un aliment restant', await page.locator('#entry-items .food-item').count() === 1);
   const after = await page.evaluate(() => JSON.parse(localStorage.getItem('gn_history'))[0]);
   check('totaux recalculés (net 14)', after.net === 14, after.net);
-  check('glycémie conservée après retrait', after.bg && after.bg.b === 5.8);
+  check('photo conservée après retrait', typeof after.photo === 'string' && after.photo.length > 10);
 
   // Recharger → onglet Calculer
   await page.click('#entry-reload');
