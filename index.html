@@ -2560,7 +2560,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.37.0</span>
+  <br><span id="app-version">Glucides Nets v2.38.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -2882,6 +2882,9 @@
       <svg id="entry-shapes" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"></svg>
       <div id="entry-marks"></div>
     </div>
+    <!-- Photos d'avant les annotations : l'IA resitue les aliments CONNUS
+         du repas sur la photo, et la fiche devient annotée pour de bon -->
+    <button class="link-btn" id="entry-annotate" type="button" style="display:none; width:100%; text-align:center; margin:-4px 0 8px;">✨ Annoter la photo (contours et pastilles)</button>
     <div class="sec-label">Aliments du repas</div>
     <div id="entry-items"></div>
     <div class="ref-card">
@@ -7492,10 +7495,15 @@
       var drawn = 0;
       overlay.forEach(function (f, i) { if (drawEntryFood(f, i, shapes, marks)) drawn++; });
       wrap.classList.toggle('annotated', drawn > 0);
+      // Photo d'avant les annotations (la géométrie n'était pas encore
+      // enregistrée) : offrir de la faire annoter par l'IA, si disponible
+      $('entry-annotate').style.display =
+        drawn === 0 && entry.items.length > 0 && aiAvailable() ? 'block' : 'none';
     } else {
       wrap.style.display = 'none';
       wrap.classList.remove('annotated');
       photo.removeAttribute('src');
+      $('entry-annotate').style.display = 'none';
     }
     var list = $('entry-items');
     list.innerHTML = '';
@@ -7699,6 +7707,125 @@
     var t = e.target;
     if (t && t.closest && (t.closest('.mp-onum') || t.closest('.mp-info'))) return;
     entryCloseInfo();
+  });
+
+  /* ── Annoter après coup une photo d'avant les annotations ──
+     Les repas photographiés avant que la géométrie soit enregistrée ont
+     une photo nue. L'IA resitue les aliments DÉJÀ CONNUS du repas (noms
+     et poids fournis — elle ne réévalue rien, elle pointe), et la fiche
+     devient annotée comme à l'évaluation, pour de bon. */
+  var ANNOTATE_SCHEMA = {
+    type: 'object',
+    properties: {
+      foods: {
+        type: 'array',
+        description: 'Un élément par aliment de la liste fournie, DANS LE MÊME ORDRE',
+        items: {
+          type: 'object',
+          properties: {
+            name: { type: 'string', description: 'Le nom fourni, recopié tel quel' },
+            x: { type: ['number', 'null'], description: 'Centre de l’aliment : % de la largeur (0-100), null si introuvable sur la photo' },
+            y: { type: ['number', 'null'], description: 'Centre de l’aliment : % de la hauteur (0-100), null si introuvable' },
+            w: { type: ['number', 'null'], description: 'Largeur du rectangle englobant, % de la largeur' },
+            h: { type: ['number', 'null'], description: 'Hauteur du rectangle englobant, % de la hauteur' },
+            pieces: {
+              type: ['array', 'null'],
+              description: 'Si l’aliment est en 2 morceaux distincts ou plus : un rectangle par morceau (12 max), sinon null',
+              items: {
+                type: 'object',
+                properties: {
+                  x: { type: 'number' }, y: { type: 'number' },
+                  w: { type: 'number' }, h: { type: 'number' }
+                },
+                required: ['x', 'y', 'w', 'h']
+              }
+            },
+            confidence: {
+              anyOf: [{ type: 'string', enum: ['bonne', 'moyenne', 'faible'] }, { type: 'null' }],
+              description: 'Ta confiance dans l’identification VISUELLE de cet aliment sur la photo'
+            }
+          },
+          required: ['name', 'x', 'y', 'w', 'h', 'pieces', 'confidence']
+        }
+      }
+    },
+    required: ['foods']
+  };
+
+  $('entry-annotate').addEventListener('click', function () {
+    if (!entryShown || !entryShown.photo || entryShown.items.length === 0) return;
+    var entry = entryShown;
+    var btn = $('entry-annotate');
+    var prev = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = '✨ L’IA situe les aliments sur la photo…';
+    function fail() {
+      btn.disabled = false;
+      btn.textContent = prev;
+      toast('⚠️ L’annotation n’a pas fonctionné — vérifie la connexion et réessaie', { type: 'warn', duration: 6000 });
+    }
+    var liste = entry.items.map(function (it, i) {
+      return (i + 1) + '. « ' + it.name + ' »' + (it.grams ? ' (' + round1(it.grams) + ' g)' : '');
+    }).join('\n');
+    aiFetch({
+      model: 'claude-opus-5',
+      max_tokens: 2048,
+      output_config: { effort: 'low', format: { type: 'json_schema', schema: ANNOTATE_SCHEMA } },
+      messages: [{
+        role: 'user',
+        content: [
+          { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: entry.photo } },
+          {
+            type: 'text',
+            text: 'Voici la photo d’un repas déjà consigné. Ses aliments sont CONNUS — ne réévalue ni les ' +
+              'quantités ni les glucides, contente-toi de SITUER chaque aliment sur la photo :\n' + liste +
+              '\nPour chacun, dans le même ordre : x,y = centre en % de l’image; w,h = rectangle englobant ' +
+              '(tous ses morceaux compris) en %; pieces = un rectangle serré par morceau quand l’aliment est ' +
+              'en 2 morceaux distincts ou plus, sinon null; confidence = bonne / moyenne / faible. ' +
+              'Un aliment invisible sur la photo : x et y à null.'
+          }
+        ]
+      }]
+    }).then(function (r) {
+      if (!r.ok) throw new Error('api');
+      return r.json();
+    }).then(function (data) {
+      if (data.stop_reason === 'refusal') throw new Error('refus');
+      var text = (data.content || [])
+        .filter(function (blk) { return blk.type === 'text'; })
+        .map(function (blk) { return blk.text; })
+        .join('');
+      var res = JSON.parse(text);
+      var foods = Array.isArray(res.foods) ? res.foods : [];
+      var overlay = [];
+      entry.items.forEach(function (it, i) {
+        // Par nom d'abord; par position dans la liste sinon
+        var f = null;
+        for (var j = 0; j < foods.length; j++) {
+          if (foods[j] && normalize(String(foods[j].name || '')) === normalize(it.name)) { f = foods[j]; break; }
+        }
+        if (!f) f = foods[i] || null;
+        if (!f || f.x == null || f.y == null) return;
+        overlay.push({
+          name: it.name,
+          grams: it.grams || null,
+          carbs: round1(it.carbs * it.ratio),
+          fiber: round1(it.fiber * it.ratio),
+          x: num(f.x), y: num(f.y), w: f.w == null ? null : num(f.w), h: f.h == null ? null : num(f.h),
+          pieces: Array.isArray(f.pieces) && f.pieces.length >= 2 ? f.pieces.map(function (pc) {
+            return { x: num(pc.x), y: num(pc.y), w: num(pc.w), h: num(pc.h) };
+          }) : null,
+          confidence: ['bonne', 'moyenne', 'faible'].indexOf(f.confidence) !== -1 ? f.confidence : 'moyenne'
+        });
+      });
+      if (overlay.length === 0) { fail(); return; }
+      entry.overlay = overlay;
+      save();
+      btn.disabled = false;
+      btn.textContent = prev;
+      openEntryModal(entry);
+      toast('✓ Photo annotée — touche une pastille pour le détail');
+    }).catch(fail);
   });
 
   /* Retirer UN aliment d'un repas depuis sa fiche. Deux cas :
