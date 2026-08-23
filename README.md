@@ -56,14 +56,13 @@ Barre du bas à cinq destinations — **Accueil**, **Favoris**, **➕ Calculer**
 - **↻ Recharge** un repas passé en un geste (pratique pour les repas récurrents). Dans la fiche, chaque aliment se **retire individuellement** (✕) — les totaux du repas sont recalculés.
 - **🩺 Rapport pour la clinique** : un bouton dans la carte « 7 derniers jours » ouvre un rapport intégré sur **7 / 14 / 30 / 90 jours** (choix mémorisé) — moyenne par **jour consigné** (jamais par jour calendaire), couverture réelle des données affichée, graphique de période (barres quotidiennes tappables jusqu'à 14 jours; hebdomadaires à 90), chiffres clés (médiane avec son n, moyenne par repas, jour le plus élevé), répartition par **moment de la journée** (déjeuner/dîner/souper/nuit, bornes horaires affichées), détail du calcul, top 3 des repas (tappables vers leur fiche) et détail jour par jour. **📤 Partager** envoie un résumé texte; **🖨️ Créer un PDF** imprime un rendu noir sur blanc via le dialogue du téléphone (« Enregistrer en PDF »), photos comprises. Des **faits calculés seulement** — aucune cible, aucun jugement, aucune recommandation : l'équipe de soins interprète.
 - La photo d'un repas analysé s'affiche **annotée dans sa fiche** comme à l'évaluation : contours colorés selon la confiance, pastilles numérotées tappables (nom, glucides estimés, niveau de confiance).
-- **🩸 Glycémie et note sur chaque repas** : dans la fiche, saisis la glycémie **avant** et **~2 h après** (mmol/L) et une note de contexte (« resto », « soccer avant », « malade »). Des repères factuels pour la discussion en clinique — l'app n'en déduit jamais rien. Indicateurs 📝🩸 dans la rangée du journal; glycémies et notes reprises dans les repas marquants du rapport et de son PDF. Gardées sur l'appareil (suivies par l'export JSON).
 - Quand une **nouvelle version** de l'app est publiée, un toast « ⬆️ Nouvelle version prête — Recharger » l'annonce dès son installation.
 - **💾 Export / import** : sauvegarde toutes tes données (recettes, favoris, journal, leçons apprises) dans un fichier JSON pour les transférer sur un autre appareil.
 - **☁️ Compte et synchronisation (facultatif, onglet Plus)** : par défaut, rien ne sort de l'appareil. En branchant un projet **Supabase** personnel, journal, recettes, favoris, profils, leçons et photos se retrouvent sur tous tes appareils. Connexion par **lien courriel**, sans mot de passe. L'isolation entre comptes est imposée par la base elle-même (Row Level Security), pas par l'app. Tout continue de fonctionner hors ligne — la synchro rattrape au retour du réseau. Bouton de **suppression définitive du compte** inclus. Mise en place : [`supabase/README.md`](supabase/README.md).
 
 ## Version de l'app
 
-La version courante est **v2.36.0**, affichée dans le pied de page de l'app (`#app-version` dans `index.html`).
+La version courante est **v2.37.0**, affichée dans le pied de page de l'app (`#app-version` dans `index.html`).
 
 **Règle à chaque mise à jour publiée** : incrémenter le numéro aux **deux** endroits, sinon les utilisateurs installés gardent l'ancienne version en cache :
 1. le pied de page d'`index.html` (`Glucides Nets vX.Y.Z`);

@@ -1356,21 +1356,6 @@
   #entry-shapes { width: 100%; height: 100%; }
   #entry-marks .mp-onum { transform: translate(-30%, -30%); }
   #entry-marks .mp-info { pointer-events: auto; }
-  /* Glycémie et note d'un repas, dans sa fiche */
-  .entry-extra { padding: 4px 0 2px; }
-  .entry-extra .bg-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    margin-bottom: 8px;
-  }
-  .entry-extra label {
-    display: block;
-    font-size: 0.85rem;
-    font-weight: 700;
-    color: var(--muted);
-  }
-  .entry-extra input { margin-top: 4px; }
   .week-chart text { fill: var(--muted); font-size: 10px; font-family: inherit; }
   .week-chart .bar { fill: var(--chart); }
   .week-chart .bar-label { fill: var(--text); font-weight: 700; }
@@ -2575,7 +2560,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.36.0</span>
+  <br><span id="app-version">Glucides Nets v2.37.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -2905,25 +2890,6 @@
       </div>
       <div class="ref-rows" id="entry-totals"></div>
     </div>
-    <div class="ref-card" style="margin-top:12px;">
-      <div class="ref-head">
-        <span class="ref-head-title"><span class="acc-ico" aria-hidden="true">🩸</span> Glycémie et note</span>
-      </div>
-      <div class="entry-extra">
-        <div class="bg-row">
-          <label for="entry-bg-before">Avant le repas (mmol/L)
-            <input type="number" id="entry-bg-before" inputmode="decimal" min="1" max="35" step="0.1" placeholder="ex. : 5,8">
-          </label>
-          <label for="entry-bg-after">~2 h après (mmol/L)
-            <input type="number" id="entry-bg-after" inputmode="decimal" min="1" max="35" step="0.1" placeholder="ex. : 8,4">
-          </label>
-        </div>
-        <label for="entry-note">Note
-          <input type="text" id="entry-note" maxlength="200" autocomplete="off" placeholder="ex. : resto, soccer avant, malade…">
-        </label>
-        <p class="hint" style="margin:8px 0 0;">Saisies à la main, gardées sur cet appareil — des repères pour la discussion en clinique, jamais un avis.</p>
-      </div>
-    </div>
     <div class="actions">
       <button class="btn btn-secondary" id="entry-delete" type="button">🗑️ Supprimer</button>
       <button class="btn btn--action" id="entry-reload" type="button">↻ Recharger ce repas</button>
@@ -3132,15 +3098,6 @@
     if (typeof e.photo === 'string' && /^[A-Za-z0-9+/=]+$/.test(e.photo)) {
       s.photo = e.photo;
       if (Array.isArray(e.overlay)) s.overlay = e.overlay;
-    }
-    // Note libre et glycémies saisies à la main (mmol/L) : des faits pour
-    // la discussion en clinique, gardés sur l'appareil comme la photo
-    if (typeof e.note === 'string' && e.note.trim()) s.note = e.note.trim().slice(0, 200);
-    if (e.bg && typeof e.bg === 'object') {
-      var bg = {};
-      if (num(e.bg.b) > 0 && num(e.bg.b) < 40) bg.b = num(e.bg.b);
-      if (num(e.bg.a) > 0 && num(e.bg.a) < 40) bg.a = num(e.bg.a);
-      if (bg.b != null || bg.a != null) s.bg = bg;
     }
     return s;
   }
@@ -7444,8 +7401,7 @@
       txt.className = 'jm-txt';
       var foods = document.createElement('span');
       foods.className = 'foods';
-      foods.textContent = entry.items.map(function (it) { return it.name; }).join(', ') +
-        (entry.note ? ' 📝' : '') + (entry.bg ? ' 🩸' : '');
+      foods.textContent = entry.items.map(function (it) { return it.name; }).join(', ');
       var net = document.createElement('span');
       net.className = 'net';
       net.textContent = entry.net + ' glucides';
@@ -7589,46 +7545,7 @@
     refRowInto(totals, '🌾', 'Fibres', 'soustraites du total', '− ' + round1(entry.fiber) + ' g');
     if (entry.polyols > 0) refRowInto(totals, '🍬', 'Polyols', 'déduits selon leur type (50 ou 100 %)', round1(entry.polyols) + ' g');
     refRowInto(totals, '🎯', 'Glucides nets', 'la valeur entrée dans la pompe', entry.net + ' g');
-    // Glycémie et note : les champs reflètent l'entrée affichée
-    $('entry-bg-before').value = entry.bg && entry.bg.b != null ? entry.bg.b : '';
-    $('entry-bg-after').value = entry.bg && entry.bg.a != null ? entry.bg.a : '';
-    $('entry-note').value = entry.note || '';
     openModal('entry-modal', '#entry-back');
-  }
-
-  /* Glycémie (mmol/L) et note libre : enregistrées dès la sortie du
-     champ; un champ vidé retire la valeur. Des repères factuels pour la
-     clinique — l'app n'en déduit jamais rien. */
-  function saveEntryExtras() {
-    if (!entryShown) return;
-    function bgVal(id) {
-      var v = parseFloat(String($(id).value).replace(',', '.'));
-      return isFinite(v) && v > 0 && v < 40 ? Math.round(v * 10) / 10 : null;
-    }
-    var b = bgVal('entry-bg-before');
-    var a = bgVal('entry-bg-after');
-    if (b != null || a != null) {
-      entryShown.bg = {};
-      if (b != null) entryShown.bg.b = b;
-      if (a != null) entryShown.bg.a = a;
-    } else {
-      delete entryShown.bg;
-    }
-    var note = $('entry-note').value.trim().slice(0, 200);
-    if (note) entryShown.note = note;
-    else delete entryShown.note;
-    save();
-    renderJournal();
-  }
-  ['entry-bg-before', 'entry-bg-after', 'entry-note'].forEach(function (id) {
-    $(id).addEventListener('change', saveEntryExtras);
-  });
-  function bgStr(bg) {
-    if (!bg) return '';
-    var parts = [];
-    if (bg.b != null) parts.push('avant ' + round1(bg.b));
-    if (bg.a != null) parts.push('~2 h après ' + round1(bg.a));
-    return parts.join(' · ') + ' mmol/L';
   }
 
   /* Une ligne icône / libellé / valeur du patron .ref-rows — partagée par
@@ -8070,9 +7987,7 @@
       net.textContent = entry.net + ' glucides';
       var when = document.createElement('span');
       when.className = 'when';
-      when.textContent = fmtTopDay.format(new Date(entry.ts)) + ' · ' + fmtTime.format(new Date(entry.ts)) +
-        (entry.bg ? ' · 🩸 ' + bgStr(entry.bg) : '') +
-        (entry.note ? ' · 📝 ' + entry.note.slice(0, 60) : '');
+      when.textContent = fmtTopDay.format(new Date(entry.ts)) + ' · ' + fmtTime.format(new Date(entry.ts));
       txt.appendChild(foods);
       txt.appendChild(net);
       txt.appendChild(when);
@@ -8311,9 +8226,7 @@
           (entry.photo ? '<img src="data:image/jpeg;base64,' + escHtml(entry.photo) + '" alt="">' : '') +
           '<div class="t"><strong>' + round1(entry.net) + ' glucides</strong> · ' +
           escHtml(fmtTopDay.format(d)) + ' ' + fmtTime.format(d) + '<br>' +
-          escHtml(entry.items.map(function (it) { return it.name; }).join(', ')) +
-          (entry.bg ? '<br>Glycémie : ' + escHtml(bgStr(entry.bg)) : '') +
-          (entry.note ? '<br>Note : ' + escHtml(entry.note) : '') + '</div></div>');
+          escHtml(entry.items.map(function (it) { return it.name; }).join(', ')) + '</div></div>');
       });
     }
 
@@ -8992,16 +8905,11 @@
           if (here && here.photo && here.photoPath === rec.photoPath) rec.photo = here.photo;
           else pending.push(rec);
         }
-        // La photo, la note et les glycémies d'un repas restent sur
-        // l'appareil (elles ne partent pas au serveur) : une version
-        // reçue ne doit pas les effacer
-        if (tab.name === 'entries' && here) {
-          if (here.photo) {
-            rec.photo = here.photo;
-            if (Array.isArray(here.overlay)) rec.overlay = here.overlay;
-          }
-          if (here.note) rec.note = here.note;
-          if (here.bg) rec.bg = here.bg;
+        // La photo d'un repas du journal reste sur l'appareil (elle ne
+        // part pas au serveur) : une version reçue ne doit pas l'effacer
+        if (tab.name === 'entries' && here && here.photo) {
+          rec.photo = here.photo;
+          if (Array.isArray(here.overlay)) rec.overlay = here.overlay;
         }
         if (here) local.splice(local.indexOf(here), 1, rec);
         else local.push(rec);
