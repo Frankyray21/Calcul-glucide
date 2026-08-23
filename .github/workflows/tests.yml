@@ -1,0 +1,37 @@
+name: Tests
+
+# Le calcul des glucides et les parcours critiques (journal, rapport de
+# clinique, analyse photo simulée) sont vérifiés à chaque poussée : une
+# régression doit se voir AVANT que gh-pages ne la serve.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  unitaires:
+    name: Calcul des glucides (unitaires)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - run: node --test tests/calc.test.mjs
+
+  bout-en-bout:
+    name: Parcours dans l'app (Playwright)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Installer Playwright
+        working-directory: tests/e2e
+        run: |
+          npm install
+          npx playwright install --with-deps chromium
+      - name: Lancer la suite
+        run: node tests/e2e/run-all.mjs
