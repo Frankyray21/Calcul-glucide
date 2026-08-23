@@ -1221,6 +1221,8 @@
   .inverse-box .result b { color: var(--carb-strong); font-size: 1.15rem; }
 
   /* Scanner de code-barres */
+  .scan-actions { display: flex; gap: 10px; margin: 12px 0; }
+  .scan-actions .btn { flex: 1; margin: 0; min-width: 0; }
   #scan-video {
     width: 100%;
     max-height: 260px;
@@ -2398,7 +2400,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.30.0</span>
+  <br><span id="app-version">Glucides Nets v2.31.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -2433,13 +2435,15 @@
     </div>
     <p class="stats-line" id="scan-status" role="status" aria-live="polite">Vise le code-barres ou le tableau de valeur nutritive.</p>
     <video id="scan-video" autoplay playsinline muted></video>
-    <button class="btn" id="capture-btn" type="button" style="display:none; margin-bottom:12px;">📸 Prendre la photo</button>
+    <div class="scan-actions">
+      <button class="btn" id="capture-btn" type="button" style="display:none;">📸 Prendre la photo</button>
+      <button class="btn btn-secondary" id="scan-photo-btn" type="button">📁 Importer</button>
+    </div>
     <label for="barcode-manual">Ou entre le code-barres manuellement</label>
     <div class="scan-row">
       <input type="text" id="barcode-manual" inputmode="numeric" autocomplete="off" placeholder="ex. : 3017620422003">
       <button class="btn" id="barcode-lookup" type="button">OK</button>
     </div>
-    <button class="btn btn-secondary" id="scan-photo-btn" type="button" style="margin-top:12px;">📁 Importer une photo</button>
     <button class="btn btn-secondary" id="scan-close" type="button" style="margin-top:12px;">Fermer</button>
   </div>
 </div>
@@ -4585,7 +4589,7 @@
         var video = $('scan-video');
         video.srcObject = stream;
         video.style.display = 'block';
-        $('capture-btn').style.display = 'block';
+        $('capture-btn').style.display = '';
         if (liveScan) {
           var detector = new BarcodeDetector({
             formats: ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128']
