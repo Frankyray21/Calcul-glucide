@@ -60,11 +60,19 @@ const ANNOTATE_RESULT = {
   check('glucides absolus repris du repas', saved.overlay[0].carbs === 44 && saved.overlay[0].grams === 180,
     JSON.stringify(saved.overlay[0]));
 
-  // Info-bulle sur une pastille fraîchement posée
+  // Info-bulle sur une pastille fraîchement posée : bandeau sous la
+  // photo, seul le contour sélectionné reste plein
   await page.locator('#entry-marks .mp-onum').first().click();
   await page.waitForTimeout(300);
   check('info-bulle : nom et nets', (await page.locator('#entry-info .t').textContent()).includes('Riz') &&
     (await page.locator('#entry-info .v').textContent()).includes('40 g nets'));
+  check('bandeau hors de la photo',
+    await page.evaluate(() => !document.getElementById('entry-info').closest('#entry-photo-wrap')));
+  check('autre contour estompé',
+    await page.evaluate(() => {
+      const autres = document.querySelectorAll('#entry-shapes [data-fi="1"], #entry-marks [data-fi="1"]');
+      return autres.length > 0 && Array.prototype.every.call(autres, el => el.style.opacity === '0.15');
+    }));
 
   // Sans accès IA, le bouton n'apparaît pas
   await page.evaluate(() => localStorage.removeItem('gn_api_key'));

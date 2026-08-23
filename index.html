@@ -1355,7 +1355,6 @@
   }
   #entry-shapes { width: 100%; height: 100%; }
   #entry-marks .mp-onum { transform: translate(-30%, -30%); }
-  #entry-marks .mp-info { pointer-events: auto; }
   .week-chart text { fill: var(--muted); font-size: 10px; font-family: inherit; }
   .week-chart .bar { fill: var(--chart); }
   .week-chart .bar-label { fill: var(--text); font-weight: 700; }
@@ -1847,6 +1846,15 @@
     font-size: 1rem;
     cursor: pointer;
     line-height: 1;
+  }
+  /* Variante bandeau : SOUS la photo, en pleine largeur — l'info ne
+     recouvre jamais l'image; la sélection estompe les autres contours */
+  .mp-info--bar {
+    position: static;
+    width: auto;
+    max-width: none;
+    margin: 8px 0;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
   }
   /* Rangée d'aliment mise en avant après un tap sur son numéro */
   @keyframes mp-flash {
@@ -2560,7 +2568,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.38.0</span>
+  <br><span id="app-version">Glucides Nets v2.39.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -6597,8 +6605,20 @@
      légende). Second tap sur la même pastille, ✕ ou tap ailleurs sur la
      photo : l'info-bulle se referme et la photo reste dégagée. */
   var mpInfoFor = -1; // aliment dont l'info-bulle est ouverte, -1 sinon
+  /* Sélection : seul l'aliment choisi garde ses contours et sa pastille
+     pleins — les autres s'estompent, la photo reste entièrement lisible */
+  function mpDim(fi) {
+    ['mp-shapes', 'mp-cards'].forEach(function (id) {
+      var layer = $(id);
+      if (!layer) return;
+      Array.prototype.forEach.call(layer.querySelectorAll('[data-fi]'), function (el) {
+        el.style.opacity = fi < 0 || String(fi) === el.getAttribute('data-fi') ? '' : '0.15';
+      });
+    });
+  }
   function mpCloseInfo() {
     mpInfoFor = -1;
+    mpDim(-1);
     var el = document.getElementById('mp-info');
     if (el && el.parentNode) el.parentNode.removeChild(el);
   }
@@ -6606,12 +6626,13 @@
     if (mpInfoFor === fi) { mpCloseInfo(); return; }
     mpCloseInfo();
     var f = mpFoods[fi];
-    var layer = $('mp-cards');
-    if (!f || !layer) return;
+    var photos = $('mp-photos');
+    if (!f || !photos) return;
     mpInfoFor = fi;
     var confTxt = { bonne: 'fiable', moyenne: 'à vérifier', faible: 'incertain — pèse-le' }[mpConfidence(f)] || 'à vérifier';
     var box = document.createElement('div');
-    box.className = 'mp-info';
+    // Bandeau SOUS la photo, jamais par-dessus : l'info ne doit rien cacher
+    box.className = 'mp-info mp-info--bar';
     box.id = 'mp-info';
     box.setAttribute('role', 'status');
     var x = document.createElement('button');
@@ -6650,17 +6671,8 @@
     box.appendChild(v);
     box.appendChild(c);
     box.appendChild(go);
-    layer.appendChild(box);
-    // Position : sous la pastille si la place le permet, sinon au-dessus,
-    // toujours ramenée à l'intérieur de l'image
-    var W = layer.offsetWidth, H = layer.offsetHeight;
-    var bw = box.offsetWidth, bh = box.offsetHeight;
-    var l = Math.round(Math.max(4, Math.min(anchor.offsetLeft + anchor.offsetWidth / 2 - bw / 2, W - bw - 4)));
-    var top = anchor.offsetTop + anchor.offsetHeight + 6;
-    if (top + bh > H - 4) top = anchor.offsetTop - bh - 6;
-    if (top < 4) top = Math.min(Math.max(4, anchor.offsetTop + anchor.offsetHeight + 6), Math.max(4, H - bh - 4));
-    box.style.left = l + 'px';
-    box.style.top = Math.round(top) + 'px';
+    photos.insertAdjacentElement('afterend', box);
+    mpDim(fi);
   }
 
   // Tap ailleurs sur la photo : l'info-bulle se referme
@@ -6676,8 +6688,9 @@
     shapes.innerHTML = '';
     cards.innerHTML = '';
     mpOutlines = [];
-    // Le calque vient d'être vidé : l'info-bulle ouverte est partie avec
-    mpInfoFor = -1;
+    // Le bandeau d'info vit SOUS la photo, hors des calques : le fermer
+    // explicitement, vider les calques ne l'emporte plus
+    mpCloseInfo();
 
     mpFoods.forEach(function (f, fi) {
       var net = mpNet(f);
@@ -6698,7 +6711,7 @@
         pieces.forEach(function (pc) { sx += pc.x; sy += pc.y; });
         ax = sx / pieces.length; ay = sy / pieces.length;
         pieces.forEach(function (pc, i) {
-          outline(pc.x, pc.y, pc.w, pc.h, col);
+          outline(pc.x, pc.y, pc.w, pc.h, col, fi);
           var pip = document.createElement('div');
           pip.className = 'mp-pip';
           var no = document.createElement('span');
@@ -6713,10 +6726,11 @@
           pip.dataset.px = pc.x;
           pip.dataset.py = pc.y;
           pip.dataset.ph = pc.h;
+          pip.setAttribute('data-fi', fi);
           cards.appendChild(pip);
         });
       } else if (f.x != null && f.y != null) {
-        outline(f.x, f.y, f.w != null ? f.w : 24, f.h != null ? f.h : 24, col);
+        outline(f.x, f.y, f.w != null ? f.w : 24, f.h != null ? f.h : 24, col, fi);
       }
 
       // Numéro cliquable au coin du contour : il ne cache pas l'aliment
@@ -6730,6 +6744,7 @@
         onum.dataset.bx = ax;
         onum.dataset.by = ay;
         onum.dataset.bh = ah;
+        onum.setAttribute('data-fi', fi);
         var label = String(f.name || 'Aliment').replace(/\s*\(.*$/, '');
         var value = fr1(net);
         var confLabel = { bonne: 'confiance bonne', moyenne: 'confiance moyenne', faible: 'confiance faible — à peser' }[mpConfidence(f)] || '';
@@ -6761,11 +6776,12 @@
     if (leg) leg.style.display = mpFoods.length > 0 ? 'flex' : 'none';
     layoutMpCards();
 
-    function outline(x, y, w, h, col) {
+    function outline(x, y, w, h, col, fi) {
       var attrs = {
         x: Math.max(0, Math.min(100 - w, x - w / 2)),
         y: Math.max(0, Math.min(100 - h, y - h / 2)),
-        width: w, height: h, rx: Math.min(w, h) * 0.28, ry: Math.min(w, h) * 0.28
+        width: w, height: h, rx: Math.min(w, h) * 0.28, ry: Math.min(w, h) * 0.28,
+        'data-fi': fi // la sélection d'une pastille estompe les autres contours
       };
       mpOutlines.push({ x: attrs.x, y: attrs.y, w: w, h: h });
       attrs['class'] = 'mp-shape-halo';
@@ -7604,7 +7620,8 @@
         x: Math.max(0, Math.min(100 - w, num(x) - w / 2)),
         y: Math.max(0, Math.min(100 - h, num(y) - h / 2)),
         width: w, height: h,
-        rx: Math.min(w, h) * 0.28, ry: Math.min(w, h) * 0.28
+        rx: Math.min(w, h) * 0.28, ry: Math.min(w, h) * 0.28,
+        'data-fi': i // la sélection d'une pastille estompe les autres contours
       };
       attrs['class'] = 'mp-shape-halo';
       shapes.appendChild(svgEl('rect', attrs));
@@ -7629,6 +7646,7 @@
     onum.className = 'mp-onum';
     onum.textContent = i + 1;
     onum.style.background = col;
+    onum.setAttribute('data-fi', i);
     var l = Math.max(2, Math.min(92, num(ax) - (num(f.w) || 24) / 2));
     var t = Math.max(2, Math.min(90, num(ay) - (num(f.h) || 24) / 2));
     onum.style.left = l + '%';
@@ -7639,7 +7657,7 @@
     onum.setAttribute('tabindex', '0');
     onum.setAttribute('aria-label', (f.name || 'Aliment') + ' : environ ' + round1(net) +
       ' g nets, estimation ' + confLabel + '. Toucher pour le détail.');
-    var reveal = function () { entryShowInfo(f, i, onum, l, t); };
+    var reveal = function () { entryShowInfo(f, i); };
     onum.addEventListener('click', reveal);
     onum.addEventListener('keydown', function (e) {
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); reveal(); }
@@ -7651,18 +7669,28 @@
   /* Info-bulle d'une pastille de la fiche : nom, glucides estimés à
      l'analyse et confiance — même présentation qu'à l'évaluation. */
   var entryInfoFor = -1;
+  function entryDim(fi) {
+    ['entry-shapes', 'entry-marks'].forEach(function (id) {
+      var layer = $(id);
+      if (!layer) return;
+      Array.prototype.forEach.call(layer.querySelectorAll('[data-fi]'), function (el) {
+        el.style.opacity = fi < 0 || String(fi) === el.getAttribute('data-fi') ? '' : '0.15';
+      });
+    });
+  }
   function entryCloseInfo() {
     entryInfoFor = -1;
+    entryDim(-1);
     var el = document.getElementById('entry-info');
     if (el && el.parentNode) el.parentNode.removeChild(el);
   }
-  function entryShowInfo(f, i, anchor, lPct, tPct) {
+  function entryShowInfo(f, i) {
     if (entryInfoFor === i) { entryCloseInfo(); return; }
     entryCloseInfo();
     entryInfoFor = i;
-    var marks = $('entry-marks');
     var box = document.createElement('div');
-    box.className = 'mp-info';
+    // Bandeau SOUS la photo, jamais par-dessus : l'info ne cache rien
+    box.className = 'mp-info mp-info--bar';
     box.id = 'entry-info';
     box.setAttribute('role', 'status');
     var x = document.createElement('button');
@@ -7694,14 +7722,8 @@
     box.appendChild(t);
     box.appendChild(v);
     box.appendChild(c);
-    marks.appendChild(box);
-    // Sous la pastille, ramenée dans l'image; au-dessus si trop bas
-    box.style.left = Math.max(2, Math.min(50, lPct)) + '%';
-    if (tPct > 60) {
-      box.style.bottom = Math.max(2, 100 - tPct + 6) + '%';
-    } else {
-      box.style.top = Math.min(92, tPct + 8) + '%';
-    }
+    $('entry-photo-wrap').insertAdjacentElement('afterend', box);
+    entryDim(i);
   }
   $('entry-photo-wrap').addEventListener('click', function (e) {
     var t = e.target;
