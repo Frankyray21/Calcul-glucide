@@ -1330,6 +1330,32 @@
     border: 1px solid var(--border);
     margin: 0 0 12px;
   }
+  /* Photo annotée (contours et pastilles de l'évaluation) : l'image garde
+     ses proportions naturelles pour que les coordonnées en % des contours
+     tombent juste — jamais de recadrage quand il y a des annotations */
+  .entry-photo-wrap {
+    position: relative;
+    margin: 0 0 12px;
+    border-radius: 16px;
+    overflow: hidden;
+  }
+  .entry-photo-wrap .entry-photo { margin: 0; display: block; }
+  .entry-photo-wrap.annotated .entry-photo {
+    max-height: none;
+    height: auto;
+    object-fit: fill;
+    border-radius: 0;
+    border: none;
+  }
+  .entry-photo-wrap.annotated { border: 1px solid var(--border); }
+  #entry-shapes, #entry-marks {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+  }
+  #entry-shapes { width: 100%; height: 100%; }
+  #entry-marks .mp-onum { transform: translate(-30%, -30%); }
+  #entry-marks .mp-info { pointer-events: auto; }
   .week-chart text { fill: var(--muted); font-size: 10px; font-family: inherit; }
   .week-chart .bar { fill: var(--chart); }
   .week-chart .bar-label { fill: var(--text); font-weight: 700; }
@@ -1927,10 +1953,14 @@
      PDF ». Noir sur blanc quel que soit le thème : un PDF sombre gaspille
      l'encre et se lit mal en clinique. */
   #print-report { display: none; }
+  /* Conditionnel à body.printing-report (posé par « Créer un PDF »,
+     retiré à afterprint) : une impression ordinaire (Ctrl+P, menu du
+     navigateur) continue d'imprimer l'app telle quelle — jamais une page
+     blanche ni un rapport périmé */
   @media print {
-    body > *:not(#print-report) { display: none !important; }
-    body { background: #fff !important; }
-    #print-report {
+    body.printing-report > *:not(#print-report) { display: none !important; }
+    body.printing-report { background: #fff !important; }
+    body.printing-report #print-report {
       display: block !important;
       color: #111;
       background: #fff;
@@ -2530,7 +2560,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.34.0</span>
+  <br><span id="app-version">Glucides Nets v2.35.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -2847,7 +2877,11 @@
       <div class="live-net" id="entry-net">0 <small>g</small></div>
       <div class="hero-sub" id="entry-sub"></div>
     </div>
-    <img id="entry-photo" class="entry-photo" alt="Photo du repas" style="display:none;">
+    <div class="entry-photo-wrap" id="entry-photo-wrap" style="display:none;">
+      <img id="entry-photo" class="entry-photo" alt="Photo du repas">
+      <svg id="entry-shapes" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"></svg>
+      <div id="entry-marks"></div>
+    </div>
     <div class="sec-label">Aliments du repas</div>
     <div id="entry-items"></div>
     <div class="ref-card">
@@ -3056,9 +3090,15 @@
       items: (Array.isArray(e.items) ? e.items : []).map(sanitizeItem).filter(Boolean),
       net: num(e.net), carbs: num(e.carbs), fiber: num(e.fiber), polyols: num(e.polyols)
     }, e);
-    // La photo du repas (base64, sans préfixe) suit l'entrée dans le
-    // stockage local et l'export — absente, la fiche s'affiche sans image
-    if (typeof e.photo === 'string' && e.photo) s.photo = e.photo;
+    // La photo du repas (base64, sans préfixe) et la géométrie de ses
+    // annotations suivent l'entrée dans le stockage local et l'export —
+    // absentes, la fiche s'affiche sans image. Alphabet base64 STRICT :
+    // cette chaîne finit dans du HTML (rapport PDF) et vient de fichiers
+    // importés — tout autre caractère est un vecteur d'injection.
+    if (typeof e.photo === 'string' && /^[A-Za-z0-9+/=]+$/.test(e.photo)) {
+      s.photo = e.photo;
+      if (Array.isArray(e.overlay)) s.overlay = e.overlay;
+    }
     return s;
   }
   /* ── Identité des enregistrements ──
@@ -3311,14 +3351,16 @@
     entry.carbs = round1(tot.carbs);
     entry.fiber = round1(tot.fiber);
     entry.polyols = round1(tot.polyols);
-    // La photo du repas analysé (si récente) suit le repas au journal
+    // La photo du repas analysé (si récente) suit le repas au journal,
+    // avec la géométrie des annotations pour la réafficher dans la fiche
     if (photoMeal && photoMeal.img && Date.now() - num(photoMeal.ts) <= PHOTO_MEAL_TTL) {
       entry.photo = photoMeal.img;
+      if (Array.isArray(photoMeal.foods)) entry.overlay = photoMeal.foods;
     }
     // Une photo pèse 40-80 Ko : seules les plus récentes restent en image
     var kept = 0;
     history.forEach(function (e) {
-      if (e.photo && ++kept > 20) delete e.photo;
+      if (e.photo && ++kept > 20) { delete e.photo; delete e.overlay; }
     });
     renderJournal();
     renderWeekChart();
@@ -4118,10 +4160,14 @@
      role=dialog + aria-modal côté HTML; ici : déplacement du focus à
      l'ouverture, restitution à la fermeture, fermeture par Échap et
      piège Tab/Maj+Tab à l'intérieur de la modale. */
-  var modalLastFocus = null;
+  /* Pile, pas case unique : la fiche d'un repas peut s'ouvrir PAR-DESSUS
+     le rapport — chaque fermeture doit rendre le focus au bon endroit,
+     même au clavier. Une réouverture d'un modal déjà ouvert (fiche
+     rafraîchie après un retrait d'aliment) n'empile rien. */
+  var modalFocusStack = [];
   function openModal(id, focusSel) {
     var ov = $(id);
-    modalLastFocus = document.activeElement;
+    if (!ov.classList.contains('open')) modalFocusStack.push(document.activeElement);
     ov.classList.add('open');
     // Focus sur le premier élément VISIBLE du modal (jamais un élément
     // masqué, sinon le focus reste derrière et Échap ne fonctionne pas)
@@ -4136,9 +4182,11 @@
     if (target) setTimeout(function () { target.focus(); }, 80);
   }
   function closeModal(id) {
-    $(id).classList.remove('open');
-    if (modalLastFocus && modalLastFocus.focus) modalLastFocus.focus();
-    modalLastFocus = null;
+    var ov = $(id);
+    if (!ov.classList.contains('open')) return; // déjà fermé : rien à dépiler
+    ov.classList.remove('open');
+    var back = modalFocusStack.pop();
+    if (back && back.focus) back.focus();
   }
   function trapModal(id, onClose) {
     var ov = $(id);
@@ -6183,7 +6231,14 @@
       return {
         name: (f.name || 'Aliment').trim(),
         grams: f.grams, carbs: f.carbs, fiber: f.fiber,
-        carbsPerGram: f.carbsPerGram, fiberPerGram: f.fiberPerGram
+        carbsPerGram: f.carbsPerGram, fiberPerGram: f.fiberPerGram,
+        // Géométrie et confiance : la fiche du journal réaffiche la photo
+        // annotée comme à l'évaluation (contours, pastilles numérotées)
+        x: f.x, y: f.y, w: f.w, h: f.h,
+        pieces: Array.isArray(f.pieces) && f.pieces.length >= 2 ? f.pieces.map(function (pc) {
+          return { x: pc.x, y: pc.y, w: pc.w, h: pc.h };
+        }) : null,
+        confidence: mpConfidence(f)
       };
     });
     var img = new Image();
@@ -7421,18 +7476,33 @@
     $('entry-net').innerHTML = entry.net + ' <small>g</small>';
     $('entry-sub').textContent = entry.items.length +
       (entry.items.length > 1 ? ' aliments' : ' aliment') + ' — glucides à entrer dans la pompe';
+    var wrap = $('entry-photo-wrap');
     var photo = $('entry-photo');
+    var shapes = $('entry-shapes');
+    var marks = $('entry-marks');
+    entryCloseInfo();
+    shapes.innerHTML = '';
+    marks.innerHTML = '';
     if (entry.photo) {
       photo.src = 'data:image/jpeg;base64,' + entry.photo;
-      photo.style.display = 'block';
+      wrap.style.display = 'block';
+      // La photo annotée comme à l'évaluation : contours de confiance et
+      // pastilles numérotées tappables, d'après la géométrie enregistrée
+      var overlay = Array.isArray(entry.overlay) ? entry.overlay : [];
+      var drawn = 0;
+      overlay.forEach(function (f, i) { if (drawEntryFood(f, i, shapes, marks)) drawn++; });
+      wrap.classList.toggle('annotated', drawn > 0);
     } else {
-      photo.style.display = 'none';
+      wrap.style.display = 'none';
+      wrap.classList.remove('annotated');
       photo.removeAttribute('src');
     }
     var list = $('entry-items');
     list.innerHTML = '';
-    entry.items.forEach(function (item) {
-      // Même carte que le repas en cours, sans le bouton retirer
+    entry.items.forEach(function (item, idx) {
+      // Même carte que le repas en cours, retrait par aliment compris :
+      // un aliment ajouté par erreur (recherche, saisie à la main) doit
+      // pouvoir sortir du repas sans supprimer tout le repas
       var div = document.createElement('div');
       div.className = 'food-item';
       var ico = document.createElement('div');
@@ -7457,9 +7527,16 @@
       var netEl = document.createElement('div');
       netEl.className = 'net';
       netEl.innerHTML = round1(netCarbs(item)) + ' g<small>glucides</small>';
+      var removeBtn = document.createElement('button');
+      removeBtn.className = 'remove';
+      removeBtn.type = 'button';
+      removeBtn.setAttribute('aria-label', 'Retirer ' + item.name + ' de ce repas');
+      removeBtn.textContent = '✕';
+      removeBtn.addEventListener('click', function () { removeEntryItem(entry, idx); });
       div.appendChild(ico);
       div.appendChild(info);
       div.appendChild(netEl);
+      div.appendChild(removeBtn);
       list.appendChild(div);
     });
     var totals = $('entry-totals');
@@ -7499,7 +7576,174 @@
   }
   function closeEntryModal() {
     entryShown = null;
+    entryCloseInfo();
     closeModal('entry-modal');
+  }
+
+  /* ── Photo annotée dans la fiche ──
+     Reconstruit les contours (couleur de confiance) et la pastille
+     numérotée de chaque aliment d'après la géométrie enregistrée avec la
+     photo. Le SVG est étiré sur l'image (viewBox 0-100) : les
+     coordonnées en % de l'analyse tombent directement juste. */
+  function drawEntryFood(f, i, shapes, marks) {
+    if (!f || typeof f !== 'object') return false;
+    var col = MP_CONF_COLOR[f.confidence] || MP_CONF_COLOR.moyenne;
+    function outline(x, y, w, h) {
+      if (x == null || y == null) return;
+      w = num(w) || 24;
+      h = num(h) || 24;
+      var attrs = {
+        x: Math.max(0, Math.min(100 - w, num(x) - w / 2)),
+        y: Math.max(0, Math.min(100 - h, num(y) - h / 2)),
+        width: w, height: h,
+        rx: Math.min(w, h) * 0.28, ry: Math.min(w, h) * 0.28
+      };
+      attrs['class'] = 'mp-shape-halo';
+      shapes.appendChild(svgEl('rect', attrs));
+      attrs['class'] = 'mp-shape';
+      var shape = svgEl('rect', attrs);
+      shape.style.stroke = col;
+      shape.style.fill = col;
+      shape.style.fillOpacity = '0.12';
+      shapes.appendChild(shape);
+    }
+    var ax = f.x, ay = f.y;
+    if (Array.isArray(f.pieces) && f.pieces.length >= 2) {
+      var sx = 0, sy = 0;
+      f.pieces.forEach(function (pc) { outline(pc.x, pc.y, pc.w, pc.h); sx += num(pc.x); sy += num(pc.y); });
+      ax = sx / f.pieces.length;
+      ay = sy / f.pieces.length;
+    } else if (f.x != null && f.y != null) {
+      outline(f.x, f.y, f.w, f.h);
+    }
+    if (ax == null || ay == null) return false;
+    var onum = document.createElement('div');
+    onum.className = 'mp-onum';
+    onum.textContent = i + 1;
+    onum.style.background = col;
+    var l = Math.max(2, Math.min(92, num(ax) - (num(f.w) || 24) / 2));
+    var t = Math.max(2, Math.min(90, num(ay) - (num(f.h) || 24) / 2));
+    onum.style.left = l + '%';
+    onum.style.top = t + '%';
+    var confLabel = { bonne: 'fiable', moyenne: 'à vérifier', faible: 'incertain — pèse-le' }[f.confidence] || 'à vérifier';
+    var net = Math.max(0, num(f.carbs) - num(f.fiber));
+    onum.setAttribute('role', 'button');
+    onum.setAttribute('tabindex', '0');
+    onum.setAttribute('aria-label', (f.name || 'Aliment') + ' : environ ' + round1(net) +
+      ' g nets, estimation ' + confLabel + '. Toucher pour le détail.');
+    var reveal = function () { entryShowInfo(f, i, onum, l, t); };
+    onum.addEventListener('click', reveal);
+    onum.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); reveal(); }
+    });
+    marks.appendChild(onum);
+    return true;
+  }
+
+  /* Info-bulle d'une pastille de la fiche : nom, glucides estimés à
+     l'analyse et confiance — même présentation qu'à l'évaluation. */
+  var entryInfoFor = -1;
+  function entryCloseInfo() {
+    entryInfoFor = -1;
+    var el = document.getElementById('entry-info');
+    if (el && el.parentNode) el.parentNode.removeChild(el);
+  }
+  function entryShowInfo(f, i, anchor, lPct, tPct) {
+    if (entryInfoFor === i) { entryCloseInfo(); return; }
+    entryCloseInfo();
+    entryInfoFor = i;
+    var marks = $('entry-marks');
+    var box = document.createElement('div');
+    box.className = 'mp-info';
+    box.id = 'entry-info';
+    box.setAttribute('role', 'status');
+    var x = document.createElement('button');
+    x.type = 'button';
+    x.className = 'x';
+    x.textContent = '✕';
+    x.setAttribute('aria-label', 'Fermer l’info-bulle');
+    x.addEventListener('click', entryCloseInfo);
+    var t = document.createElement('div');
+    t.className = 't';
+    var no = document.createElement('span');
+    no.className = 'no';
+    no.textContent = (i + 1) + ' · ';
+    t.appendChild(no);
+    t.appendChild(document.createTextNode(String(f.name || 'Aliment')));
+    var v = document.createElement('div');
+    v.className = 'v';
+    v.textContent = '≈ ' + round1(Math.max(0, num(f.carbs) - num(f.fiber))) + ' g nets · ' +
+      round1(num(f.grams)) + ' g estimés';
+    var c = document.createElement('div');
+    c.className = 'conf';
+    var dot = document.createElement('i');
+    dot.style.background = MP_CONF_COLOR[f.confidence] || MP_CONF_COLOR.moyenne;
+    dot.setAttribute('aria-hidden', 'true');
+    c.appendChild(dot);
+    c.appendChild(document.createTextNode(
+      { bonne: 'fiable', moyenne: 'à vérifier', faible: 'incertain — pèse-le' }[f.confidence] || 'à vérifier'));
+    box.appendChild(x);
+    box.appendChild(t);
+    box.appendChild(v);
+    box.appendChild(c);
+    marks.appendChild(box);
+    // Sous la pastille, ramenée dans l'image; au-dessus si trop bas
+    box.style.left = Math.max(2, Math.min(50, lPct)) + '%';
+    if (tPct > 60) {
+      box.style.bottom = Math.max(2, 100 - tPct + 6) + '%';
+    } else {
+      box.style.top = Math.min(92, tPct + 8) + '%';
+    }
+  }
+  $('entry-photo-wrap').addEventListener('click', function (e) {
+    var t = e.target;
+    if (t && t.closest && (t.closest('.mp-onum') || t.closest('.mp-info'))) return;
+    entryCloseInfo();
+  });
+
+  /* Retirer UN aliment d'un repas depuis sa fiche. Deux cas :
+     — le repas EN COURS (reflété en continu au journal) : c'est `meal`
+       qui fait foi, on retire là et le miroir recalcule tout;
+     — un repas fermé : on retire de l'entrée et on recalcule ses totaux
+       avec le même mealTotals que partout ailleurs. */
+  function removeEntryItem(entry, idx) {
+    var live = entry.id === lsGet(pk('gn_meal_entry'));
+    var name = entry.items[idx] ? entry.items[idx].name : 'Aliment';
+    if (entry.items.length <= 1) {
+      // Dernier aliment : le repas entier s'en va, comme « Supprimer »
+      closeEntryModal();
+      closeReportModal();
+      if (live) {
+        meal = [];
+        forget('entry', entry);
+        history.splice(history.indexOf(entry), 1);
+        resetMealEntryId();
+        save();
+        renderMeal();
+        renderJournal();
+      } else {
+        removeEntry(entry);
+      }
+      toast('Repas supprimé du journal (dernier aliment retiré)');
+      return;
+    }
+    if (live) {
+      meal.splice(idx, 1);
+      save(); // le miroir remet l'entrée à jour, photo comprise
+      renderMeal();
+    } else {
+      entry.items.splice(idx, 1);
+      var tot = mealTotals(entry.items);
+      entry.net = round1(tot.net);
+      entry.carbs = round1(tot.carbs);
+      entry.fiber = round1(tot.fiber);
+      entry.polyols = round1(tot.polyols);
+      save();
+      renderJournal();
+    }
+    toast('✓ ' + name + ' retiré du repas');
+    renderReportIfOpen();
+    openEntryModal(entry); // la fiche se rafraîchit avec les bons totaux
   }
   trapModal('entry-modal', closeEntryModal);
   $('entry-back').addEventListener('click', closeEntryModal);
@@ -7566,9 +7810,17 @@
   function computeReport() {
     var now = new Date();
     var start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - (reportDays - 1));
-    var slice = history.filter(function (e) { return num(e.ts) >= start.getTime(); });
+    // Borne haute : fin d'aujourd'hui. Un repas horodaté dans le futur
+    // (horloge corrigée, autre appareil mal à l'heure) fausserait moyennes
+    // et « jour le plus élevé » sans même apparaître dans le graphique.
+    var end = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1).getTime();
+    var slice = history.filter(function (e) {
+      return num(e.ts) >= start.getTime() && num(e.ts) < end;
+    });
+    // ts=0 (entrée d'une autre version, eaten_at illisible) n'est pas une
+    // vraie date : il ne doit pas faire croire que la période est couverte
     var oldest = Infinity;
-    history.forEach(function (e) { if (num(e.ts) < oldest) oldest = num(e.ts); });
+    history.forEach(function (e) { if (num(e.ts) > 0 && num(e.ts) < oldest) oldest = num(e.ts); });
     var byDay = {};
     var totNet = 0, totCarbs = 0, totFiber = 0, totPolyols = 0;
     slice.forEach(function (e) {
@@ -7611,6 +7863,10 @@
         reportDays = n;
         lsSet('gn_report_period', String(n));
         renderReport();
+        // Le rendu vient de détruire la pilule qui portait le focus : le
+        // rendre à la pilule active, sinon le clavier retombe hors du modal
+        var sel = $('report-periods').querySelector('.sel');
+        if (sel) sel.focus();
       });
       pills.appendChild(b);
     });
@@ -7628,8 +7884,9 @@
       coverage.textContent = 'Du ' + fmtRange.format(R.start) + ' au ' + fmtRange.format(R.now) + '.';
     }
 
-    // En vedette : moyenne par jour consigné
-    $('report-avg').innerHTML = round1(avg) + ' <small>g</small>';
+    // En vedette : moyenne par jour consigné — « — » quand rien n'est
+    // consigné (une moyenne de 0 n'existe pas, et un 0 s'imprime)
+    $('report-avg').innerHTML = nbRepas === 0 ? '—' : round1(avg) + ' <small>g</small>';
     $('report-sub').textContent = nbRepas === 0
       ? 'Aucun repas consigné sur cette période.'
       : nbRepas + ' repas · ' + joursActifs + (joursActifs > 1 ? ' jours consignés' : ' jour consigné') +
@@ -7679,18 +7936,25 @@
       refRowInto(moments, bk.ico, bk.lbl, sub, val);
     });
 
-    // Détail du calcul : sommes des champs stockés, arrondi à l'affichage
+    // Détail du calcul : sommes des champs stockés, arrondi à l'affichage.
+    // Le montant soustrait est DÉRIVÉ (totaux − nets) pour que la
+    // soustraction affichée retombe exactement sur la moyenne en vedette —
+    // les polyols « autres » ne sont déduits qu'à moitié et la borne à
+    // zéro s'applique par aliment, on ne peut pas juste sommer les masses
     var calc = $('report-calc');
     calc.innerHTML = '';
     var ja = Math.max(1, joursActifs);
+    var deduit = round1(round1(R.totCarbs / ja) - round1(R.totNet / ja));
+    var deduitSub = 'fibres ' + round1(R.totFiber / ja) + ' g' +
+      (R.totPolyols > 0 ? ' · polyols ' + round1(R.totPolyols / ja) + ' g (déduits à 50 ou 100 %)' : '');
     refRowInto(calc, '🍞', 'Glucides totaux', 'moyenne par jour consigné', round1(R.totCarbs / ja) + ' g');
-    refRowInto(calc, '🌾', 'Fibres', 'soustraites du total', '− ' + round1(R.totFiber / ja) + ' g');
-    if (R.totPolyols > 0) refRowInto(calc, '🍬', 'Polyols', 'déduits selon leur type (50 ou 100 %)', round1(R.totPolyols / ja) + ' g');
+    refRowInto(calc, '🌾', 'Soustraits du total', deduitSub, '− ' + deduit + ' g');
     refRowInto(calc, '🎯', 'Glucides nets', 'la moyenne en vedette ci-dessus', round1(avg) + ' g');
 
     // Repas les plus élevés : rangées tappables vers la fiche existante,
-    // SANS les boutons recharger/supprimer — le rapport se passe de main
-    // en main en clinique, il reste en lecture seule
+    // sans les boutons ↻/✕ de rangée. La fiche garde ses propres actions :
+    // chacune referme d'abord le rapport (ou le rafraîchit), jamais
+    // d'état périmé qui se promène en clinique
     var top = $('report-top');
     top.innerHTML = '';
     if (nbRepas === 0) {
@@ -7773,6 +8037,12 @@
     svg.innerHTML = '';
     var W = 340, H = 130, padB = 20, padT = 18;
     var weekly = reportDays > 30;
+    // Colonnes tappables seulement quand elles restent des cibles
+    // raisonnables au doigt : à 30 jours, ~12 px de large, c'est raté
+    var tappable = !weekly && reportDays <= 14;
+    svg.setAttribute('aria-label', weekly
+      ? 'Glucides nets par semaine (moyenne par jour consigné)'
+      : 'Glucides nets par jour sur la période');
     var bars = [];
     var d, k, i;
     if (!weekly) {
@@ -7796,7 +8066,7 @@
     }
     $('report-chart-note').textContent = weekly
       ? 'Une barre par semaine : moyenne par jour consigné de la semaine.'
-      : 'Une barre par jour · touche une barre pour voir ces repas.';
+      : 'Une barre par jour' + (tappable ? ' · touche une barre pour voir ces repas.' : '.');
 
     var maxV = 10;
     bars.forEach(function (b) { if (b.total > maxV) maxV = b.total; });
@@ -7836,10 +8106,9 @@
         dn.textContent = n <= 7 ? dayNames[b.date.getDay()] : b.date.getDate();
         svg.appendChild(dn);
       }
-      // Colonne tappable (barres quotidiennes seulement) : mène aux repas
-      // de ce jour — ferme d'abord le rapport, sinon le journal défilerait
-      // derrière lui sans qu'on le voie
-      if (!weekly && b.total > 0) {
+      // Colonne tappable : mène aux repas de ce jour — ferme d'abord le
+      // rapport, sinon le journal défilerait derrière lui sans qu'on le voie
+      if (tappable && b.total > 0) {
         var hit = svgEl('rect', {
           x: x - gap / 2, y: 0, width: barW + gap, height: H,
           'class': 'bar-hit', tabindex: 0, role: 'button',
@@ -7870,6 +8139,10 @@
       ' au ' + fmtRange.format(R.now)];
     lines.push('Journal : ' + R.nbRepas + ' repas · ' + ja + (ja > 1 ? ' jours consignés' : ' jour consigné') +
       ' sur ' + reportDays);
+    if (R.truncated) {
+      lines.push('Données consignées depuis le ' + fmtRange.format(new Date(R.oldest)) +
+        ' — moyennes sur les jours couverts');
+    }
     if (ja > 0) {
       lines.push('Moyenne : ' + round1(R.avg) + ' glucides nets par jour consigné');
       lines.push('Médiane quotidienne : ' + round1(median(R.dayTotals)) +
@@ -7909,7 +8182,7 @@
         ' — les moyennes portent sur les jours couverts.</p>');
     }
     h.push('<div class="pr-hero"><span>Glucides nets — moyenne par jour consigné</span><b>' +
-      round1(R.avg) + ' g</b><span>' + R.nbRepas + ' repas · ' + R.joursActifs +
+      (R.nbRepas === 0 ? '—' : round1(R.avg) + ' g') + '</b><span>' + R.nbRepas + ' repas · ' + R.joursActifs +
       (R.joursActifs > 1 ? ' jours consignés' : ' jour consigné') + ' sur ' + reportDays + '</span></div>');
 
     h.push('<h2>Chiffres clés</h2><table>');
@@ -7937,11 +8210,10 @@
 
     h.push('<h2>Détail du calcul — moyennes par jour consigné</h2><table>');
     h.push('<tr><td>Glucides totaux</td><td class="num">' + round1(R.totCarbs / ja) + ' g</td></tr>');
-    h.push('<tr><td>Fibres (soustraites du total)</td><td class="num">− ' + round1(R.totFiber / ja) + ' g</td></tr>');
-    if (R.totPolyols > 0) {
-      h.push('<tr><td>Polyols (déduits selon leur type, 50 ou 100 %)</td><td class="num">' +
-        round1(R.totPolyols / ja) + ' g</td></tr>');
-    }
+    var deduitPdf = round1(round1(R.totCarbs / ja) - round1(R.totNet / ja));
+    h.push('<tr><td>Soustraits du total — fibres ' + round1(R.totFiber / ja) + ' g' +
+      (R.totPolyols > 0 ? ', polyols ' + round1(R.totPolyols / ja) + ' g (déduits à 50 ou 100 %)' : '') +
+      '</td><td class="num">− ' + deduitPdf + ' g</td></tr>');
     h.push('<tr><td><strong>Glucides nets</strong></td><td class="num"><strong>' +
       round1(R.avg) + ' g</strong></td></tr>');
     h.push('</table>');
@@ -7951,7 +8223,7 @@
       R.top.forEach(function (entry) {
         var d = new Date(entry.ts);
         h.push('<div class="pr-top">' +
-          (entry.photo ? '<img src="data:image/jpeg;base64,' + entry.photo + '" alt="">' : '') +
+          (entry.photo ? '<img src="data:image/jpeg;base64,' + escHtml(entry.photo) + '" alt="">' : '') +
           '<div class="t"><strong>' + round1(entry.net) + ' glucides</strong> · ' +
           escHtml(fmtTopDay.format(d)) + ' ' + fmtTime.format(d) + '<br>' +
           escHtml(entry.items.map(function (it) { return it.name; }).join(', ')) + '</div></div>');
@@ -7998,7 +8270,27 @@
   });
   $('report-pdf').addEventListener('click', function () {
     buildPrintReport();
-    window.print();
+    document.body.classList.add('printing-report');
+    var cleanup = function () {
+      document.body.classList.remove('printing-report');
+      $('print-report').innerHTML = '';
+      window.removeEventListener('afterprint', cleanup);
+    };
+    // Pas de minuterie de secours : sur téléphone, le dialogue est
+    // asynchrone et une minuterie viderait le rapport pendant qu'il est
+    // encore ouvert. afterprint suffit sur les navigateurs modernes.
+    window.addEventListener('afterprint', cleanup);
+    if (typeof window.print !== 'function') {
+      cleanup();
+      toast('⚠️ L’impression n’est pas offerte dans ce navigateur — utilise « 📤 Partager »', { type: 'warn', duration: 6000 });
+      return;
+    }
+    try {
+      window.print();
+    } catch (e) {
+      cleanup();
+      toast('⚠️ L’impression a échoué ici — utilise « 📤 Partager »', { type: 'warn', duration: 6000 });
+    }
   });
   $('report-share').addEventListener('click', function () {
     var text = reportSummaryText();
@@ -8007,6 +8299,9 @@
     } else if (navigator.clipboard) {
       navigator.clipboard.writeText(text).then(function () {
         toast('✓ Rapport copié — colle-le dans un courriel à la clinique');
+      }, function () {
+        // Permission refusée ou contexte non sécurisé : montrer le texte
+        alert(text);
       });
     } else {
       alert(text);
@@ -8612,7 +8907,10 @@
         }
         // La photo d'un repas du journal reste sur l'appareil (elle ne
         // part pas au serveur) : une version reçue ne doit pas l'effacer
-        if (tab.name === 'entries' && here && here.photo) rec.photo = here.photo;
+        if (tab.name === 'entries' && here && here.photo) {
+          rec.photo = here.photo;
+          if (Array.isArray(here.overlay)) rec.overlay = here.overlay;
+        }
         if (here) local.splice(local.indexOf(here), 1, rec);
         else local.push(rec);
         byId[row.id] = rec;
