@@ -1753,6 +1753,70 @@
     cursor: pointer;
   }
   .mp-onum:active { transform: scale(0.9); }
+  /* Info-bulle d'une pastille touchée : l'aliment, ses glucides et la
+     confiance de l'estimation, lus sur place — la photo reste dégagée
+     tant qu'on ne demande rien */
+  .mp-info {
+    position: absolute;
+    z-index: 5;
+    width: max-content;
+    max-width: min(80%, 250px);
+    padding: 10px 12px;
+    border-radius: 14px;
+    background: rgba(7, 17, 31, 0.94);
+    color: #fff;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.45);
+    pointer-events: auto;
+    font-size: 0.85rem;
+    line-height: 1.35;
+  }
+  .mp-info .t { font-weight: 800; padding-right: 24px; }
+  .mp-info .t .no { color: var(--cyan); }
+  .mp-info .v { color: #C49AFF; font-weight: 700; margin-top: 2px; }
+  .mp-info .conf {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+    font-weight: 700;
+    font-size: 0.8rem;
+  }
+  .mp-info .conf i {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+    flex: none;
+  }
+  .mp-info .go {
+    display: block;
+    width: 100%;
+    margin-top: 8px;
+    padding: 8px 10px;
+    border: none;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.14);
+    color: #fff;
+    font: inherit;
+    font-weight: 700;
+    font-size: 0.82rem;
+    cursor: pointer;
+    text-align: center;
+  }
+  .mp-info .go:active { transform: scale(0.98); }
+  .mp-info .x {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 30px;
+    height: 30px;
+    border: none;
+    background: none;
+    color: rgba(255, 255, 255, 0.75);
+    font-size: 1rem;
+    cursor: pointer;
+    line-height: 1;
+  }
   /* Rangée d'aliment mise en avant après un tap sur son numéro */
   @keyframes mp-flash {
     0%, 100% { background: var(--card); }
@@ -2402,7 +2466,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.32.0</span>
+  <br><span id="app-version">Glucides Nets v2.33.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -2481,7 +2545,7 @@
       <div class="card">
         <p>Un seul bouton, trois cas : un <strong>code-barres</strong> est cherché sur Open Food Facts; une <strong>étiquette nutritionnelle</strong> est lue directement sur ton appareil (rien n'est envoyé); une <strong>assiette</strong> est estimée par l'IA — chaque aliment reçoit son contour, son poids et ses glucides, à vérifier avant d'ajouter.</p>
         <p>L'estimation visuelle reste approximative : en cas de doute, pèse. Le poids est la valeur à vérifier en premier.</p>
-        <p>Chaque aliment est <strong>encadré selon la confiance</strong> : 🟢 vert fiable, 🟡 jaune à vérifier, 🔴 rouge incertain (pèse-le). Touche le numéro d'un encadré pour voir son détail sous la photo.</p>
+        <p>Chaque aliment est <strong>encadré selon la confiance</strong> : 🟢 vert fiable, 🟡 jaune à vérifier, 🔴 rouge incertain (pèse-le). Touche la <strong>pastille numérotée</strong> d'un encadré : une info-bulle montre l'aliment, ses glucides estimés et la confiance, avec un bouton pour l'ajuster.</p>
         <p>La lecture IA demande soit une clé API personnelle (bouton ✨), soit un accès partagé si le propriétaire de l'app t'a invité.</p>
       </div>
     </details>
@@ -5621,7 +5685,7 @@
     openModal('meal-photo-modal', '#mp-add');
     requestAnimationFrame(layoutMpCards);
   }
-  function closeMealPhotoModal() { mpSetBusy(false); closeModal('meal-photo-modal'); }
+  function closeMealPhotoModal() { mpSetBusy(false); mpCloseInfo(); closeModal('meal-photo-modal'); }
   trapModal('meal-photo-modal', closeMealPhotoModal);
   $('mp-back').addEventListener('click', closeMealPhotoModal);
   $('meal-photo-modal').addEventListener('click', function (e) {
@@ -6326,11 +6390,9 @@
   var mpMealConfidence = null; // confiance globale de la dernière analyse
   var mpOutlines = [];   // contours tracés, en % — obstacles au placement
 
-  /* Tap sur un numéro de la photo : montrer l'aliment sans le cacher —
-     un aperçu bref, puis on amène sa carte modifiable à l'écran et on la
-     fait clignoter. La photo, elle, reste dégagée. */
-  function mpRevealFood(i, label, value) {
-    toast(label + ' · ≈ ' + value + ' g nets', { duration: 3500 });
+  /* Amener la carte modifiable d'un aliment à l'écran et la faire
+     clignoter — depuis le bouton « Ajuster » de l'info-bulle. */
+  function mpRevealFood(i) {
     var row = document.getElementById('mp-row-' + i);
     if (!row) return;
     row.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -6339,12 +6401,93 @@
     row.classList.add('mp-row--flash');
   }
 
+  /* Tap sur une pastille numérotée : une info-bulle ancrée à la pastille
+     montre l'essentiel sans quitter la photo — l'aliment, ses glucides
+     estimés et la confiance de l'estimation (le même code couleur que la
+     légende). Second tap sur la même pastille, ✕ ou tap ailleurs sur la
+     photo : l'info-bulle se referme et la photo reste dégagée. */
+  var mpInfoFor = -1; // aliment dont l'info-bulle est ouverte, -1 sinon
+  function mpCloseInfo() {
+    mpInfoFor = -1;
+    var el = document.getElementById('mp-info');
+    if (el && el.parentNode) el.parentNode.removeChild(el);
+  }
+  function mpShowInfo(fi, anchor) {
+    if (mpInfoFor === fi) { mpCloseInfo(); return; }
+    mpCloseInfo();
+    var f = mpFoods[fi];
+    var layer = $('mp-cards');
+    if (!f || !layer) return;
+    mpInfoFor = fi;
+    var confTxt = { bonne: 'fiable', moyenne: 'à vérifier', faible: 'incertain — pèse-le' }[mpConfidence(f)] || 'à vérifier';
+    var box = document.createElement('div');
+    box.className = 'mp-info';
+    box.id = 'mp-info';
+    box.setAttribute('role', 'status');
+    var x = document.createElement('button');
+    x.type = 'button';
+    x.className = 'x';
+    x.textContent = '✕';
+    x.setAttribute('aria-label', 'Fermer l’info-bulle');
+    x.addEventListener('click', mpCloseInfo);
+    var t = document.createElement('div');
+    t.className = 't';
+    var no = document.createElement('span');
+    no.className = 'no';
+    no.textContent = (fi + 1) + ' · ';
+    t.appendChild(no);
+    t.appendChild(document.createTextNode(String(f.name || 'Aliment').replace(/\s*\(.*$/, '')));
+    var v = document.createElement('div');
+    v.className = 'v';
+    v.textContent = '≈ ' + fr1(mpNet(f)) + ' g nets · ' + fr1(num(f.grams)) + ' g estimés';
+    var c = document.createElement('div');
+    c.className = 'conf';
+    var dot = document.createElement('i');
+    dot.style.background = mpConfColor(f);
+    dot.setAttribute('aria-hidden', 'true');
+    c.appendChild(dot);
+    c.appendChild(document.createTextNode(confTxt));
+    var go = document.createElement('button');
+    go.type = 'button';
+    go.className = 'go';
+    go.textContent = '✏️ Vérifier / ajuster cet aliment';
+    go.addEventListener('click', function () {
+      mpCloseInfo();
+      mpRevealFood(fi);
+    });
+    box.appendChild(x);
+    box.appendChild(t);
+    box.appendChild(v);
+    box.appendChild(c);
+    box.appendChild(go);
+    layer.appendChild(box);
+    // Position : sous la pastille si la place le permet, sinon au-dessus,
+    // toujours ramenée à l'intérieur de l'image
+    var W = layer.offsetWidth, H = layer.offsetHeight;
+    var bw = box.offsetWidth, bh = box.offsetHeight;
+    var l = Math.round(Math.max(4, Math.min(anchor.offsetLeft + anchor.offsetWidth / 2 - bw / 2, W - bw - 4)));
+    var top = anchor.offsetTop + anchor.offsetHeight + 6;
+    if (top + bh > H - 4) top = anchor.offsetTop - bh - 6;
+    if (top < 4) top = Math.min(Math.max(4, anchor.offsetTop + anchor.offsetHeight + 6), Math.max(4, H - bh - 4));
+    box.style.left = l + 'px';
+    box.style.top = Math.round(top) + 'px';
+  }
+
+  // Tap ailleurs sur la photo : l'info-bulle se referme
+  $('mp-photos').addEventListener('click', function (e) {
+    var t = e.target;
+    if (t && t.closest && (t.closest('.mp-onum') || t.closest('.mp-info'))) return;
+    mpCloseInfo();
+  });
+
   function renderMpOverlay(total) {
     var shapes = $('mp-shapes'), cards = $('mp-cards'), tot = $('mp-photo-total');
     if (!shapes || !cards || !tot) return;
     shapes.innerHTML = '';
     cards.innerHTML = '';
     mpOutlines = [];
+    // Le calque vient d'être vidé : l'info-bulle ouverte est partie avec
+    mpInfoFor = -1;
 
     mpFoods.forEach(function (f, fi) {
       var net = mpNet(f);
@@ -6402,8 +6545,8 @@
         var confLabel = { bonne: 'confiance bonne', moyenne: 'confiance moyenne', faible: 'confiance faible — à peser' }[mpConfidence(f)] || '';
         onum.setAttribute('role', 'button');
         onum.setAttribute('tabindex', '0');
-        onum.setAttribute('aria-label', label + ' : environ ' + value + ' g nets, ' + confLabel + '. Toucher pour ajuster.');
-        var reveal = function () { mpRevealFood(fi, label, value); };
+        onum.setAttribute('aria-label', label + ' : environ ' + value + ' g nets, ' + confLabel + '. Toucher pour le détail.');
+        var reveal = function () { mpShowInfo(fi, onum); };
         onum.addEventListener('click', reveal);
         onum.addEventListener('keydown', function (e) {
           if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); reveal(); }
@@ -6437,12 +6580,14 @@
       mpOutlines.push({ x: attrs.x, y: attrs.y, w: w, h: h });
       attrs['class'] = 'mp-shape-halo';
       shapes.appendChild(svgEl('rect', attrs));
-      // Couleur de confiance posée en inline : elle prime sur le cyan du CSS
+      // Couleur de confiance posée en style inline : les attributs de
+      // présentation SVG perdent contre le CSS (.mp-shape), pas le style
       attrs['class'] = 'mp-shape';
-      attrs.stroke = col;
-      attrs.fill = col;
-      attrs['fill-opacity'] = '0.12';
-      shapes.appendChild(svgEl('rect', attrs));
+      var shape = svgEl('rect', attrs);
+      shape.style.stroke = col;
+      shape.style.fill = col;
+      shape.style.fillOpacity = '0.12';
+      shapes.appendChild(shape);
     }
   }
 
