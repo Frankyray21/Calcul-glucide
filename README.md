@@ -18,7 +18,7 @@ Le site est servi par GitHub Pages depuis la branche `gh-pages`; le workflow `.g
 
 ## Navigation
 
-Barre du bas à cinq destinations — **Accueil**, **Favoris**, **➕ Calculer** (bouton central en vedette), **Journal**, **Plus** :
+Barre du bas à cinq destinations — **Accueil**, **Favoris**, **➕ Calculer** (bouton central en vedette — depuis un autre onglet il amène sur Calculer, et déjà sur Calculer il lance directement le calcul d'un repas : feuille photo / scan), **Journal**, **Plus** :
 
 - **🏠 Accueil** : profil actif (changement en un geste), résumé du repas en cours, **📤 partage du repas** (texto/courriel au parent, à la garderie ou à l'école — liste des aliments et total en glucides), actions rapides (scanner, chercher, favoris).
 - **👥 Profils (onglet Plus)** : un compte gère plusieurs personnes (ton enfant, toi…). Chaque profil garde **ses propres repas, favoris, recettes et journal**, isolés sur l'appareil, avec prénom et allergies/intolérances affichées à l'accueil. L'outil interactif et l'à-propos vivent aussi dans Plus.
@@ -62,7 +62,7 @@ Barre du bas à cinq destinations — **Accueil**, **Favoris**, **➕ Calculer**
 
 ## Version de l'app
 
-La version courante est **v2.42.0**, affichée dans le pied de page de l'app (`#app-version` dans `index.html`).
+La version courante est **v2.43.0**, affichée dans le pied de page de l'app (`#app-version` dans `index.html`).
 
 **Règle à chaque mise à jour publiée** : incrémenter le numéro aux **deux** endroits, sinon les utilisateurs installés gardent l'ancienne version en cache :
 1. le pied de page d'`index.html` (`Glucides Nets vX.Y.Z`);

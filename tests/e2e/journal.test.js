@@ -68,12 +68,27 @@ const { serve, launch, check, finish, JPEG_1PX } = require('./helper');
   }, [JPEG_1PX]);
   await page.reload({ waitUntil: 'load' });
   await page.waitForTimeout(500);
-  await page.click('.tab-btn[data-tab="meal"]');
-  await page.waitForTimeout(200);
+  // Après rechargement l'onglet Calculer est déjà actif — le re-cliquer
+  // ouvrirait la feuille photo/scan (comportement du « + » d'action)
   await page.click('#finish-btn');
   await page.waitForTimeout(400);
   const top = await page.evaluate(() => JSON.parse(localStorage.getItem('gn_history'))[0]);
   check('photo attachée au repas confirmé', typeof top.photo === 'string' && top.photo.length > 10);
+
+  // Le « + » central : depuis un autre onglet il amène sur Calculer;
+  // déjà sur Calculer, il lance le calcul d'un repas (feuille photo/scan)
+  await page.click('.tab-btn[data-tab="journal"]');
+  await page.waitForTimeout(200);
+  await page.click('.tab-btn--cta .tb-plus');
+  await page.waitForTimeout(200);
+  check('+ depuis Journal : onglet Calculer', (await page.locator('.tab-btn.active').getAttribute('data-tab')) === 'meal');
+  check('+ depuis Journal : pas de feuille ouverte', await page.locator('#scan-modal.open').count() === 0);
+  await page.click('.tab-btn--cta .tb-plus');
+  await page.waitForTimeout(300);
+  check('+ sur Calculer : feuille photo/scan ouverte', await page.locator('#scan-modal.open').count() === 1);
+  await page.keyboard.press('Escape');
+  await page.waitForTimeout(200);
+  check('feuille refermée', await page.locator('#scan-modal.open').count() === 0);
 
   check('aucune erreur JS', errors.length === 0, errors.join(' | '));
   await finish(browser, srv);
