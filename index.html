@@ -2580,7 +2580,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.42.0</span>
+  <br><span id="app-version">Glucides Nets v2.43.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -3444,6 +3444,15 @@
   });
 
   /* ── Onglets ── */
+  // Le « + » central est un vrai bouton d'action : déjà sur Calculer, il
+  // lance le calcul d'un repas (photo / scan) au lieu de ne rien faire.
+  // Enregistré AVANT le basculement d'onglet pour lire l'état d'avant :
+  // depuis un autre onglet, un premier tap amène simplement sur Calculer.
+  // isTrusted : seul un geste réel ouvre la feuille — switchTab('meal')
+  // programmatique (retour après un ajout) ne doit jamais la déclencher.
+  document.querySelector('.tab-btn--cta').addEventListener('click', function (e) {
+    if (e.isTrusted && $('panel-meal').classList.contains('active')) $('scan-open-btn').click();
+  });
   document.querySelectorAll('.tab-btn').forEach(function (btn) {
     btn.addEventListener('click', function () {
       document.querySelectorAll('.tab-btn').forEach(function (b) {
