@@ -2580,7 +2580,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.43.0</span>
+  <br><span id="app-version">Glucides Nets v2.44.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -6752,7 +6752,7 @@
       var multi = mpFoods.length > 1; // le numéro ne sert qu'à distinguer
       // Ancre de l'aliment : son centre s'il est situé, sinon le centre
       // moyen de ses morceaux — c'est là que se posent le numéro et la carte.
-      var ax = f.x, ay = f.y, ah = f.h != null ? f.h : 24;
+      var ax = f.x, ay = f.y, ah = f.h != null ? f.h : 24, aw = f.w != null ? f.w : 24;
       // Les morceaux dessinés sont ceux vus sur la photo : c'est eux qui
       // fixent la valeur unitaire, même si le poids corrigé fait dire
       // « 10 biscuits » à la mesure — ces 5 morceaux-là valent plus cher.
@@ -6798,6 +6798,7 @@
         onum.dataset.bx = ax;
         onum.dataset.by = ay;
         onum.dataset.bh = ah;
+        onum.dataset.bw = aw;
         onum.setAttribute('data-fi', fi);
         var label = String(f.name || 'Aliment').replace(/\s*\(.*$/, '');
         var value = fr1(net);
@@ -6931,12 +6932,26 @@
 
     // Les badges numéro se collent au coin de leur contour : petits, ils
     // ne cachent pas l'aliment; c'est le seul repère laissé sur la photo.
+    // Sur une photo chargée, deux contours voisins peuvent partager un
+    // coin : chaque badge essaie alors les autres coins de SON contour
+    // pour rester tappable — jamais un badge par-dessus un autre.
     Array.prototype.forEach.call(onums, function (b) {
-      var bx = num(b.dataset.bx), by = num(b.dataset.by), bh = num(b.dataset.bh);
+      var bx = num(b.dataset.bx), by = num(b.dataset.by);
+      var bw2 = num(b.dataset.bw || b.dataset.bh) / 2, bh2 = num(b.dataset.bh) / 2;
       var w = b.offsetWidth, h = b.offsetHeight;
-      var l = Math.round(Math.max(2, Math.min((bx - num(b.dataset.bh) / 2) / 100 * W - 2, W - w - 2)));
-      var t = Math.round(Math.max(2, Math.min((by - bh / 2) / 100 * H - 2, H - h - 2)));
-      put(b, l, t);
+      var cl = (bx - bw2) / 100 * W - 2, cr = (bx + bw2) / 100 * W - w + 2;
+      var ct = (by - bh2) / 100 * H - 2, cb = (by + bh2) / 100 * H - h + 2;
+      var cands = [[cl, ct], [cr, ct], [cl, cb], [cr, cb],
+        [cl - w - 4, ct], [cr + w + 4, ct], [cl, ct - h - 4], [cl, cb + h + 4]];
+      var i, l, t;
+      for (i = 0; i < cands.length; i++) {
+        l = Math.round(Math.max(2, Math.min(cands[i][0], W - w - 2)));
+        t = Math.round(Math.max(2, Math.min(cands[i][1], H - h - 2)));
+        if (free(l, t, w, h)) { put(b, l, t); return; }
+      }
+      // Aucun coin libre : coin d'origine, quitte à se toucher
+      put(b, Math.round(Math.max(2, Math.min(cl, W - w - 2))),
+        Math.round(Math.max(2, Math.min(ct, H - h - 2))));
     });
 
     // 2. Chaque pastille au plus près de son morceau : au-dessus, sinon
@@ -7562,8 +7577,8 @@
       // La photo annotée comme à l'évaluation : contours de confiance et
       // pastilles numérotées tappables, d'après la géométrie enregistrée
       var overlay = Array.isArray(entry.overlay) ? entry.overlay : [];
-      var drawn = 0;
-      overlay.forEach(function (f, i) { if (drawEntryFood(f, i, shapes, marks)) drawn++; });
+      var drawn = 0, taken = [];
+      overlay.forEach(function (f, i) { if (drawEntryFood(f, i, shapes, marks, taken)) drawn++; });
       wrap.classList.toggle('annotated', drawn > 0);
       // Photo d'avant les annotations (la géométrie n'était pas encore
       // enregistrée) : offrir de la faire annoter par l'IA, si disponible
@@ -7663,7 +7678,7 @@
      numérotée de chaque aliment d'après la géométrie enregistrée avec la
      photo. Le SVG est étiré sur l'image (viewBox 0-100) : les
      coordonnées en % de l'analyse tombent directement juste. */
-  function drawEntryFood(f, i, shapes, marks) {
+  function drawEntryFood(f, i, shapes, marks, taken) {
     if (!f || typeof f !== 'object') return false;
     var col = MP_CONF_COLOR[f.confidence] || MP_CONF_COLOR.moyenne;
     function outline(x, y, w, h) {
@@ -7701,8 +7716,30 @@
     onum.textContent = i + 1;
     onum.style.background = col;
     onum.setAttribute('data-fi', i);
-    var l = Math.max(2, Math.min(92, num(ax) - (num(f.w) || 24) / 2));
-    var t = Math.max(2, Math.min(90, num(ay) - (num(f.h) || 24) / 2));
+    // Coin haut-gauche du contour d'abord; si un badge déjà posé est trop
+    // proche (contours voisins), on essaie les autres coins de CE contour
+    // pour que chaque pastille reste tappable. Seuils en % : un badge fait
+    // ~26 px sur une photo de ~350 px, soit environ 8 %.
+    var w2 = (num(f.w) || 24) / 2, h2 = (num(f.h) || 24) / 2;
+    var cx = num(ax), cy = num(ay);
+    var cands = [
+      [cx - w2, cy - h2], [cx + w2 - 7, cy - h2],
+      [cx - w2, cy + h2 - 7], [cx + w2 - 7, cy + h2 - 7],
+      // Petit contour dont les 4 coins sont pris : on s'écarte un peu
+      [cx - w2 - 8, cy - h2], [cx + w2 + 1, cy - h2],
+      [cx - w2, cy - h2 - 8], [cx - w2, cy + h2 + 1]
+    ];
+    var l = null, t = null;
+    for (var c = 0; c < cands.length; c++) {
+      var cl = Math.max(2, Math.min(92, cands[c][0]));
+      var ct2 = Math.max(2, Math.min(90, cands[c][1]));
+      var libre = !taken || taken.every(function (p) {
+        return Math.abs(p[0] - cl) >= 9 || Math.abs(p[1] - ct2) >= 8;
+      });
+      if (l === null || libre) { l = cl; t = ct2; }
+      if (libre) break;
+    }
+    if (taken) taken.push([l, t]);
     onum.style.left = l + '%';
     onum.style.top = t + '%';
     var confLabel = { bonne: 'fiable', moyenne: 'à vérifier', faible: 'incertain — pèse-le' }[f.confidence] || 'à vérifier';
