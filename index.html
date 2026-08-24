@@ -2404,7 +2404,8 @@
       <p class="hint" style="margin:0 0 8px;" id="week-summary">Enregistre un premier repas pour voir ta semaine ici.</p>
       <svg class="week-chart" id="week-chart" viewBox="0 0 340 130" role="img"
            aria-label="Glucides nets par jour, 7 derniers jours"></svg>
-      <button class="btn btn-secondary" id="report-open" type="button" style="margin-top:10px;">🩺 Rapport pour la clinique</button>
+      <button class="btn btn-secondary" id="pdf-quick" type="button" style="margin-top:10px;">📄 Créer un PDF</button>
+      <button class="link-btn" id="report-open" type="button" style="width:100%; text-align:center; margin-top:6px;">🩺 Voir le rapport détaillé</button>
     </div>
 
     <div class="card">
@@ -2568,7 +2569,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.40.0</span>
+  <br><span id="app-version">Glucides Nets v2.41.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -8513,8 +8514,9 @@
   $('report-modal').addEventListener('click', function (e) {
     if (e.target === $('report-modal')) closeReportModal();
   });
-  $('report-pdf').addEventListener('click', function () {
-    var btn = $('report-pdf');
+  // Création du PDF — depuis le journal (bouton principal) ou depuis le
+  // rapport détaillé; même flux dans les deux cas
+  function printReportPdf(btn) {
     btn.disabled = true;
     // Les photos annotées se préparent en asynchrone avant l'impression
     buildPrintReport().then(function () {
@@ -8541,7 +8543,9 @@
         toast('⚠️ L’impression a échoué ici — utilise « 📤 Partager »', { type: 'warn', duration: 6000 });
       }
     });
-  });
+  }
+  $('report-pdf').addEventListener('click', function () { printReportPdf($('report-pdf')); });
+  $('pdf-quick').addEventListener('click', function () { printReportPdf($('pdf-quick')); });
   $('report-share').addEventListener('click', function () {
     var text = reportSummaryText();
     if (navigator.share) {
