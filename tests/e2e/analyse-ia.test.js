@@ -56,11 +56,19 @@ const RESULT = {
   check('info-bulle ouverte', await page.locator('#mp-info').count() === 1);
   check('info-bulle : nom', (await page.locator('#mp-info .t').textContent()).includes('Riz'));
   check('info-bulle : confiance', (await page.locator('#mp-info .conf').textContent()).includes('à vérifier'));
-  // Le bandeau vit SOUS la photo (jamais par-dessus) et seule la
-  // sélection garde ses contours pleins
-  check('bandeau hors des calques photo',
-    await page.evaluate(() => !document.getElementById('mp-info').closest('#mp-cards') &&
-      !document.getElementById('mp-info').closest('#mp-photos')));
+  // L'info se pose SUR la photo, du côté libre : jamais par-dessus
+  // l'aliment sélectionné, et seule la sélection garde ses contours pleins
+  check('info posée sur la photo',
+    await page.evaluate(() => !!document.getElementById('mp-info').closest('.mp-photo-wrap')));
+  check('info ne couvre pas l’aliment sélectionné',
+    await page.evaluate(() => {
+      const b = document.getElementById('mp-info').getBoundingClientRect();
+      const shapes = document.querySelectorAll('#mp-shapes .mp-shape[data-fi="0"]');
+      return shapes.length > 0 && Array.prototype.every.call(shapes, s => {
+        const r = s.getBoundingClientRect();
+        return b.right <= r.left || b.left >= r.right || b.bottom <= r.top || b.top >= r.bottom;
+      });
+    }));
   check('autres contours estompés',
     await page.evaluate(() => {
       const els = document.querySelectorAll('#mp-shapes [data-fi], #mp-cards [data-fi]');

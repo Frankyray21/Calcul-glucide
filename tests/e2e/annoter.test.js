@@ -60,14 +60,23 @@ const ANNOTATE_RESULT = {
   check('glucides absolus repris du repas', saved.overlay[0].carbs === 44 && saved.overlay[0].grams === 180,
     JSON.stringify(saved.overlay[0]));
 
-  // Info-bulle sur une pastille fraîchement posée : bandeau sous la
-  // photo, seul le contour sélectionné reste plein
+  // Info-bulle sur une pastille fraîchement posée : posée SUR la photo
+  // du côté libre, seul le contour sélectionné reste plein
   await page.locator('#entry-marks .mp-onum').first().click();
   await page.waitForTimeout(300);
   check('info-bulle : nom et nets', (await page.locator('#entry-info .t').textContent()).includes('Riz') &&
     (await page.locator('#entry-info .v').textContent()).includes('40 g nets'));
-  check('bandeau hors de la photo',
-    await page.evaluate(() => !document.getElementById('entry-info').closest('#entry-photo-wrap')));
+  check('info posée sur la photo',
+    await page.evaluate(() => !!document.getElementById('entry-info').closest('#entry-photo-wrap')));
+  check('info ne couvre pas l’aliment sélectionné',
+    await page.evaluate(() => {
+      const b = document.getElementById('entry-info').getBoundingClientRect();
+      const shapes = document.querySelectorAll('#entry-shapes .mp-shape[data-fi="0"]');
+      return shapes.length > 0 && Array.prototype.every.call(shapes, s => {
+        const r = s.getBoundingClientRect();
+        return b.right <= r.left || b.left >= r.right || b.bottom <= r.top || b.top >= r.bottom;
+      });
+    }));
   check('autre contour estompé',
     await page.evaluate(() => {
       const autres = document.querySelectorAll('#entry-shapes [data-fi="1"], #entry-marks [data-fi="1"]');
