@@ -1856,6 +1856,17 @@
     margin: 8px 0;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
   }
+  /* Variante posée SUR la photo : ancrée en haut ou en bas selon le côté
+     libre — jamais par-dessus l'aliment sélectionné (sinon repli en
+     bandeau sous la photo) */
+  .mp-info--over {
+    position: absolute;
+    left: 8px;
+    right: 8px;
+    z-index: 6;
+    width: auto;
+    max-width: none;
+  }
   /* Rangée d'aliment mise en avant après un tap sur son numéro */
   @keyframes mp-flash {
     0%, 100% { background: var(--card); }
@@ -2569,7 +2580,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.41.0</span>
+  <br><span id="app-version">Glucides Nets v2.42.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -6623,6 +6634,26 @@
     var el = document.getElementById('mp-info');
     if (el && el.parentNode) el.parentNode.removeChild(el);
   }
+  /* Pose l'info-bulle SUR la photo, du côté (haut ou bas) où l'aliment
+     sélectionné n'est pas. `reservedBottom` garde le bandeau du total
+     dégagé. Renvoie false quand aucun côté n'a la place : l'appelant
+     replie alors l'info en bandeau sous la photo. */
+  function placeInfoOnPhoto(box, wrap, shapes, reservedBottom) {
+    var wr = wrap.getBoundingClientRect();
+    if (!wr.height || shapes.length === 0) return false;
+    var top = Infinity, bottom = -Infinity;
+    Array.prototype.forEach.call(shapes, function (s) {
+      var r = s.getBoundingClientRect();
+      top = Math.min(top, r.top - wr.top);
+      bottom = Math.max(bottom, r.bottom - wr.top);
+    });
+    var need = box.offsetHeight + 12;
+    var above = top, below = wr.height - (reservedBottom || 0) - bottom;
+    if (above < need && below < need) return false;
+    if (above >= below) box.style.top = '6px';
+    else box.style.top = Math.round(wr.height - (reservedBottom || 0) - box.offsetHeight - 6) + 'px';
+    return true;
+  }
   function mpShowInfo(fi, anchor) {
     if (mpInfoFor === fi) { mpCloseInfo(); return; }
     mpCloseInfo();
@@ -6632,8 +6663,8 @@
     mpInfoFor = fi;
     var confTxt = { bonne: 'fiable', moyenne: 'à vérifier', faible: 'incertain — pèse-le' }[mpConfidence(f)] || 'à vérifier';
     var box = document.createElement('div');
-    // Bandeau SOUS la photo, jamais par-dessus : l'info ne doit rien cacher
-    box.className = 'mp-info mp-info--bar';
+    // Sur la photo, du côté libre — jamais sur l'aliment sélectionné
+    box.className = 'mp-info mp-info--over';
     box.id = 'mp-info';
     box.setAttribute('role', 'status');
     var x = document.createElement('button');
@@ -6672,7 +6703,20 @@
     box.appendChild(v);
     box.appendChild(c);
     box.appendChild(go);
-    photos.insertAdjacentElement('afterend', box);
+    var wrap = photos.querySelector('.mp-photo-wrap');
+    var shapes = wrap ? wrap.querySelectorAll('#mp-shapes .mp-shape[data-fi="' + fi + '"]') : [];
+    var tot = $('mp-photo-total');
+    var posed = false;
+    if (wrap) {
+      wrap.appendChild(box);
+      posed = placeInfoOnPhoto(box, wrap, shapes, tot ? tot.offsetHeight : 0);
+    }
+    if (!posed) {
+      // Pas de côté libre : bandeau sous la photo, comme avant
+      box.className = 'mp-info mp-info--bar';
+      box.style.top = '';
+      photos.insertAdjacentElement('afterend', box);
+    }
     mpDim(fi);
   }
 
@@ -7690,8 +7734,8 @@
     entryCloseInfo();
     entryInfoFor = i;
     var box = document.createElement('div');
-    // Bandeau SOUS la photo, jamais par-dessus : l'info ne cache rien
-    box.className = 'mp-info mp-info--bar';
+    // Sur la photo, du côté libre — jamais sur l'aliment sélectionné
+    box.className = 'mp-info mp-info--over';
     box.id = 'entry-info';
     box.setAttribute('role', 'status');
     var x = document.createElement('button');
@@ -7723,7 +7767,15 @@
     box.appendChild(t);
     box.appendChild(v);
     box.appendChild(c);
-    $('entry-photo-wrap').insertAdjacentElement('afterend', box);
+    var wrap = $('entry-photo-wrap');
+    var shapes = wrap.querySelectorAll('#entry-shapes .mp-shape[data-fi="' + i + '"]');
+    wrap.appendChild(box);
+    if (!placeInfoOnPhoto(box, wrap, shapes, 0)) {
+      // Pas de côté libre : bandeau sous la photo, comme avant
+      box.className = 'mp-info mp-info--bar';
+      box.style.top = '';
+      wrap.insertAdjacentElement('afterend', box);
+    }
     entryDim(i);
   }
   $('entry-photo-wrap').addEventListener('click', function (e) {
