@@ -25,10 +25,14 @@ const { serve, launch, check, finish, JPEG_1PX } = require('./helper');
       items: names.map(n => ({ name: n, carbs: 10, fiber: 1, polyols: 0, polyolType: 'half', ratio: 1, grams: 50 })),
       net, carbs, fiber, polyols: 0, ...(photo ? { photo: jpeg } : {})
     });
+    const r3 = mk('r3', at(1, 12, 30), 45, 50, 5, ['Sandwich'], true);
+    // Annotations enregistrées : le PDF doit montrer la photo ANNOTÉE
+    r3.overlay = [{ name: 'Sandwich', grams: 50, carbs: 10, fiber: 1,
+      x: 50, y: 50, w: 40, h: 30, pieces: null, confidence: 'bonne' }];
     localStorage.setItem('gn_history', JSON.stringify([
       mk('r1', at(0, 8, 0), 30, 33, 3, ['Gruau']),
       mk('r2', at(0, 18, 0), 60, 66, 6, ['Pâtes']),
-      mk('r3', at(1, 12, 30), 45, 50, 5, ['Sandwich'], true),
+      r3,
       mk('r4', at(10, 17, 0), 80, 88, 8, ['Pizza']),
       mk('r5', at(10, 22, 0), 15, 16, 1, ['Biscuits'])
     ]));
@@ -98,15 +102,19 @@ const { serve, launch, check, finish, JPEG_1PX } = require('./helper');
   check('texte partagé : formule des nets', !!shared && shared.text.includes('Nets = glucides − fibres − polyols'));
   check('texte partagé : aucun jugement', !!shared && !/trop|cible|devrait/i.test(shared.text));
 
-  // PDF : calque rempli, gardé par body.printing-report, photo incluse
+  // PDF : calque rempli (photos annotées préparées en asynchrone), gardé
+  // par body.printing-report
   await page.evaluate(() => { window.__printed = 0; window.print = () => { window.__printed++; }; });
   await page.click('#report-pdf');
-  await page.waitForTimeout(200);
+  await page.waitForTimeout(900);
   check('window.print appelé', (await page.evaluate(() => window.__printed)) === 1);
   const printHtml = await page.evaluate(() => document.getElementById('print-report').innerHTML);
   check('PDF : titre', printHtml.includes('Rapport glucides'));
   check('PDF : moments', printHtml.includes('Souper et soirée'));
   check('PDF : photo du top', printHtml.includes('data:image/jpeg'));
+  // La photo du PDF est la version ANNOTÉE (ré-encodée par canvas) :
+  // le base64 original ne doit plus s'y trouver tel quel
+  check('PDF : photo annotée, pas l’originale', !printHtml.includes(JPEG_1PX.slice(40, 80)));
   check('PDF : classe d’impression posée',
     await page.evaluate(() => document.body.classList.contains('printing-report')));
 

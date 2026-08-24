@@ -2568,7 +2568,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.39.0</span>
+  <br><span id="app-version">Glucides Nets v2.40.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -8317,11 +8317,106 @@
       return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c];
     });
   }
+  /* La photo d'un repas marquant, ANNOTÉE comme dans la fiche (contours
+     de confiance, pastilles numérotées), cuite dans l'image même : le
+     PDF montre exactement ce que l'écran montre, sur n'importe quelle
+     imprimante. Sans annotations enregistrées, la photo part telle
+     quelle; une photo illisible part telle quelle aussi. */
+  function annotatedPhotoUrl(entry) {
+    return new Promise(function (resolve) {
+      if (!entry.photo) { resolve(null); return; }
+      var plain = 'data:image/jpeg;base64,' + entry.photo;
+      var overlay = Array.isArray(entry.overlay) ? entry.overlay : [];
+      if (overlay.length === 0) { resolve(plain); return; }
+      var img = new Image();
+      img.onload = function () {
+        try {
+          var W = img.width, H = img.height;
+          var canvas = document.createElement('canvas');
+          canvas.width = W;
+          canvas.height = H;
+          var ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0);
+          var lw = Math.max(2, Math.round(Math.max(W, H) / 220));
+          function roundRect(l, t, w2, h2, r) {
+            r = Math.max(0, Math.min(r, w2 / 2, h2 / 2));
+            ctx.beginPath();
+            ctx.moveTo(l + r, t);
+            ctx.arcTo(l + w2, t, l + w2, t + h2, r);
+            ctx.arcTo(l + w2, t + h2, l, t + h2, r);
+            ctx.arcTo(l, t + h2, l, t, r);
+            ctx.arcTo(l, t, l + w2, t, r);
+            ctx.closePath();
+          }
+          overlay.forEach(function (f, i) {
+            var col = MP_CONF_COLOR[f.confidence] || MP_CONF_COLOR.moyenne;
+            function outline(x, y, w, hh) {
+              if (x == null || y == null) return;
+              w = num(w) || 24;
+              hh = num(hh) || 24;
+              var l = Math.max(0, Math.min(100 - w, num(x) - w / 2)) / 100 * W;
+              var t = Math.max(0, Math.min(100 - hh, num(y) - hh / 2)) / 100 * H;
+              var pw = w / 100 * W, ph = hh / 100 * H;
+              var r = Math.min(pw, ph) * 0.28;
+              ctx.strokeStyle = 'rgba(7,17,31,0.55)'; // doublure sombre
+              ctx.lineWidth = lw * 2;
+              roundRect(l, t, pw, ph, r);
+              ctx.stroke();
+              ctx.strokeStyle = col;
+              ctx.lineWidth = lw;
+              roundRect(l, t, pw, ph, r);
+              ctx.stroke();
+            }
+            var ax = f.x, ay = f.y;
+            if (Array.isArray(f.pieces) && f.pieces.length >= 2) {
+              var sx = 0, sy = 0;
+              f.pieces.forEach(function (pc) { outline(pc.x, pc.y, pc.w, pc.h); sx += num(pc.x); sy += num(pc.y); });
+              ax = sx / f.pieces.length;
+              ay = sy / f.pieces.length;
+            } else if (f.x != null && f.y != null) {
+              outline(f.x, f.y, f.w, f.h);
+            }
+            if (ax == null || ay == null) return;
+            // Pastille numérotée au coin du contour, comme à l'écran
+            var cx = Math.max(2, Math.min(92, num(ax) - (num(f.w) || 24) / 2)) / 100 * W;
+            var cy = Math.max(2, Math.min(90, num(ay) - (num(f.h) || 24) / 2)) / 100 * H;
+            var rad = Math.max(9, Math.round(Math.max(W, H) / 34));
+            ctx.beginPath();
+            ctx.arc(cx, cy, rad, 0, Math.PI * 2);
+            ctx.fillStyle = col;
+            ctx.fill();
+            ctx.lineWidth = Math.max(1.5, lw * 0.75);
+            ctx.strokeStyle = 'rgba(7,17,31,0.6)';
+            ctx.stroke();
+            ctx.fillStyle = '#071120';
+            ctx.font = '700 ' + Math.round(rad * 1.2) + 'px system-ui, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(String(i + 1), cx, cy + rad * 0.05);
+          });
+          resolve(canvas.toDataURL('image/jpeg', 0.85));
+        } catch (e) {
+          resolve(plain);
+        }
+      };
+      img.onerror = function () { resolve(plain); };
+      img.src = plain;
+    });
+  }
+
   function buildPrintReport() {
     var p = activeProfile();
     var R = computeReport();
     var ja = Math.max(1, R.joursActifs);
     var fmtFull = new Intl.DateTimeFormat('fr-CA', { day: 'numeric', month: 'long', year: 'numeric' });
+    // Les photos annotées se préparent d'abord (décodage asynchrone),
+    // le HTML du rapport se construit ensuite avec elles
+    return Promise.all(R.top.map(annotatedPhotoUrl)).then(function (photoUrls) {
+      buildPrintReportHtml(p, R, ja, fmtFull, photoUrls);
+    });
+  }
+
+  function buildPrintReportHtml(p, R, ja, fmtFull, photoUrls) {
     var h = [];
     h.push('<h1>Rapport glucides — ' + escHtml(p.name) + '</h1>');
     h.push('<p class="pr-sub">Du ' + fmtRange.format(R.start) + ' au ' + fmtRange.format(R.now) +
@@ -8369,10 +8464,11 @@
 
     if (R.top.length > 0) {
       h.push('<h2>Repas les plus élevés de la période</h2>');
-      R.top.forEach(function (entry) {
+      R.top.forEach(function (entry, i) {
         var d = new Date(entry.ts);
+        var url = photoUrls[i]; // photo annotée (contours et pastilles cuits dans l'image)
         h.push('<div class="pr-top">' +
-          (entry.photo ? '<img src="data:image/jpeg;base64,' + escHtml(entry.photo) + '" alt="">' : '') +
+          (url ? '<img src="' + escHtml(url) + '" alt="">' : '') +
           '<div class="t"><strong>' + round1(entry.net) + ' glucides</strong> · ' +
           escHtml(fmtTopDay.format(d)) + ' ' + fmtTime.format(d) + '<br>' +
           escHtml(entry.items.map(function (it) { return it.name; }).join(', ')) + '</div></div>');
@@ -8418,28 +8514,33 @@
     if (e.target === $('report-modal')) closeReportModal();
   });
   $('report-pdf').addEventListener('click', function () {
-    buildPrintReport();
-    document.body.classList.add('printing-report');
-    var cleanup = function () {
-      document.body.classList.remove('printing-report');
-      $('print-report').innerHTML = '';
-      window.removeEventListener('afterprint', cleanup);
-    };
-    // Pas de minuterie de secours : sur téléphone, le dialogue est
-    // asynchrone et une minuterie viderait le rapport pendant qu'il est
-    // encore ouvert. afterprint suffit sur les navigateurs modernes.
-    window.addEventListener('afterprint', cleanup);
-    if (typeof window.print !== 'function') {
-      cleanup();
-      toast('⚠️ L’impression n’est pas offerte dans ce navigateur — utilise « 📤 Partager »', { type: 'warn', duration: 6000 });
-      return;
-    }
-    try {
-      window.print();
-    } catch (e) {
-      cleanup();
-      toast('⚠️ L’impression a échoué ici — utilise « 📤 Partager »', { type: 'warn', duration: 6000 });
-    }
+    var btn = $('report-pdf');
+    btn.disabled = true;
+    // Les photos annotées se préparent en asynchrone avant l'impression
+    buildPrintReport().then(function () {
+      btn.disabled = false;
+      document.body.classList.add('printing-report');
+      var cleanup = function () {
+        document.body.classList.remove('printing-report');
+        $('print-report').innerHTML = '';
+        window.removeEventListener('afterprint', cleanup);
+      };
+      // Pas de minuterie de secours : sur téléphone, le dialogue est
+      // asynchrone et une minuterie viderait le rapport pendant qu'il est
+      // encore ouvert. afterprint suffit sur les navigateurs modernes.
+      window.addEventListener('afterprint', cleanup);
+      if (typeof window.print !== 'function') {
+        cleanup();
+        toast('⚠️ L’impression n’est pas offerte dans ce navigateur — utilise « 📤 Partager »', { type: 'warn', duration: 6000 });
+        return;
+      }
+      try {
+        window.print();
+      } catch (e) {
+        cleanup();
+        toast('⚠️ L’impression a échoué ici — utilise « 📤 Partager »', { type: 'warn', duration: 6000 });
+      }
+    });
   });
   $('report-share').addEventListener('click', function () {
     var text = reportSummaryText();
