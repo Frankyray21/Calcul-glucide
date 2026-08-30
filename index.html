@@ -375,6 +375,29 @@
     border-bottom: 1px solid var(--border);
   }
   .food-item:last-child { border-bottom: none; }
+  /* Zone tactile : toute la ligne (icône + infos + net) ouvre l'ajustement
+     de portion. Un vrai <button> pour rester accessible au clavier. */
+  .food-item .food-tap {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: none;
+    border: none;
+    margin: 0;
+    padding: 4px 2px;
+    font: inherit;
+    color: inherit;
+    text-align: left;
+    cursor: pointer;
+    border-radius: 12px;
+    transition: background-color 150ms ease-out, transform 150ms ease-out;
+  }
+  .food-item .food-tap:hover { background: var(--accent-light); }
+  .food-item .food-tap:active { transform: scale(0.99); }
+  .food-item .food-tap .net { flex: none; }
+  .food-item .edit-cue { flex: none; color: var(--muted); font-size: 1.3rem; line-height: 1; }
   .food-item .f-ico {
     flex: none;
     width: 46px;
@@ -2580,7 +2603,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.45.0</span>
+  <br><span id="app-version">Glucides Nets v2.46.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -2759,6 +2782,29 @@
       <button class="btn btn--action" id="qty-add" type="button">Ajouter au repas</button>
     </div>
     <button class="link-btn" id="qty-edit" type="button" style="display:none; width:100%; text-align:center;">✏️ Corriger les valeurs à la main</button>
+  </div>
+</div>
+
+<!-- Modal : ajuster la portion d'un aliment déjà dans le repas -->
+<div class="modal-overlay" id="mealedit-modal" role="dialog" aria-modal="true" aria-labelledby="mealedit-title">
+  <div class="modal">
+    <h3 id="mealedit-title">Ajuster la portion</h3>
+    <div class="hero-card">
+      <div class="hero-label">Glucides de cet aliment</div>
+      <div class="live-net" id="mealedit-net" role="status" aria-live="polite">0 <small>g</small></div>
+      <div class="hero-sub" id="mealedit-sub"></div>
+    </div>
+    <label for="mealedit-qty" id="mealedit-label">Quantité consommée (grammes)</label>
+    <!-- Gros − / + : ajustable avec des gants -->
+    <div class="stepper">
+      <button class="step-btn" id="mealedit-minus" type="button" aria-label="Réduire la portion">−</button>
+      <input type="number" id="mealedit-qty" inputmode="decimal" min="0" step="1">
+      <button class="step-btn" id="mealedit-plus" type="button" aria-label="Augmenter la portion">+</button>
+    </div>
+    <div class="actions">
+      <button class="btn btn-secondary" id="mealedit-remove" type="button">🗑️ Retirer</button>
+      <button class="btn btn--action" id="mealedit-save" type="button">Valider</button>
+    </div>
   </div>
 </div>
 
@@ -3720,6 +3766,24 @@
         netEl.className = 'net';
         netEl.innerHTML = net + ' g<small>glucides</small>';
 
+        var cue = document.createElement('span');
+        cue.className = 'edit-cue';
+        cue.setAttribute('aria-hidden', 'true');
+        cue.textContent = '›';
+
+        // Toute la ligne (sauf le ✕) ouvre l'ajustement de portion
+        var tap = document.createElement('button');
+        tap.type = 'button';
+        tap.className = 'food-tap';
+        tap.setAttribute('aria-label', 'Ajuster la portion de ' + item.name);
+        tap.appendChild(ico);
+        tap.appendChild(info);
+        tap.appendChild(netEl);
+        tap.appendChild(cue);
+        tap.addEventListener('click', function () {
+          openMealItemEdit(i);
+        });
+
         var removeBtn = document.createElement('button');
         removeBtn.className = 'remove';
         removeBtn.setAttribute('aria-label', 'Retirer ' + item.name);
@@ -3730,9 +3794,7 @@
           renderMeal();
         });
 
-        div.appendChild(ico);
-        div.appendChild(info);
-        div.appendChild(netEl);
+        div.appendChild(tap);
         div.appendChild(removeBtn);
         list.appendChild(div);
       });
@@ -4406,6 +4468,92 @@
     modalRecipe = null;
   }
   trapModal('qty-modal', closeQtyModal);
+
+  /* ── Ajuster la portion d'un aliment déjà dans le repas ──
+     On expose la seule grandeur qui touche la pompe : la portion.
+     - Aliment pesé (champ `grams`) : on édite les grammes, ratio = g/100.
+     - Aliment en portion (favori, saisie manuelle) : on édite le
+       multiplicateur `ratio` directement. Dans les deux cas le net est
+       recalculé par GN_CALC.netCarbs, jamais à la main. */
+  var mealEditIndex = -1;
+  var mealEditGramsMode = true;
+  function mealEditProbe(factor) {
+    var it = meal[mealEditIndex] || {};
+    return {
+      carbs: it.carbs, fiber: it.fiber, polyols: it.polyols,
+      polyolType: it.polyolType,
+      ratio: mealEditGramsMode ? factor / 100 : factor
+    };
+  }
+  function updateMealEditNet() {
+    if (mealEditIndex < 0) return;
+    var v = parseFloat($('mealedit-qty').value) || 0;
+    var net = round1(netCarbs(mealEditProbe(v)));
+    $('mealedit-net').innerHTML = net + ' <small>g</small>';
+    $('mealedit-sub').textContent = v > 0
+      ? (mealEditGramsMode ? 'pour ' + round1(v) + ' grammes' : 'portion ×' + round2(v))
+      : 'entre la valeur ci-dessus';
+    $('mealedit-save').textContent = v > 0 ? 'Valider ' + net + ' g' : 'Valider';
+  }
+  function openMealItemEdit(i) {
+    var it = meal[i];
+    if (!it) return;
+    mealEditIndex = i;
+    mealEditGramsMode = num(it.grams) > 0;
+    $('mealedit-title').textContent = foodEmoji(it.name) + ' ' + it.name;
+    var input = $('mealedit-qty');
+    if (mealEditGramsMode) {
+      $('mealedit-label').textContent = 'Quantité consommée (grammes)';
+      input.step = '1';
+      input.value = round1(it.grams);
+    } else {
+      $('mealedit-label').textContent = 'Portion (multiplicateur)';
+      input.step = '0.25';
+      input.value = round2(num(it.ratio) || 1);
+    }
+    updateMealEditNet();
+    openModal('mealedit-modal', '#mealedit-qty');
+  }
+  function closeMealEdit() {
+    closeModal('mealedit-modal');
+    mealEditIndex = -1;
+  }
+  trapModal('mealedit-modal', closeMealEdit);
+  $('mealedit-modal').addEventListener('click', function (e) {
+    if (e.target === this) closeMealEdit();
+  });
+  $('mealedit-qty').addEventListener('input', updateMealEditNet);
+  function stepMealEdit(dir) {
+    var input = $('mealedit-qty');
+    var cur = parseFloat(input.value) || 0;
+    var stepv = mealEditGramsMode ? 10 : 0.25;
+    input.value = Math.max(0, round2(cur + dir * stepv));
+    updateMealEditNet();
+  }
+  $('mealedit-minus').addEventListener('click', function () { stepMealEdit(-1); });
+  $('mealedit-plus').addEventListener('click', function () { stepMealEdit(1); });
+  $('mealedit-remove').addEventListener('click', function () {
+    if (mealEditIndex < 0 || !meal[mealEditIndex]) { closeMealEdit(); return; }
+    meal.splice(mealEditIndex, 1);
+    touchMeal();
+    save();
+    renderMeal();
+    closeMealEdit();
+    toast('Aliment retiré du repas');
+  });
+  $('mealedit-save').addEventListener('click', function () {
+    var it = meal[mealEditIndex];
+    if (!it) { closeMealEdit(); return; }
+    var v = parseFloat($('mealedit-qty').value) || 0;
+    if (v <= 0) { $('mealedit-qty').focus(); return; }
+    if (mealEditGramsMode) { it.grams = round1(v); it.ratio = v / 100; }
+    else { it.ratio = v; }
+    touchMeal();
+    save();
+    renderMeal();
+    closeMealEdit();
+    toast('✓ Portion ajustée — ' + round1(netCarbs(it)) + ' g glucides');
+  });
 
   // Fiche produit (scan / photo) : mêmes valeurs, mais corrigeables à la main
   function openProductModal(product) {
