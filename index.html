@@ -1671,6 +1671,8 @@
     color: var(--btn-text);
   }
   .qty-portions button:active { transform: scale(0.96); }
+  /* Variante 3 colonnes : deux rangées égales pour les 6 fractions */
+  .qty-portions--3 { grid-template-columns: repeat(3, 1fr); }
 
   .link-btn {
     background: none;
@@ -2603,7 +2605,7 @@
 <p class="disclaimer">
   ⚠️ Cet outil est une aide au calcul seulement. Il ne remplace pas l'avis de ton équipe de soins en diabète.
   Vérifie toujours les valeurs entrées dans ta pompe et suis les recommandations de ton professionnel de la santé.
-  <br><span id="app-version">Glucides Nets v2.46.0</span>
+  <br><span id="app-version">Glucides Nets v2.47.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -2793,6 +2795,17 @@
       <div class="hero-label">Glucides de cet aliment</div>
       <div class="live-net" id="mealedit-net" role="status" aria-live="polite">0 <small>g</small></div>
       <div class="hero-sub" id="mealedit-sub"></div>
+    </div>
+    <!-- Fractions de la portion actuelle : « j'en ai mangé la moitié »
+         sans calcul mental. La référence est la portion à l'ouverture. -->
+    <div class="sec-label" style="margin-top:10px;">Portion mangée</div>
+    <div class="qty-portions qty-portions--3" id="mealedit-portions">
+      <button type="button" data-frac="0.25" aria-label="Le quart de la portion">¼</button>
+      <button type="button" data-frac="0.5" aria-label="La moitié de la portion">½</button>
+      <button type="button" data-frac="0.75" aria-label="Les trois quarts de la portion">¾</button>
+      <button type="button" data-frac="1" aria-label="La portion au complet">1 portion</button>
+      <button type="button" data-frac="1.5" aria-label="Une portion et demie">1½</button>
+      <button type="button" data-frac="2" aria-label="Le double de la portion">×2</button>
     </div>
     <label for="mealedit-qty" id="mealedit-label">Quantité consommée (grammes)</label>
     <!-- Gros − / + : ajustable avec des gants -->
@@ -4477,6 +4490,7 @@
        recalculé par GN_CALC.netCarbs, jamais à la main. */
   var mealEditIndex = -1;
   var mealEditGramsMode = true;
+  var mealEditRef = 0; // portion de référence (valeur à l'ouverture) pour les fractions
   function mealEditProbe(factor) {
     var it = meal[mealEditIndex] || {};
     return {
@@ -4494,6 +4508,12 @@
       ? (mealEditGramsMode ? 'pour ' + round1(v) + ' grammes' : 'portion ×' + round2(v))
       : 'entre la valeur ci-dessus';
     $('mealedit-save').textContent = v > 0 ? 'Valider ' + net + ' g' : 'Valider';
+    // Fraction correspondant à la valeur entrée : mise en évidence
+    var eps = mealEditGramsMode ? 0.05 : 0.005;
+    document.querySelectorAll('#mealedit-portions button').forEach(function (b) {
+      b.classList.toggle('sel',
+        mealEditRef > 0 && Math.abs(mealEditRef * parseFloat(b.dataset.frac) - v) < eps);
+    });
   }
   function openMealItemEdit(i) {
     var it = meal[i];
@@ -4511,6 +4531,7 @@
       input.step = '0.25';
       input.value = round2(num(it.ratio) || 1);
     }
+    mealEditRef = parseFloat(input.value) || 0;
     updateMealEditNet();
     openModal('mealedit-modal', '#mealedit-qty');
   }
@@ -4532,6 +4553,14 @@
   }
   $('mealedit-minus').addEventListener('click', function () { stepMealEdit(-1); });
   $('mealedit-plus').addEventListener('click', function () { stepMealEdit(1); });
+  document.querySelectorAll('#mealedit-portions button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      if (mealEditRef <= 0) return;
+      var v = mealEditRef * parseFloat(b.dataset.frac);
+      $('mealedit-qty').value = mealEditGramsMode ? round1(v) : round2(v);
+      updateMealEditNet();
+    });
+  });
   $('mealedit-remove').addEventListener('click', function () {
     if (mealEditIndex < 0 || !meal[mealEditIndex]) { closeMealEdit(); return; }
     meal.splice(mealEditIndex, 1);
