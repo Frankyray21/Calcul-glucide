@@ -1186,11 +1186,16 @@
     font-weight: 600;
     padding: 8px 4px 8px 14px;
   }
+  .fav-chip .fav-edit {
+    font-size: 0.85rem;
+    min-width: 40px;
+    padding: 8px 2px;
+  }
   .fav-chip .fav-del {
     color: var(--danger);
     font-weight: 700;
-    min-width: 48px;
-    padding: 8px 10px 8px 4px;
+    min-width: 44px;
+    padding: 8px 10px 8px 2px;
   }
 
   .save-fav-row {
@@ -2574,7 +2579,7 @@
      Plus → À propos. Ici, une ligne suffit — relue à chaque écran. -->
 <p class="disclaimer">
   ⚠️ Aide au calcul seulement — vérifie toujours la valeur entrée dans la pompe.
-  <br><span id="app-version">Glucides Nets v2.48.0</span>
+  <br><span id="app-version">Glucides Nets v2.49.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -2756,40 +2761,6 @@
   </div>
 </div>
 
-<!-- Modal : ajuster la portion d'un aliment déjà dans le repas -->
-<div class="modal-overlay" id="mealedit-modal" role="dialog" aria-modal="true" aria-labelledby="mealedit-title">
-  <div class="modal">
-    <h3 id="mealedit-title">Ajuster la portion</h3>
-    <div class="hero-card">
-      <div class="hero-label">Glucides de cet aliment</div>
-      <div class="live-net" id="mealedit-net" role="status" aria-live="polite">0 <small>g</small></div>
-      <div class="hero-sub" id="mealedit-sub"></div>
-    </div>
-    <!-- Fractions de la portion actuelle : « j'en ai mangé la moitié »
-         sans calcul mental. La référence est la portion à l'ouverture. -->
-    <div class="sec-label" style="margin-top:10px;">Portion mangée</div>
-    <div class="qty-portions qty-portions--3" id="mealedit-portions">
-      <button type="button" data-frac="0.25" aria-label="Le quart de la portion">¼</button>
-      <button type="button" data-frac="0.5" aria-label="La moitié de la portion">½</button>
-      <button type="button" data-frac="0.75" aria-label="Les trois quarts de la portion">¾</button>
-      <button type="button" data-frac="1" aria-label="La portion au complet">1 portion</button>
-      <button type="button" data-frac="1.5" aria-label="Une portion et demie">1½</button>
-      <button type="button" data-frac="2" aria-label="Le double de la portion">×2</button>
-    </div>
-    <label for="mealedit-qty" id="mealedit-label">Quantité consommée (grammes)</label>
-    <!-- Gros − / + : ajustable avec des gants -->
-    <div class="stepper">
-      <button class="step-btn" id="mealedit-minus" type="button" aria-label="Réduire la portion">−</button>
-      <input type="number" id="mealedit-qty" inputmode="decimal" min="0" step="1">
-      <button class="step-btn" id="mealedit-plus" type="button" aria-label="Augmenter la portion">+</button>
-    </div>
-    <div class="actions">
-      <button class="btn btn-secondary" id="mealedit-remove" type="button">🗑️ Retirer</button>
-      <button class="btn btn--action" id="mealedit-save" type="button">Valider</button>
-    </div>
-  </div>
-</div>
-
 <!-- Modal : repas analysé depuis une photo (estimation IA, modifiable) -->
 <div class="modal-overlay full" id="meal-photo-modal" role="dialog" aria-modal="true" aria-labelledby="mp-title">
   <div class="modal modal--full">
@@ -2954,6 +2925,79 @@
       <button class="btn btn-secondary" id="cons-cancel" type="button">Annuler</button>
       <button class="btn btn--action" id="cons-apply" type="button">Mettre à jour le repas</button>
     </div>
+  </div>
+</div>
+
+<!-- Modal : corriger les valeurs d'un élément qui t'appartient
+     (recette, favori, aliment du repas) — une seule fiche pour tous. -->
+<div class="modal-overlay" id="editval-modal" role="dialog" aria-modal="true" aria-labelledby="editval-title">
+  <div class="modal">
+    <h3 id="editval-title">✏️ Corriger les valeurs</h3>
+    <p class="hint" id="editval-hint" style="margin:0 0 10px;"></p>
+    <label for="editval-name">Nom</label>
+    <input type="text" id="editval-name" maxlength="80" autocomplete="off">
+    <div class="row">
+      <div>
+        <label for="editval-carbs">Glucides (g)</label>
+        <input type="number" id="editval-carbs" inputmode="decimal" min="0" step="0.1">
+      </div>
+      <div>
+        <label for="editval-fiber">Fibres (g)</label>
+        <input type="number" id="editval-fiber" inputmode="decimal" min="0" step="0.1">
+      </div>
+    </div>
+    <div class="row">
+      <div>
+        <label for="editval-polyols">Polyols (g)</label>
+        <input type="number" id="editval-polyols" inputmode="decimal" min="0" step="0.1" placeholder="0">
+      </div>
+      <div>
+        <label for="editval-ptype">Type de polyols</label>
+        <select id="editval-ptype">
+          <option value="half">Polyols (50 %)</option>
+          <option value="full">Érythritol (100 %)</option>
+        </select>
+      </div>
+    </div>
+    <div class="actions">
+      <button class="btn btn-secondary" id="editval-cancel" type="button">Annuler</button>
+      <button class="btn btn--action" id="editval-save" type="button">Enregistrer</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal : ajuster la portion d'un aliment déjà dans le repas -->
+<div class="modal-overlay" id="mealedit-modal" role="dialog" aria-modal="true" aria-labelledby="mealedit-title">
+  <div class="modal">
+    <h3 id="mealedit-title">Ajuster la portion</h3>
+    <div class="hero-card">
+      <div class="hero-label">Glucides de cet aliment</div>
+      <div class="live-net" id="mealedit-net" role="status" aria-live="polite">0 <small>g</small></div>
+      <div class="hero-sub" id="mealedit-sub"></div>
+    </div>
+    <!-- Fractions de la portion actuelle : « j'en ai mangé la moitié »
+         sans calcul mental. La référence est la portion à l'ouverture. -->
+    <div class="sec-label" style="margin-top:10px;">Portion mangée</div>
+    <div class="qty-portions qty-portions--3" id="mealedit-portions">
+      <button type="button" data-frac="0.25" aria-label="Le quart de la portion">¼</button>
+      <button type="button" data-frac="0.5" aria-label="La moitié de la portion">½</button>
+      <button type="button" data-frac="0.75" aria-label="Les trois quarts de la portion">¾</button>
+      <button type="button" data-frac="1" aria-label="La portion au complet">1 portion</button>
+      <button type="button" data-frac="1.5" aria-label="Une portion et demie">1½</button>
+      <button type="button" data-frac="2" aria-label="Le double de la portion">×2</button>
+    </div>
+    <label for="mealedit-qty" id="mealedit-label">Quantité consommée (grammes)</label>
+    <!-- Gros − / + : ajustable avec des gants -->
+    <div class="stepper">
+      <button class="step-btn" id="mealedit-minus" type="button" aria-label="Réduire la portion">−</button>
+      <input type="number" id="mealedit-qty" inputmode="decimal" min="0" step="1">
+      <button class="step-btn" id="mealedit-plus" type="button" aria-label="Augmenter la portion">+</button>
+    </div>
+    <div class="actions">
+      <button class="btn btn-secondary" id="mealedit-remove" type="button">🗑️ Retirer</button>
+      <button class="btn btn--action" id="mealedit-save" type="button">Valider</button>
+    </div>
+    <button class="link-btn" id="mealedit-fix" type="button" style="width:100%; text-align:center;">✏️ Corriger les valeurs (glucides, fibres…)</button>
   </div>
 </div>
 
@@ -4020,6 +4064,20 @@
         markEngagement();
       });
 
+      // Ton favori t'appartient : mêmes corrections que les recettes
+      var edit = document.createElement('button');
+      edit.type = 'button';
+      edit.className = 'fav-edit';
+      edit.textContent = '✏️';
+      edit.setAttribute('aria-label', 'Corriger le favori ' + fav.name);
+      edit.addEventListener('click', function () {
+        openEditVal(fav, 'Valeurs pour 100 g du favori.', function () {
+          save();
+          renderFavorites();
+          toast('✓ Favori corrigé — ' + round1(net100(fav)) + ' g nets / 100 g');
+        });
+      });
+
       var del = document.createElement('button');
       del.type = 'button';
       del.className = 'fav-del';
@@ -4033,6 +4091,7 @@
       });
 
       chip.appendChild(add);
+      chip.appendChild(edit);
       chip.appendChild(del);
       list.appendChild(chip);
     });
@@ -4210,6 +4269,23 @@
       var actionsRow = document.createElement('div');
       actionsRow.className = 'card-actions';
 
+      // Ta recette t'appartient : ses valeurs se corrigent sur place
+      var editBtn = document.createElement('button');
+      editBtn.type = 'button';
+      editBtn.className = 'card-share';
+      editBtn.textContent = '✏️';
+      editBtn.title = 'Corriger';
+      editBtn.setAttribute('aria-label', 'Corriger la recette ' + r.name);
+      editBtn.addEventListener('click', function () {
+        openEditVal(r, 'Valeurs pour 100 g de la recette.', function () {
+          save();
+          renderRecipes();
+          buildToolOptions();
+          drawToolChart();
+          toast('✓ Recette corrigée — ' + round1(net100(r)) + ' g nets / 100 g');
+        });
+      });
+
       var shareBtn = document.createElement('button');
       shareBtn.type = 'button';
       shareBtn.className = 'card-share';
@@ -4235,6 +4311,7 @@
         }
       });
 
+      actionsRow.appendChild(editBtn);
       actionsRow.appendChild(shareBtn);
       actionsRow.appendChild(del);
 
@@ -4500,10 +4577,34 @@
        multiplicateur `ratio` directement. Dans les deux cas le net est
        recalculé par GN_CALC.netCarbs, jamais à la main. */
   var mealEditIndex = -1;
+  var mealEditEntry = null; // fiche ouverte depuis un repas du journal
+  var mealEditLive = false; // cette entrée est le miroir du repas EN COURS
   var mealEditGramsMode = true;
   var mealEditRef = 0; // portion de référence (valeur à l'ouverture) pour les fractions
+  function mealEditItem() {
+    // Repas en cours (même ouvert depuis sa fiche au journal) : `meal`
+    // fait foi — le miroir n'en est qu'une copie, comme removeEntryItem.
+    var list = (mealEditEntry && !mealEditLive) ? mealEditEntry.items : meal;
+    return list[mealEditIndex];
+  }
+  /* Après une retouche sur un repas FERMÉ, ses totaux précalculés doivent
+     suivre — même mealTotals que partout ailleurs. Le repas en cours,
+     lui, passe par save() → mirrorMeal(). */
+  function commitEntryEditFor(entry, it) {
+    var tot = mealTotals(entry.items);
+    entry.net = round1(tot.net);
+    entry.carbs = round1(tot.carbs);
+    entry.fiber = round1(tot.fiber);
+    entry.polyols = round1(tot.polyols);
+    save();
+    renderJournal();
+    renderWeekChart();
+    renderReportIfOpen();
+    openEntryModal(entry); // la fiche se rafraîchit avec les bons totaux
+    toast('✓ ' + it.name + ' ajusté — repas à ' + entry.net + ' g nets');
+  }
   function mealEditProbe(factor) {
-    var it = meal[mealEditIndex] || {};
+    var it = mealEditItem() || {};
     return {
       carbs: it.carbs, fiber: it.fiber, polyols: it.polyols,
       polyolType: it.polyolType,
@@ -4526,10 +4627,12 @@
         mealEditRef > 0 && Math.abs(mealEditRef * parseFloat(b.dataset.frac) - v) < eps);
     });
   }
-  function openMealItemEdit(i) {
-    var it = meal[i];
-    if (!it) return;
+  function openMealItemEdit(i, entry) {
+    mealEditEntry = entry || null;
+    mealEditLive = !!(entry && entry.id === lsGet(pk('gn_meal_entry')));
     mealEditIndex = i;
+    var it = mealEditItem();
+    if (!it) { mealEditEntry = null; return; }
     mealEditGramsMode = num(it.grams) > 0;
     $('mealedit-title').textContent = foodEmoji(it.name) + ' ' + it.name;
     var input = $('mealedit-qty');
@@ -4549,6 +4652,7 @@
   function closeMealEdit() {
     closeModal('mealedit-modal');
     mealEditIndex = -1;
+    mealEditEntry = null;
   }
   trapModal('mealedit-modal', closeMealEdit);
   $('mealedit-modal').addEventListener('click', function (e) {
@@ -4572,9 +4676,22 @@
       updateMealEditNet();
     });
   });
+  /* Après une retouche du repas EN COURS faite depuis sa fiche au
+     journal : save() → mirrorMeal() a déjà remis l'entrée à jour, il
+     reste à rafraîchir la fiche restée ouverte dessous. */
+  function refreshLiveFiche(entry) {
+    var fresh = findEntry(entry.id);
+    if (fresh) openEntryModal(fresh);
+  }
   $('mealedit-remove').addEventListener('click', function () {
-    if (mealEditIndex < 0 || !meal[mealEditIndex]) { closeMealEdit(); return; }
-    meal.splice(mealEditIndex, 1);
+    if (mealEditIndex < 0 || !mealEditItem()) { closeMealEdit(); return; }
+    var entry = mealEditEntry, live = mealEditLive, idx = mealEditIndex;
+    if (entry) {
+      closeMealEdit();
+      removeEntryItem(entry, idx); // gère lui-même repas en cours vs fermé
+      return;
+    }
+    meal.splice(idx, 1);
     touchMeal();
     save();
     renderMeal();
@@ -4582,17 +4699,79 @@
     toast('Aliment retiré du repas');
   });
   $('mealedit-save').addEventListener('click', function () {
-    var it = meal[mealEditIndex];
+    var it = mealEditItem();
     if (!it) { closeMealEdit(); return; }
     var v = parseFloat($('mealedit-qty').value) || 0;
     if (v <= 0) { $('mealedit-qty').focus(); return; }
     if (mealEditGramsMode) { it.grams = round1(v); it.ratio = v / 100; }
     else { it.ratio = v; }
+    var entry = mealEditEntry, live = mealEditLive;
+    closeMealEdit();
+    if (entry && !live) { commitEntryEditFor(entry, it); return; }
     touchMeal();
     save();
     renderMeal();
+    if (entry) refreshLiveFiche(entry);
+    toast('✓ Portion ajustée — ' + round1(netCarbs(it)) + ' g nets');
+  });
+  /* Valeurs de l'aliment (glucides, fibres…) : ouvre la fiche de
+     correction partagée avec les recettes et les favoris. */
+  $('mealedit-fix').addEventListener('click', function () {
+    var it = mealEditItem();
+    if (!it) return;
+    var entry = mealEditEntry, live = mealEditLive;
     closeMealEdit();
-    toast('✓ Portion ajustée — ' + round1(netCarbs(it)) + ' g glucides');
+    openEditVal(it, entry && !live
+      ? 'Valeurs de référence de cet aliment (repas du journal).'
+      : 'Valeurs de référence de cet aliment (celles de l’étiquette).',
+      function () {
+        if (entry && !live) { commitEntryEditFor(entry, it); return; }
+        touchMeal();
+        save();
+        renderMeal();
+        if (entry) refreshLiveFiche(entry);
+        toast('✓ Valeurs corrigées — ' + round1(netCarbs(it)) + ' g nets');
+      });
+  });
+
+  /* ── Fiche générique « Corriger les valeurs » ──
+     Tout ce qui appartient à l'utilisateur (recette, favori, aliment
+     d'un repas) se corrige ici : mêmes champs, même comportement. La
+     cible est modifiée EN PLACE puis le rappel persiste et re-rend. */
+  var editValTarget = null;   // objet à modifier en place
+  var editValDone = null;     // rappel après enregistrement
+  function openEditVal(rec, hint, onSaved) {
+    editValTarget = rec;
+    editValDone = onSaved;
+    $('editval-hint').textContent = hint || '';
+    $('editval-name').value = rec.name || '';
+    $('editval-carbs').value = round1(num(rec.carbs));
+    $('editval-fiber').value = round1(num(rec.fiber));
+    $('editval-polyols').value = num(rec.polyols) > 0 ? round1(num(rec.polyols)) : '';
+    $('editval-ptype').value = rec.polyolType === 'full' ? 'full' : 'half';
+    openModal('editval-modal', '#editval-name');
+  }
+  function closeEditVal() {
+    closeModal('editval-modal');
+    editValTarget = null;
+    editValDone = null;
+  }
+  trapModal('editval-modal', closeEditVal);
+  $('editval-modal').addEventListener('click', function (e) {
+    if (e.target === this) closeEditVal();
+  });
+  $('editval-cancel').addEventListener('click', closeEditVal);
+  $('editval-save').addEventListener('click', function () {
+    var rec = editValTarget, done = editValDone;
+    if (!rec) { closeEditVal(); return; }
+    var name = $('editval-name').value.trim();
+    if (name) rec.name = name.slice(0, 80);
+    rec.carbs = Math.max(0, parseFloat($('editval-carbs').value) || 0);
+    rec.fiber = Math.max(0, parseFloat($('editval-fiber').value) || 0);
+    rec.polyols = Math.max(0, parseFloat($('editval-polyols').value) || 0);
+    rec.polyolType = $('editval-ptype').value === 'full' ? 'full' : 'half';
+    closeEditVal();
+    if (done) done();
   });
 
   // Fiche produit (scan / photo) : mêmes valeurs, mais corrigeables à la main
@@ -5442,6 +5621,38 @@
         saveAiMemory();
       });
       row.appendChild(txt);
+      // Une note écrite à la main se corrige : son texte revient dans le
+      // champ, l'ancienne version s'efface (annulable). Les leçons
+      // déduites des corrections photo, elles, se suppriment seulement.
+      if (l.kind === 'note') {
+        var editLesson = document.createElement('button');
+        editLesson.type = 'button';
+        editLesson.className = 'forget';
+        editLesson.textContent = '✏️';
+        editLesson.setAttribute('aria-label', 'Corriger cette leçon');
+        editLesson.addEventListener('click', function () {
+          var i = aiMemory.lessons.indexOf(l);
+          if (i === -1) return;
+          forget('lesson', l);
+          aiMemory.lessons.splice(i, 1);
+          saveAiMemory();
+          var input = $('ai-memory-new');
+          input.value = l.text;
+          input.focus();
+          toast('Leçon dans le champ — corrige-la puis touche « Retenir »', {
+            duration: 6000,
+            action: {
+              label: 'Annuler',
+              fn: function () {
+                input.value = '';
+                addLesson({ kind: 'note', text: l.text });
+                saveAiMemory();
+              }
+            }
+          });
+        });
+        row.appendChild(editLesson);
+      }
       row.appendChild(forgetBtn);
       box.appendChild(row);
     });
@@ -7864,15 +8075,31 @@
       var netEl = document.createElement('div');
       netEl.className = 'net';
       netEl.innerHTML = round1(netCarbs(item)) + ' g<small>nets</small>';
+
+      var cue = document.createElement('span');
+      cue.className = 'edit-cue';
+      cue.setAttribute('aria-hidden', 'true');
+      cue.textContent = '›';
+
+      // Même geste que le repas en cours : toute la ligne ouvre
+      // l'ajustement de portion (et la correction des valeurs)
+      var tap = document.createElement('button');
+      tap.type = 'button';
+      tap.className = 'food-tap';
+      tap.setAttribute('aria-label', 'Ajuster la portion de ' + item.name);
+      tap.appendChild(ico);
+      tap.appendChild(info);
+      tap.appendChild(netEl);
+      tap.appendChild(cue);
+      tap.addEventListener('click', function () { openMealItemEdit(idx, entry); });
+
       var removeBtn = document.createElement('button');
       removeBtn.className = 'remove';
       removeBtn.type = 'button';
       removeBtn.setAttribute('aria-label', 'Retirer ' + item.name + ' de ce repas');
       removeBtn.textContent = '✕';
       removeBtn.addEventListener('click', function () { removeEntryItem(entry, idx); });
-      div.appendChild(ico);
-      div.appendChild(info);
-      div.appendChild(netEl);
+      div.appendChild(tap);
       div.appendChild(removeBtn);
       list.appendChild(div);
     });
