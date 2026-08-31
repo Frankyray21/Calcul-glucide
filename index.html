@@ -154,7 +154,6 @@
     color: var(--brand);
   }
   header h1 .brand-net { color: var(--brand-net); }
-  header p { font-size: 1.02rem; font-weight: 700; color: var(--text); margin-top: 1px; }
 
   /* Barre de navigation du bas (maquette) : 5 destinations, bouton
      central « + Calculer » en vedette, cibles d'au moins 48 px */
@@ -2158,7 +2157,6 @@
     </div>
     <div class="titles">
       <h1>Glucide<span class="brand-net">Net</span></h1>
-      <p id="screen-title">Calculer</p>
     </div>
     <button class="info-btn" id="info-btn" type="button" aria-label="Aide et à propos">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
@@ -2578,7 +2576,7 @@
      Plus → À propos. Ici, une ligne suffit — relue à chaque écran. -->
 <p class="disclaimer">
   ⚠️ Aide au calcul seulement — vérifie toujours la valeur entrée dans la pompe.
-  <br><span id="app-version">GlucideNet v2.51.0</span>
+  <br><span id="app-version">GlucideNet v2.52.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -3555,11 +3553,6 @@
       $('panel-' + btn.dataset.tab).classList.add('active');
       // L'onglet actif pilote l'affichage global (barre totale, espace bas)
       document.body.dataset.tab = btn.dataset.tab;
-      // L'en-tête nomme l'écran courant au lieu de répéter la marque
-      $('screen-title').textContent = {
-        home: 'Accueil', recipes: 'Favoris', meal: 'Calculer',
-        journal: 'Journal', plus: 'Plus'
-      }[btn.dataset.tab] || 'Calculer';
       // Sur Calculer, le « + » central devient l'appareil photo : il
       // annonce son second rôle (re-taper ouvre le scanner) au lieu de
       // surprendre.
