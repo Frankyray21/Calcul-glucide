@@ -11,7 +11,7 @@
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>Glucides Nets — Calculateur pour pompe à insuline</title>
+<title>GlucideNet — Calculateur pour pompe à insuline</title>
 <style>
   /* ── Tokens de design ──
      Palette conviviale inspirée de mySugr (chaleureuse, jamais clinique).
@@ -46,6 +46,8 @@
     --carb-soft: rgba(124, 58, 237, 0.12);
     --action: #15803D;       /* vert : uniquement les actions positives */
     --action-pressed: #14532D;
+    --brand: #2643C9;        /* bleu du logo GlucideNet */
+    --brand-net: #7C3AED;    /* mauve du « Net » */
   }
   /* Mode sombre : bleu nuit profond + bleu signal (maquette de référence).
      Contrastes vérifiés : #4D9FFF sur #07111F ≈ 7,4:1, #A7B2C5 sur
@@ -74,6 +76,8 @@
       --carb-soft: rgba(167, 108, 245, 0.18);
       --action: #65B958;
       --action-pressed: #4E9D45;
+      --brand: #F5F7FA;      /* sur fond nuit, « Glucide » passe en clair */
+      --brand-net: #A78BFA;  /* mauve éclairci pour le contraste */
     }
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -114,10 +118,10 @@
   }
   /* Logo GlucideNet : l'image porte déjà son carré arrondi et son fond */
   .logo {
-    width: 34px;
-    height: 34px;
+    width: 48px;
+    height: 48px;
     flex-shrink: 0;
-    border-radius: 9px;
+    border-radius: 12px;
     overflow: hidden;
     display: flex;
     align-items: center;
@@ -140,10 +144,17 @@
   }
   .info-btn svg { width: 20px; height: 20px; }
   .info-btn:active { color: var(--accent-text); border-color: var(--accent); }
-  /* Compact : la marque en discret, l'écran courant en évidence — la
-     zone la plus précieuse du mobile revient au contenu. */
-  header h1 { font-size: 0.95rem; font-weight: 700; letter-spacing: -0.01em; color: var(--muted); }
-  header p { font-size: 1.25rem; font-weight: 800; color: var(--text); margin-top: 0; letter-spacing: -0.02em; }
+  /* Mot-symbole GlucideNet en vedette (« Net » en mauve, comme le
+     logo), l'écran courant juste dessous. */
+  header h1 {
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: -0.02em;
+    line-height: 1.1;
+    color: var(--brand);
+  }
+  header h1 .brand-net { color: var(--brand-net); }
+  header p { font-size: 1.02rem; font-weight: 700; color: var(--text); margin-top: 1px; }
 
   /* Barre de navigation du bas (maquette) : 5 destinations, bouton
      central « + Calculer » en vedette, cibles d'au moins 48 px */
@@ -2066,7 +2077,7 @@
   <section class="ob-step active" id="ob-step-1">
     <div class="ob-body">
       <div class="ob-illus" aria-hidden="true">🥗</div>
-      <h2 id="ob-title-1" tabindex="-1">Bienvenue dans Glucides Nets!</h2>
+      <h2 id="ob-title-1" tabindex="-1">Bienvenue dans GlucideNet!</h2>
       <p class="lead">Calcule les glucides de tes repas, même sans réseau. Simple, rapide, et toujours dans ta poche.</p>
     </div>
     <div class="ob-footer">
@@ -2143,10 +2154,10 @@
 <header>
   <div class="header-inner">
     <div class="logo" aria-hidden="true">
-      <img src="icons/logo-64.png" alt="" width="34" height="34">
+      <img src="icons/logo-64.png" alt="" width="48" height="48">
     </div>
     <div class="titles">
-      <h1>Glucides Nets</h1>
+      <h1>Glucide<span class="brand-net">Net</span></h1>
       <p id="screen-title">Calculer</p>
     </div>
     <button class="info-btn" id="info-btn" type="button" aria-label="Aide et à propos">
@@ -2555,7 +2566,7 @@
 
     <div class="card">
       <h2>ℹ️ À propos</h2>
-      <p class="hint">Glucides Nets est une <strong>aide au calcul des glucides seulement</strong>. Elle ne recommande jamais de dose d'insuline, ne calcule pas de bolus et ne remplace pas ton équipe de soins en diabète. Toutes tes données restent sur cet appareil — sauvegarde et transfert dans l'onglet Journal.</p>
+      <p class="hint">GlucideNet est une <strong>aide au calcul des glucides seulement</strong>. Elle ne recommande jamais de dose d'insuline, ne calcule pas de bolus et ne remplace pas ton équipe de soins en diabète. Toutes tes données restent sur cet appareil — sauvegarde et transfert dans l'onglet Journal.</p>
     </div>
 
   </section>
@@ -2567,13 +2578,13 @@
      Plus → À propos. Ici, une ligne suffit — relue à chaque écran. -->
 <p class="disclaimer">
   ⚠️ Aide au calcul seulement — vérifie toujours la valeur entrée dans la pompe.
-  <br><span id="app-version">Glucides Nets v2.50.0</span>
+  <br><span id="app-version">GlucideNet v2.51.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
 <div class="modal-overlay" id="install-modal" role="dialog" aria-modal="true" aria-labelledby="install-title">
   <div class="modal">
-    <h3 id="install-title">📲 Installer Glucides Nets</h3>
+    <h3 id="install-title">📲 Installer GlucideNet</h3>
     <p class="stats-line">L'app s'installe directement depuis le navigateur — rien à télécharger sur un magasin d'applications.</p>
     <ul class="install-steps" id="install-steps-ios" style="display:none;">
       <li><span class="num">1</span><span>Touche le bouton <strong>Partager</strong> <span aria-hidden="true">(carré avec flèche ↑)</span> dans la barre de Safari.</span></li>
@@ -3897,7 +3908,7 @@
         ' : ' + round1(net) + ' glucides');
     });
     lines.push('TOTAL : ' + round1(totNet) + ' glucides');
-    lines.push('Calculé avec Glucides Nets — valeurs à vérifier.');
+    lines.push('Calculé avec GlucideNet — valeurs à vérifier.');
     return lines.join('\n');
   }
   function shareMeal() {
@@ -8960,7 +8971,7 @@
       });
     }
     lines.push('Nets = glucides − fibres − polyols (érythritol en entier, autres à moitié)');
-    lines.push('Généré par Glucides Nets — faits calculés, aucune recommandation. Valeurs à vérifier.');
+    lines.push('Généré par GlucideNet — faits calculés, aucune recommandation. Valeurs à vérifier.');
     return lines.join('\n');
   }
 
@@ -9075,7 +9086,7 @@
     var h = [];
     h.push('<h1>Rapport glucides — ' + escHtml(p.name) + '</h1>');
     h.push('<p class="pr-sub">Du ' + fmtRange.format(R.start) + ' au ' + fmtRange.format(R.now) +
-      ' (' + reportDays + ' jours) · généré le ' + fmtFull.format(R.now) + ' · Glucides Nets</p>');
+      ' (' + reportDays + ' jours) · généré le ' + fmtFull.format(R.now) + ' · GlucideNet</p>');
     if (R.truncated) {
       h.push('<p class="pr-note">Données consignées depuis le ' + fmtRange.format(new Date(R.oldest)) +
         ' — les moyennes portent sur les jours couverts.</p>');
@@ -9144,7 +9155,7 @@
 
     h.push('<p class="pr-foot">Nets = glucides − fibres − polyols (érythritol soustrait en entier, ' +
       'autres polyols à moitié). Ce rapport résume ce qui a été consigné au journal de l’app ' +
-      'Glucides Nets : des faits calculés, sans avis médical ni recommandation de dose. ' +
+      'GlucideNet : des faits calculés, sans avis médical ni recommandation de dose. ' +
       'Il ne mesure pas la glycémie et ne remplace pas l’évaluation de l’équipe de soins. ' +
       'Valeurs déclaratives, à vérifier.</p>');
     $('print-report').innerHTML = h.join('');
@@ -9348,7 +9359,7 @@
       var data;
       try { data = JSON.parse(e.target.result); } catch (err) { backupStatus('❌ Fichier illisible.'); return; }
       if (!data || data.app !== 'glucides-nets') {
-        backupStatus('❌ Ce fichier n’est pas une sauvegarde Glucides Nets.');
+        backupStatus('❌ Ce fichier n’est pas une sauvegarde GlucideNet.');
         return;
       }
       if (data.version && num(data.version) > 1) {
@@ -9388,7 +9399,7 @@
     var text = 'Recette « ' + r.name + ' » — ' + round1(net100(r)) +
       ' g de glucides nets / 100 g (glucides ' + round1(r.carbs) + ' g, fibres ' +
       round1(r.fiber) + ' g' + (r.polyols ? ', polyols ' + round1(r.polyols) + ' g' : '') +
-      ' / 100 g). Calculé avec l’app Glucides Nets.';
+      ' / 100 g). Calculé avec l’app GlucideNet.';
     if (navigator.share) {
       navigator.share({ title: r.name, text: text }).catch(function () { /* annulé */ });
     } else if (navigator.clipboard) {

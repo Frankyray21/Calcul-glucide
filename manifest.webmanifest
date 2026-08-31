@@ -1,6 +1,6 @@
 {
-  "name": "Glucides Nets — Calculateur pour pompe à insuline",
-  "short_name": "Glucides Nets",
+  "name": "GlucideNet — Calculateur pour pompe à insuline",
+  "short_name": "GlucideNet",
   "description": "Calculateur de glucides nets pour personnes vivant avec le diabète de type 1 utilisant une pompe à insuline.",
   "lang": "fr",
   "start_url": ".",
