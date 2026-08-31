@@ -8,7 +8,7 @@
    affiché dans le pied de page d'index.html (#app-version). L'incrémenter
    à CHAQUE mise à jour publiée, sinon les utilisateurs installés gardent
    l'ancienne version en cache. */
-var CACHE = 'glucides-nets-v2.49.0';
+var CACHE = 'glucides-nets-v2.50.0';
 var ASSETS = [
   '.',
   'index.html',
@@ -17,7 +17,9 @@ var ASSETS = [
   'manifest.webmanifest',
   'icons/icon-192.png',
   'icons/icon-512.png',
-  'icons/apple-touch-icon.png'
+  'icons/apple-touch-icon.png',
+  'icons/logo-64.png',
+  'icons/icon-maskable-512.png'
 ];
 
 self.addEventListener('install', function (event) {
