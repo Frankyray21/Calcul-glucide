@@ -8,7 +8,7 @@
    affiché dans le pied de page d'index.html (#app-version). L'incrémenter
    à CHAQUE mise à jour publiée, sinon les utilisateurs installés gardent
    l'ancienne version en cache. */
-var CACHE = 'glucides-nets-v2.52.0';
+var CACHE = 'glucides-nets-v2.52.1';
 var ASSETS = [
   '.',
   'index.html',
@@ -50,7 +50,10 @@ self.addEventListener('activate', function (event) {
   event.waitUntil(
     caches.keys().then(function (keys) {
       return Promise.all(keys.map(function (key) {
-        if (key !== CACHE) return caches.delete(key);
+        // Ne purger QUE nos propres caches (préfixe « glucides-nets- ») : l'origine
+        // frankyray21.github.io est partagée avec les autres sites (Wiki SST,
+        // Procédures MRI, TMS, RodBot…) — leurs caches ne doivent jamais être touchés.
+        if (key.indexOf('glucides-nets-') === 0 && key !== CACHE) return caches.delete(key);
       }));
     }).then(function () { return self.clients.claim(); })
   );
