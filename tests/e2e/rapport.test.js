@@ -118,20 +118,21 @@ const { serve, launch, check, finish, JPEG_1PX } = require('./helper');
   check('PDF : classe d’impression posée',
     await page.evaluate(() => document.body.classList.contains('printing-report')));
 
-  // Bouton « Créer un PDF » du journal : PDF direct, sans ouvrir le rapport
+  // Le PDF est accessible depuis le rapport détaillé du journal.
   await page.keyboard.press('Escape');
   await page.waitForTimeout(300);
   check('rapport refermé', await page.locator('#report-modal.open').count() === 0);
-  check('bouton principal « Créer un PDF »',
-    (await page.locator('#pdf-quick').textContent()).includes('Créer un PDF'));
   check('lien « rapport détaillé » présent',
     (await page.locator('#report-open').textContent()).includes('rapport détaillé'));
-  await page.click('#pdf-quick');
+  await page.click('#report-open');
+  check('rapport rouvert depuis le journal', await page.locator('#report-modal.open').count() === 1);
+  await page.click('#report-pdf');
   await page.waitForTimeout(900);
-  check('PDF direct : window.print appelé', (await page.evaluate(() => window.__printed)) === 2);
-  check('PDF direct : calque rempli', (await page.evaluate(() =>
+  check('nouvel export PDF : window.print appelé', (await page.evaluate(() => window.__printed)) === 2);
+  check('nouvel export PDF : calque rempli', (await page.evaluate(() =>
     document.getElementById('print-report').innerHTML)).includes('Rapport glucides'));
-  check('PDF direct : rapport toujours fermé', await page.locator('#report-modal.open').count() === 0);
+  await page.keyboard.press('Escape');
+  check('rapport refermé après export', await page.locator('#report-modal.open').count() === 0);
 
   check('aucune erreur JS', errors.length === 0, errors.join(' | '));
   await finish(browser, srv);

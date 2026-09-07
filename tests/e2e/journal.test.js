@@ -75,8 +75,7 @@ const { serve, launch, check, finish, JPEG_1PX } = require('./helper');
   const top = await page.evaluate(() => JSON.parse(localStorage.getItem('gn_history'))[0]);
   check('photo attachée au repas confirmé', typeof top.photo === 'string' && top.photo.length > 10);
 
-  // Le « + » central : depuis un autre onglet il amène sur Calculer;
-  // déjà sur Calculer, il lance le calcul d'un repas (feuille photo/scan)
+  // Le bouton central reste une destination. Le scanner a son action explicite.
   await page.click('.tab-btn[data-tab="journal"]');
   await page.waitForTimeout(200);
   await page.click('.tab-btn--cta .tb-plus');
@@ -85,7 +84,10 @@ const { serve, launch, check, finish, JPEG_1PX } = require('./helper');
   check('+ depuis Journal : pas de feuille ouverte', await page.locator('#scan-modal.open').count() === 0);
   await page.click('.tab-btn--cta .tb-plus');
   await page.waitForTimeout(300);
-  check('+ sur Calculer : feuille photo/scan ouverte', await page.locator('#scan-modal.open').count() === 1);
+  check('+ sur Calculer : navigation stable, sans scanner', await page.locator('#scan-modal.open').count() === 0);
+  await page.click('#scan-open-btn');
+  await page.waitForTimeout(300);
+  check('action scanner : feuille photo/scan ouverte', await page.locator('#scan-modal.open').count() === 1);
   await page.keyboard.press('Escape');
   await page.waitForTimeout(200);
   check('feuille refermée', await page.locator('#scan-modal.open').count() === 0);

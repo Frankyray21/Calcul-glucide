@@ -2066,6 +2066,7 @@
     #print-report .pr-foot { margin-top: 14pt; color: #555; font-size: 8.5pt; }
   }
 </style>
+<link rel="stylesheet" href="ui.css?v=2.53.0">
 </head>
 <body data-tab="meal">
 
@@ -2162,6 +2163,11 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
     </button>
   </div>
+  <div class="profile-strip">
+    <label for="active-profile-select">Repas de</label>
+    <select id="active-profile-select" aria-label="Profil actif"></select>
+  </div>
+  <p class="profile-allergies" id="active-profile-allergies" hidden></p>
 </header>
 
 <div class="install-banner" id="install-banner">
@@ -2180,41 +2186,36 @@
 
   <!-- ═══════════ ONGLET ACCUEIL ═══════════ -->
   <section class="tab-panel" id="panel-home">
-
-    <div class="card feature-card">
-      <div class="feat-head">
-        <div class="feat-ico" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <g stroke="var(--accent)"><path d="M4 7.5V6a2 2 0 0 1 2-2h1.5"/><path d="M16.5 4H18a2 2 0 0 1 2 2v1.5"/><path d="M20 16.5V18a2 2 0 0 1-2 2h-1.5"/><path d="M7.5 20H6a2 2 0 0 1-2-2v-1.5"/></g>
-            <g stroke="currentColor"><line x1="8" y1="8.5" x2="8" y2="15.5"/><line x1="10.7" y1="8.5" x2="10.7" y2="15.5"/><line x1="13.4" y1="8.5" x2="13.4" y2="15.5"/><line x1="16" y1="8.5" x2="16" y2="15.5"/></g>
-          </svg>
-        </div>
-        <div>
-          <h2>Calcul des glucides</h2>
-          <p class="feat-sub">Assiette, étiquette ou code-barres</p>
-        </div>
-      </div>
-      <button class="btn btn--action" id="home-scan" type="button">📷 Scanner le repas</button>
+    <div class="card home-summary">
+      <p class="eyebrow" id="home-meal-status">Repas en cours</p>
+      <h2 id="home-meal-title">On prépare ton repas ?</h2>
+      <div class="home-amount" id="home-meal-amount" hidden><span id="home-meal-net">0</span> <small>g nets</small></div>
+      <p id="home-meal-description">Choisis un aliment ou prends ton assiette en photo.</p>
+      <button class="btn btn--action" id="home-continue" type="button">Composer un repas</button>
     </div>
-
-    <div class="card feature-card">
-      <div class="search-wrap">
-        <svg class="search-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="search" id="home-db-search" placeholder="Chercher un aliment… (ex. : riz, pomme, pain)" autocomplete="off" aria-label="Chercher un aliment">
-      </div>
+    <button class="btn btn--action scan-launch" id="home-scan" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="4"/></svg><span class="launch-copy"><strong>Scanner un repas</strong><small>Photo, étiquette ou code-barres</small></span><span class="launch-arrow" aria-hidden="true">›</span></button>
+    <div class="card search-card">
+      <label class="sr-only" for="home-db-search">Chercher un aliment</label>
+      <input type="search" id="home-db-search" placeholder="Chercher un aliment…" autocomplete="off">
       <div class="search-results" id="home-db-results"></div>
     </div>
-
+    <div class="home-links">
+      <button class="home-link" id="home-favorites" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9z"/></svg><span>Mes favoris<small id="home-favorites-count">Aliments et recettes</small></span></button>
+      <button class="home-link" id="home-journal" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="5" width="16" height="16" rx="3"/><path d="M8 3v4m8-4v4M4 11h16"/></svg><span>Mon journal<small>Retrouver mes repas</small></span></button>
+    </div>
+    <div class="home-section-head"><h2>Derniers repas</h2><button id="home-view-journal" type="button">Tout voir →</button></div>
+    <div id="home-recent-meals"></div>
   </section>
 
   <!-- ═══════════ ONGLET REPAS ═══════════ -->
   <section class="tab-panel active" id="panel-meal">
+    <div class="section-intro"><p class="eyebrow">Calculer</p><h2>Qu’est-ce qu’on mange ?</h2><p>Ajoute tes aliments, puis ajuste les quantités.</p></div>
 
     <!-- Épuré : l'action principale d'abord, les explications longues
          vivent dans les accordéons ou les écrans contextuels -->
-    <div class="card">
-      <h2>🧮 Calcul des glucides</h2>
-      <button class="btn btn--action" id="scan-open-btn" type="button">📷 Scanner le repas</button>
+    <div class="card meal-scan-card">
+      <h2>Calcul des glucides</h2>
+      <button class="btn btn--action scan-launch" id="scan-open-btn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="4"/></svg><span class="launch-copy"><strong>Scanner un repas</strong><small>Photo, étiquette ou code-barres</small></span><span class="launch-arrow" aria-hidden="true">›</span></button>
       <!-- Import : PAS de capture → ouvre la galerie/les fichiers, pas la
            caméra (la caméra en direct est le scanner). -->
       <input type="file" id="label-photo-input" accept="image/*" style="display:none;">
@@ -2223,9 +2224,9 @@
       <input type="file" id="leftover-input" accept="image/*" capture="environment" hidden>
     </div>
 
-    <div class="card">
-      <h2>🔍 Chercher un aliment</h2>
-      <input type="search" id="db-search" placeholder="Chercher… (ex. : riz, pomme, pain)" autocomplete="off">
+    <div class="card search-card">
+      <h2><label for="db-search">Chercher un aliment</label></h2>
+      <input type="search" id="db-search" placeholder="Riz, pomme, pain…" autocomplete="off">
       <div class="search-results" id="db-results"></div>
     </div>
 
@@ -2278,8 +2279,8 @@
       </div>
     </details>
 
-    <div class="card">
-      <h2>🍽️ Repas actuel</h2>
+    <div class="card meal-card">
+      <h2>Dans ton assiette</h2>
       <div class="sec-label" id="meal-sec-label" style="display:none;">Aliments</div>
       <div id="meal-list"><p class="empty"><span class="illus" aria-hidden="true">🍽️</span>Ton repas est vide. Ajoute ton premier aliment ci-dessus!</p></div>
       <!-- Le total vit dans la barre fixe « À entrer dans la pompe »,
@@ -2576,7 +2577,7 @@
      Plus → À propos. Ici, une ligne suffit — relue à chaque écran. -->
 <p class="disclaimer">
   ⚠️ Aide au calcul seulement — vérifie toujours la valeur entrée dans la pompe.
-  <br><span id="app-version">GlucideNet v2.52.1</span>
+  <br><span id="app-version">GlucideNet v2.53.0</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
@@ -2720,7 +2721,7 @@
       <div class="hero-label">Glucides calculés</div>
       <div class="live-net" id="qty-net" role="status" aria-live="polite">0 <small>g</small></div>
       <div class="hero-sub" id="qty-net-sub">pour 0 gramme consommé</div>
-      <div class="hero-badge">✓ Valeur calculée — vérifie l'étiquette</div>
+      <div class="hero-badge" id="qty-source">Valeurs de référence · à vérifier</div>
     </div>
     <label for="qty-grams">Quantité consommée (grammes)</label>
     <!-- Gros boutons − / + espacés : utilisables avec des gants -->
@@ -3036,15 +3037,12 @@
   <button class="tab-btn" data-tab="plus"><span class="tb-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span>Plus</span></button>
 </nav>
 
-<div class="total-bar" role="status" aria-live="polite">
+<div class="total-bar">
   <div class="inner">
-    <div class="label">TOTAL À ENTRER DANS LA POMPE</div>
-    <div class="tb-row">
-      <div class="tb-mini"><span>Glucides totaux</span><b class="tb-carb" id="total-carbs">0<small> g</small></b></div>
-      <div class="tb-mini"><span>Fibres</span><b id="total-fiber">0<small> g</small></b></div>
-      <div class="value"><span class="big" id="total-net">0</span><small>g nets</small></div>
-    </div>
+    <div><div class="label">Glucides calculés</div><button class="total-toggle" id="total-toggle" type="button" aria-expanded="false" aria-controls="total-breakdown">Voir le détail ⌄</button></div>
+    <div class="value" role="status" aria-live="polite" aria-atomic="true"><span class="big" id="total-net">0</span><small>g nets</small></div>
   </div>
+  <div class="total-breakdown" id="total-breakdown" hidden><span>Glucides totaux <b id="total-carbs">0<small> g</small></b></span><span>Fibres <b id="total-fiber">0<small> g</small></b></span></div>
 </div>
 
 <div class="toast-zone" id="toast-zone" role="status" aria-live="polite"></div>
@@ -3532,15 +3530,6 @@
   });
 
   /* ── Onglets ── */
-  // Le « + » central est un vrai bouton d'action : déjà sur Calculer, il
-  // lance le calcul d'un repas (photo / scan) au lieu de ne rien faire.
-  // Enregistré AVANT le basculement d'onglet pour lire l'état d'avant :
-  // depuis un autre onglet, un premier tap amène simplement sur Calculer.
-  // isTrusted : seul un geste réel ouvre la feuille — switchTab('meal')
-  // programmatique (retour après un ajout) ne doit jamais la déclencher.
-  document.querySelector('.tab-btn--cta').addEventListener('click', function (e) {
-    if (e.isTrusted && $('panel-meal').classList.contains('active')) $('scan-open-btn').click();
-  });
   document.querySelectorAll('.tab-btn').forEach(function (btn) {
     btn.addEventListener('click', function () {
       document.querySelectorAll('.tab-btn').forEach(function (b) {
@@ -3553,22 +3542,10 @@
       $('panel-' + btn.dataset.tab).classList.add('active');
       // L'onglet actif pilote l'affichage global (barre totale, espace bas)
       document.body.dataset.tab = btn.dataset.tab;
-      // Sur Calculer, le « + » central devient l'appareil photo : il
-      // annonce son second rôle (re-taper ouvre le scanner) au lieu de
-      // surprendre.
-      var cta = document.querySelector('.tab-btn--cta');
-      if (btn.dataset.tab === 'meal') {
-        cta.querySelector('.tb-plus').textContent = '📷';
-        cta.setAttribute('aria-label', 'Scanner le repas');
-      } else {
-        cta.querySelector('.tb-plus').textContent = '+';
-        cta.removeAttribute('aria-label');
-      }
+      renderHome();
+      window.scrollTo({ top: 0, behavior: 'auto' });
     });
   });
-  // État initial : l'onglet Calculer est actif au chargement
-  document.querySelector('.tab-btn--cta .tb-plus').textContent = '📷';
-  document.querySelector('.tab-btn--cta').setAttribute('aria-label', 'Scanner le repas');
   function switchTab(name) {
     document.querySelector('.tab-btn[data-tab="' + name + '"]').click();
   }
@@ -3674,42 +3651,19 @@
     if (d && !d.open) d.open = true;
   }
 
-  bindDbSearch('db-search', 'db-results', function (f) {
-    openManualCard();
-    $('food-name').value = f.n;
-    $('carbs').value = f.c;
-    $('fiber').value = f.f;
-    $('polyols').value = '';
-    $('portion-label').value = 100;
-    $('portion-eaten').value = '';
-    $('portion-eaten').focus();
-    scrollToEl($('food-name'));
-  }, function (query) {
-    openManualCard();
-    $('food-name').value = query;
-    $('carbs').focus();
-    scrollToEl($('food-name'));
-  });
-
-  /* Recherche de l'accueil : même base, on bascule vers Calculer au choix */
-  bindDbSearch('home-db-search', 'home-db-results', function (f) {
-    switchTab('meal');
-    openManualCard();
-    $('food-name').value = f.n;
-    $('carbs').value = f.c;
-    $('fiber').value = f.f;
-    $('polyols').value = '';
-    $('portion-label').value = 100;
-    $('portion-eaten').value = '';
-    $('portion-eaten').focus();
-    scrollToEl($('food-name'));
-  }, function (query) {
+  function openDatabaseFood(f) {
+    openProductModal({ name: f.n, carbs: f.c, fiber: f.f, polyols: 0,
+      polyolType: 'half', sourceLabel: 'Base alimentaire · valeurs pour 100 g' });
+  }
+  function createManualFood(query) {
     switchTab('meal');
     openManualCard();
     $('food-name').value = query;
     $('carbs').focus();
     scrollToEl($('food-name'));
-  });
+  }
+  bindDbSearch('db-search', 'db-results', openDatabaseFood, createManualFood);
+  bindDbSearch('home-db-search', 'home-db-results', openDatabaseFood, createManualFood);
 
   /* ── Formulaire aliment ── */
   function readForm() {
@@ -3875,11 +3829,69 @@
 
   /* ── Accueil (maquette) : scanner, base d'aliments et total —
      les profils se gèrent dans l'onglet Plus, le repas dans Calculer ── */
-  function renderHome() {}
+  function renderHome() {
+    var profile = activeProfile();
+    var select = $('active-profile-select');
+    var profileOptions = JSON.stringify(PROFILES.map(function (p) { return [p.id, p.name]; }));
+    if (select.dataset.options !== profileOptions) {
+      select.innerHTML = '';
+      PROFILES.forEach(function (p) {
+        var option = document.createElement('option');
+        option.value = p.id; option.textContent = p.name;
+        select.appendChild(option);
+      });
+      select.dataset.options = profileOptions;
+    }
+    select.value = activeProfileId;
+    var allergies = $('active-profile-allergies');
+    allergies.textContent = profile.allergies ? 'Allergies / intolérances : ' + profile.allergies : '';
+    allergies.hidden = !profile.allergies;
+    var hasMeal = meal.length > 0;
+    $('home-meal-status').textContent = hasMeal ? 'Repas en cours · ' + profile.name : 'Pour ' + profile.name;
+    $('home-meal-title').textContent = hasMeal ? meal.length + (meal.length > 1 ? ' aliments dans ton assiette' : ' aliment dans ton assiette') : 'On prépare ton repas ?';
+    $('home-meal-amount').hidden = !hasMeal;
+    $('home-meal-net').textContent = round1(mealTotals(meal).net);
+    $('home-meal-description').textContent = hasMeal ? meal.map(function (it) { return it.name; }).join(' · ') : 'Choisis un aliment ou prends ton assiette en photo.';
+    $('home-continue').textContent = hasMeal ? 'Continuer mon repas →' : 'Composer un repas →';
+    $('home-favorites-count').textContent = favorites.length + (favorites.length > 1 ? ' aliments' : ' aliment') + ' · ' + recipes.length + (recipes.length > 1 ? ' recettes' : ' recette');
+    var recent = history.filter(function (e) { return e.id !== lsGet(pk('gn_meal_entry')); }).slice().sort(function (a, b) { return b.ts - a.ts; }).slice(0, 3);
+    var box = $('home-recent-meals'); box.innerHTML = '';
+    if (!recent.length) {
+      var empty = document.createElement('p'); empty.className = 'recent-empty';
+      empty.textContent = 'Tes repas terminés apparaîtront ici, prêts à être retrouvés.';
+      box.appendChild(empty);
+    }
+    recent.forEach(function (entry) {
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'recent-meal';
+      var copy = document.createElement('span'); copy.className = 'recent-copy';
+      var title = document.createElement('strong');
+      title.textContent = new Intl.DateTimeFormat('fr-CA', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(entry.ts));
+      var foods = document.createElement('small'); foods.textContent = entry.items.map(function (it) { return it.name; }).join(', ');
+      copy.appendChild(title); copy.appendChild(foods);
+      var net = document.createElement('span'); net.className = 'recent-net'; net.textContent = round1(entry.net) + ' g nets';
+      b.appendChild(copy); b.appendChild(net);
+      b.addEventListener('click', function () { openEntryModal(entry); });
+      box.appendChild(b);
+    });
+  }
+  $('active-profile-select').addEventListener('change', function () { switchProfile(this.value); });
+  $('home-continue').addEventListener('click', function () { switchTab('meal'); });
+  $('home-favorites').addEventListener('click', function () { switchTab('recipes'); });
+  ['home-journal', 'home-view-journal'].forEach(function (id) {
+    $(id).addEventListener('click', function () { switchTab('journal'); });
+  });
+  $('total-toggle').addEventListener('click', function () {
+    var expanded = this.getAttribute('aria-expanded') !== 'true';
+    this.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    this.textContent = expanded ? 'Masquer le détail ⌃' : 'Voir le détail ⌄';
+    $('total-breakdown').hidden = !expanded;
+    document.body.classList.toggle('total-expanded', expanded);
+  });
 
   function switchProfile(id) {
     if (id === activeProfileId) return;
     if (!lsSet('gn_active_profile', id)) {
+      $('active-profile-select').value = activeProfileId;
       toast('⚠️ Impossible de changer de profil (stockage indisponible)', { type: 'error' });
       return;
     }
@@ -4028,6 +4040,7 @@
 
   /* ── Favoris ── */
   function renderFavorites() {
+    renderHome();
     var card = $('favorites-card');
     var list = $('favorites-list');
     if (favorites.length === 0) { card.style.display = 'none'; return; }
@@ -4382,7 +4395,8 @@
     if (!ov.classList.contains('open')) return; // déjà fermé : rien à dépiler
     ov.classList.remove('open');
     var back = modalFocusStack.pop();
-    if (back && back.focus) back.focus();
+    if (back && back.isConnected && back.focus) back.focus();
+    else if (document.body.dataset.tab === 'home') $('home-continue').focus();
   }
   function trapModal(id, onClose) {
     var ov = $(id);
@@ -4446,6 +4460,7 @@
     modalRecipe = recipe;
     $('qty-title').textContent = recipe.name;
     // Sous-titre : marque du produit (Open Food Facts), si connue
+    $('qty-source').textContent = recipe.sourceLabel || 'Valeurs de référence · à vérifier';
     var brandEl = $('qty-brand');
     if (recipe.brand) {
       brandEl.textContent = recipe.brand;
@@ -4781,8 +4796,7 @@
     $('polyols').value = modalRecipe.polyols ? round1(modalRecipe.polyols) : '';
     $('polyol-type').value = modalRecipe.polyolType === 'full' ? 'full' : 'half';
     $('portion-label').value = 100;
-    $('portion-eaten').value = modalRecipe.serving && num(modalRecipe.serving.grams) > 0
-      ? round1(modalRecipe.serving.grams) : '';
+    $('portion-eaten').value = $('qty-grams').value;
     closeQtyModal();
     switchTab('meal');
     scrollToEl($('food-name'));
@@ -4796,7 +4810,8 @@
     $('qty-net').innerHTML = round1(net) + ' <small>g</small>';
     $('qty-net-sub').textContent = g > 0
       ? 'pour ' + round1(g) + ' grammes consommés'
-      : 'entre la quantité consommée ci-dessus';
+      : 'choisis une quantité pour calculer';
+    $('qty-add').disabled = !(g > 0 && Number.isFinite(g));
     // Le bouton principal annonce ce qu'il ajoute
     $('qty-add').textContent = g > 0
       ? 'Ajouter ' + round1(net) + ' g au repas'
@@ -7851,6 +7866,7 @@
   var fmtTime = new Intl.DateTimeFormat('fr-CA', { hour: '2-digit', minute: '2-digit' });
 
   function renderJournal() {
+    renderHome();
     var list = $('journal-list');
     list.innerHTML = '';
     if (history.length === 0) {

@@ -8,11 +8,12 @@
    affiché dans le pied de page d'index.html (#app-version). L'incrémenter
    à CHAQUE mise à jour publiée, sinon les utilisateurs installés gardent
    l'ancienne version en cache. */
-var CACHE = 'glucides-nets-v2.52.1';
+var CACHE = 'glucides-nets-v2.53.0';
 var ASSETS = [
   '.',
   'index.html',
   'calc.js',
+  'ui.css?v=2.53.0',
   'foods.json',
   'manifest.webmanifest',
   'icons/icon-192.png',
