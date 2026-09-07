@@ -6,16 +6,16 @@
   "start_url": ".",
   "scope": ".",
   "display": "standalone",
-  "background_color": "#F8FAFC",
-  "theme_color": "#2563EB",
+  "background_color": "#ffffff",
+  "theme_color": "#171717",
   "shortcuts": [
-    { "name": "📷 Photographier un repas", "url": "./?action=photo",
+    { "name": "Photographier un repas", "url": "./?action=photo",
       "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
-    { "name": "➕ Nouveau repas", "url": "./?action=meal",
+    { "name": "Nouveau repas", "url": "./?action=meal",
       "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
-    { "name": "💬 Discuter du dernier repas", "url": "./?action=discuss",
+    { "name": "Discuter du dernier repas", "url": "./?action=discuss",
       "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] },
-    { "name": "📅 Journal", "url": "./?action=journal",
+    { "name": "Journal", "url": "./?action=journal",
       "icons": [{ "src": "icons/icon-192.png", "sizes": "192x192" }] }
   ],
   "icons": [
