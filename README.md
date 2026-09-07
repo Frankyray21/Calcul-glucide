@@ -20,13 +20,13 @@ Le site est servi par GitHub Pages depuis la branche `gh-pages`; le workflow `.g
 
 Barre du bas à cinq destinations — **Accueil**, **Favoris**, **➕ Calculer**, **Journal**, **Plus**. Calculer ouvre toujours le calculateur ; le bouton « Scanner un repas » lance la photo ou le scan.
 
-### Interface v2.54.0
+### Interface v2.54.1
 
 - Le profil actif est visible dans l'en-tête et reste accessible au défilement.
 - Accueil présente le repas en cours, les raccourcis favoris/journal et les trois derniers repas terminés.
 - La recherche ouvre la fiche de quantité : résultat en direct, ajout désactivé tant que la quantité n'est pas positive, correction des valeurs avec conservation de la quantité choisie.
 - Le total occupe le haut du repas, avec glucides totaux et fibres dépliables.
-- Une interface monochrome : fond uni, icônes au trait, listes séparées par un filet et chiffres mis en avant.
+- Une interface graphite : fond uni, icônes au trait, listes séparées par un filet et glucides calculés en mauve.
 - Le style mobile, clair et sombre, est regroupé dans `ui.css`, également disponible hors ligne.
 - Les anciens favoris conservent leur comportement : leur référence nutritionnelle historique ne permet pas de les convertir automatiquement en valeurs par 100 g.
 
@@ -72,7 +72,7 @@ Barre du bas à cinq destinations — **Accueil**, **Favoris**, **➕ Calculer**
 
 ## Version de l'app
 
-La version courante est **v2.54.0**, affichée dans le pied de page de l'app (`#app-version` dans `index.html`).
+La version courante est **v2.54.1**, affichée dans le pied de page de l'app (`#app-version` dans `index.html`).
 
 **Règle à chaque mise à jour publiée** : incrémenter le numéro aux **deux** endroits, sinon les utilisateurs installés gardent l'ancienne version en cache :
 1. le pied de page d'`index.html` (`Glucides Nets vX.Y.Z`);
@@ -80,7 +80,7 @@ La version courante est **v2.54.0**, affichée dans le pied de page de l'app (`#
 
 ## Design et onboarding
 
-- **Direction artistique** : interface sobre inspirée des commandes de l'app Tesla, sans reprendre ses éléments de marque. Blanc et graphite (`#171717`), grands chiffres, traits fins, surfaces plates et angles légèrement arrondis. Les émojis décoratifs et dégradés sont retirés. La couleur reste utilisée pour les alertes et les niveaux de confiance des photos ; les vraies photos sont conservées. Les règles d'écran sont regroupées dans `ui.css`, indépendamment du rapport imprimé.
+- **Direction artistique** : interface sobre inspirée des commandes de l'app Tesla, sans reprendre ses éléments de marque. Blanc et graphite (`#171717`), grands chiffres, traits fins, surfaces plates et angles légèrement arrondis. Un accent mauve souligne les glucides calculés (`#7C3EA6` en clair, `#C59AE6` en sombre) et le repère de navigation actif. Les émojis décoratifs et dégradés sont retirés. Les alertes et niveaux de confiance des photos conservent leurs couleurs ; les vraies photos sont conservées. Les règles d'écran sont regroupées dans `ui.css`, indépendamment du rapport imprimé.
 - **Ton** : français québécois, chaleureux et direct, tutoiement partout.
 - **Onboarding** (premier lancement) : 4 écrans en moins de 90 s — bienvenue, comment ça marche, **avertissement médical obligatoire et bloquant** (case à cocher + « J'ai compris », stocké localement, jamais réaffiché), puis préparation hors ligne avec barre de progression déterminée. Les écrans de présentation se sautent; l'avertissement, non.
 - **Permission caméra juste-à-temps** : jamais demandée au démarrage — un écran d'amorce explique le bénéfice au moment du premier scan de code-barres.

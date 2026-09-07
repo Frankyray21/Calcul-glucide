@@ -1,16 +1,16 @@
-/* GlucideNet — graphite. La couleur est réservée aux états utiles. */
+/* GlucideNet — graphite et mauve. Les glucides calculés portent l'accent. */
 @media screen {
   :root {
     --bg:#fff; --card:#fff; --text:#171a20; --muted:#62656b; --border:#e7e7e7; --radius:6px; --surface:#f4f4f4;
     --accent:#44464a; --accent-text:#393c41; --accent-deep:#000; --accent-light:#f0f0f0; --btn-bg:#171a20; --btn-text:#fff;
-    --brand:#171a20; --brand-net:#171a20; --carb:#171a20; --carb-strong:#171a20; --carb-soft:#f4f4f4;
+    --brand:#171a20; --brand-net:#171a20; --carb:#7c3ea6; --carb-strong:#7c3ea6; --carb-soft:#f5eef9;
     --action:#171a20; --action-pressed:#000; --chart:#55585e; --chart-soft:#eee; --info:#44464a;
   }
   @media (prefers-color-scheme:dark) {
     :root {
       --bg:#171717; --card:#171717; --text:#f4f4f4; --muted:#a2a3a5; --border:#343434; --surface:#242424;
       --accent:#ddd; --accent-text:#e4e4e4; --accent-deep:#ddd; --accent-light:#2b2b2b; --btn-bg:#f0f0f0; --btn-text:#171a20;
-      --brand:#f4f4f4; --brand-net:#f4f4f4; --carb:#f4f4f4; --carb-strong:#f4f4f4; --carb-soft:#242424;
+      --brand:#f4f4f4; --brand-net:#f4f4f4; --carb:#c59ae6; --carb-strong:#c59ae6; --carb-soft:#2b2232;
       --action:#f0f0f0; --action-pressed:#ddd; --chart:#ddd; --chart-soft:#333; --info:#ddd;
     }
   }
@@ -56,24 +56,24 @@
   .empty {padding:16px 0;font-size:.9rem;text-align:left;line-height:1.6}.empty .illus,.food-item .f-ico,.acc-ico,.ref-ico {display:none}
   .empty .btn {font-size:.84rem;min-height:44px;width:auto;padding:10px 16px}
   .food-item {border:0;border-bottom:1px solid var(--border);border-radius:0;background:transparent;padding:4px 0}
-  .food-item .name {font-size:.96rem;font-weight:550}.food-item .detail {font-size:.78rem}.food-item .net {color:var(--text);font-size:1.15rem;font-weight:550}
+  .food-item .name {font-size:.96rem;font-weight:550}.food-item .detail {font-size:.78rem}.food-item .net {color:var(--carb);font-size:1.15rem;font-weight:550}
   .food-item .net small {font-weight:400}.food-item .remove {color:var(--muted);min-width:44px;min-height:44px}.food-tap {padding:12px 0;gap:10px}.sec-label {font-weight:400;text-transform:none;letter-spacing:0}
   .total-bar {position:static;left:auto;right:auto;bottom:auto;max-width:none;padding:30px 0 24px;margin:0;background:transparent;border:0;border-radius:0;box-shadow:none;z-index:auto}
   .total-bar .inner {display:flex;flex-direction:column;align-items:center;gap:8px}.total-bar .total-copy {order:1;text-align:center}
-  .total-bar .label {text-transform:none;letter-spacing:0;margin:0;color:var(--muted);font-size:.9rem;font-weight:400}
+  .total-bar .label {text-transform:none;letter-spacing:0;margin:0;color:var(--carb);font-size:.9rem;font-weight:400}
   .total-bar .value {display:flex;flex:none;align-items:baseline;gap:7px;padding:0;border:0;white-space:nowrap}
-  .total-bar .value .big {font-size:clamp(3.5rem,16vw,5rem);font-weight:450;letter-spacing:-.065em;line-height:1.04;color:var(--text)}
+  .total-bar .value .big {font-size:clamp(3.5rem,16vw,5rem);font-weight:450;letter-spacing:-.065em;line-height:1.04;color:var(--carb)}
   .total-bar .value small {font-size:1rem;font-weight:400;color:var(--muted)}
   .total-toggle {background:transparent;border:0;color:var(--muted);font-size:.78rem;font-weight:400;min-height:36px;margin:3px auto 0;cursor:pointer}
   .total-breakdown {display:flex;justify-content:center;gap:10px 24px;flex-wrap:wrap;font-size:.86rem;color:var(--muted);padding:16px 0 4px;margin-top:8px;border-top:1px solid var(--border)}
   .total-breakdown[hidden] {display:none}.total-breakdown b {color:var(--text);font-weight:550;margin-left:4px}.total-breakdown small {font-size:inherit}
   .bottomnav {height:calc(76px + env(safe-area-inset-bottom));background:var(--bg);border-top:1px solid var(--border);padding:7px max(8px,calc((100vw - 580px)/2)) calc(5px + env(safe-area-inset-bottom));box-shadow:none}
   .tab-btn {min-width:0;justify-content:center;gap:6px;font-size:.76rem;font-weight:450;border-radius:0;position:relative}.tab-btn.active {color:var(--text);background:transparent}
-  .tab-btn.active::before {content:'';position:absolute;top:-8px;width:22px;height:2px;background:var(--text)}.tab-btn .tb-ico svg {width:22px;height:22px;stroke-width:1.55}
+  .tab-btn.active::before {content:'';position:absolute;top:-8px;width:22px;height:2px;background:var(--carb)}.tab-btn .tb-ico svg {width:22px;height:22px;stroke-width:1.55}
   .tab-btn--cta .tb-plus {background:transparent;color:inherit;box-shadow:none;width:25px;height:22px;margin:0;font-size:1.7rem;font-weight:300;border-radius:0}.tab-btn--cta.active .tb-plus {outline:none}
   .home-summary {text-align:center;border:0;border-radius:0;background:transparent;padding:30px 0 10px;margin:0;box-shadow:none}
   .home-summary h2 {font-size:1.65rem;font-weight:500;letter-spacing:-.04em;margin:12px 0}
-  .home-summary .home-amount {font-size:clamp(3.5rem,16vw,5rem);font-weight:450;letter-spacing:-.065em;line-height:1.1;margin:22px 0 8px}.home-summary .home-amount[hidden] {display:none}
+  .home-summary .home-amount {font-size:clamp(3.5rem,16vw,5rem);font-weight:450;letter-spacing:-.065em;line-height:1.1;margin:22px 0 8px;color:var(--carb)}.home-summary .home-amount[hidden] {display:none}
   .home-amount small {font-size:1rem;color:var(--muted);font-weight:400;letter-spacing:0}
   #home-meal-description {color:var(--muted);font-size:.9rem;margin:10px auto 20px;max-width:350px;overflow-wrap:anywhere;line-height:1.6}.home-summary .btn {min-width:190px;width:auto;background:var(--surface);color:var(--text)}
   .home-links {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:22px 0;margin:16px 0 6px}
@@ -84,16 +84,16 @@
   .home-section-head h2 {font-size:1rem;margin:0}.home-section-head button {background:transparent;border:0;font-size:.84rem;color:var(--muted);padding:8px 0;min-height:44px;cursor:pointer}
   .recent-empty {padding:8px 0 24px;color:var(--muted);font-size:.88rem;line-height:1.6}
   .recent-meal {display:flex;align-items:center;gap:16px;width:100%;padding:18px 0;margin:0;border:0;border-bottom:1px solid var(--border);border-radius:0;background:transparent;color:var(--text);text-align:left;cursor:pointer}
-  .recent-copy {flex:1;min-width:0}.recent-copy strong {display:block;font-size:.9rem;font-weight:500;margin-bottom:4px}.recent-copy small {display:block;font-size:.82rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.recent-net {font-size:.96rem;font-weight:550;white-space:nowrap}
+  .recent-copy {flex:1;min-width:0}.recent-copy strong {display:block;font-size:.9rem;font-weight:500;margin-bottom:4px}.recent-copy small {display:block;font-size:.82rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.recent-net {font-size:.96rem;font-weight:550;white-space:nowrap;color:var(--carb)}
   .fav-chip {border-radius:5px;background:var(--surface);border:0}.fav-edit svg,.fav-del svg,.card-edit svg,.card-share svg,.forget svg {display:block;width:19px;height:19px;margin:auto}
   .recipe-card {border:1px solid var(--border);border-radius:6px;box-shadow:none}.recipe-card .name {font-weight:550}.recipe-card .photo {border-radius:0;background:var(--surface)}
-  .recipe-card .recipe-placeholder {min-height:80px}.recipe-placeholder svg,.photo-preview svg {width:30px;height:30px;color:var(--muted)}.recipe-card .stats b,.journal-meal .net {color:var(--text);font-weight:550}
+  .recipe-card .recipe-placeholder {min-height:80px}.recipe-placeholder svg,.photo-preview svg {width:30px;height:30px;color:var(--muted)}.recipe-card .stats b,.journal-meal .net {color:var(--carb);font-weight:550}
   .journal-meal {background:transparent;border:0;border-bottom:1px solid var(--border);border-radius:0}
   .acc,.ref-card,.calc-card,.mp-row {border-radius:6px;box-shadow:none}.acc {background:transparent;border-color:var(--border)}.acc summary,.ref-head-title {font-weight:500}
   .modal {border-radius:9px}.modal--full {border-radius:0}.circle-btn,.fav-heart {border:0;background:transparent;color:var(--text);box-shadow:none}.fav-heart[aria-pressed="true"] {color:var(--text);background:var(--surface)}
   #qty-modal .modal--full {padding:20px 24px calc(120px + env(safe-area-inset-bottom))}#qty-modal .qty-head {margin:12px 0 16px}#qty-modal .qty-head h3 {font-size:1.35rem;font-weight:550;letter-spacing:-.025em}
   #qty-modal .hero-card {background:transparent;border:0;border-radius:0;padding:30px 0;margin:0 0 10px;box-shadow:none}
-  #qty-modal .hero-label {text-transform:none;letter-spacing:0;font-size:.88rem;color:var(--muted);font-weight:400}#qty-modal .live-net {color:var(--text);font-size:4rem;font-weight:450;letter-spacing:-.06em;margin:12px 0 6px}
+  #qty-modal .hero-label {text-transform:none;letter-spacing:0;font-size:.88rem;color:var(--carb);font-weight:400}#qty-modal .live-net {color:var(--carb);font-size:4rem;font-weight:450;letter-spacing:-.06em;margin:12px 0 6px}
   #qty-modal .live-net small {font-size:1rem;font-weight:400}#qty-modal .hero-sub,#qty-modal .hero-badge {font-size:.84rem;color:var(--muted);background:transparent;font-weight:400;padding:0}
   .stepper .step-btn {background:var(--surface);color:var(--text);border:0;border-radius:5px;font-size:1.5rem;font-weight:400}.stepper input {min-width:0;font-size:1.45rem;font-weight:500}
   .qty-portions button,.measure-chips button {border-radius:5px;font-weight:450}.qty-portions button.sel {background:var(--btn-bg);color:var(--btn-text);border-color:var(--btn-bg)}
