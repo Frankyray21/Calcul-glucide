@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" media="(prefers-color-scheme: light)" content="#1D4ED8">
-<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#0F172A">
+<meta name="theme-color" media="(prefers-color-scheme: light)" content="#ffffff">
+<meta name="theme-color" media="(prefers-color-scheme: dark)" content="#171717">
 <meta name="description" content="Calcule les glucides nets de tes repas, même sans réseau — pour pompe à insuline, diabète de type 1">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="icons/icon-192.png" type="image/png">
@@ -2066,6 +2066,7 @@
     #print-report .pr-foot { margin-top: 14pt; color: #555; font-size: 8.5pt; }
   }
 </style>
+<link rel="stylesheet" href="ui.css?v=2.54.1">
 </head>
 <body data-tab="meal">
 
@@ -2075,7 +2076,7 @@
   <!-- Écran 1 : bienvenue -->
   <section class="ob-step active" id="ob-step-1">
     <div class="ob-body">
-      <div class="ob-illus" aria-hidden="true">🥗</div>
+      <div class="ob-illus" aria-hidden="true"></div>
       <h2 id="ob-title-1" tabindex="-1">Bienvenue dans GlucideNet!</h2>
       <p class="lead">Calcule les glucides de tes repas, même sans réseau. Simple, rapide, et toujours dans ta poche.</p>
     </div>
@@ -2092,16 +2093,16 @@
       <h2 id="ob-title-2" tabindex="-1">Comment ça marche</h2>
       <ul class="ob-benefits">
         <li>
-          <span class="ico" aria-hidden="true">🔍</span>
+          <span class="ico" aria-hidden="true"></span>
           <span>Trouve ton aliment<small>Cherche dans la base ou scanne un code-barres.</small></span>
         </li>
         <li>
-          <span class="ico" aria-hidden="true">🍽️</span>
+          <span class="ico" aria-hidden="true"></span>
           <span>Compose ton repas<small>Ajoute tes aliments, ajuste les portions.</small></span>
         </li>
         <li>
-          <span class="ico" aria-hidden="true">🧮</span>
-          <span>Vois ton total<small>Les glucides nets s'affichent en continu, en bas de l'écran.</small></span>
+          <span class="ico" aria-hidden="true"></span>
+          <span>Vois ton total<small>Les glucides nets s'affichent en haut du repas et se mettent à jour à chaque ajout.</small></span>
         </li>
       </ul>
     </div>
@@ -2115,7 +2116,7 @@
   <!-- Écran 3 : avertissement médical — obligatoire et bloquant -->
   <section class="ob-step" id="ob-step-3" aria-labelledby="ob-title-3">
     <div class="ob-body">
-      <div class="ob-illus" aria-hidden="true">🩺</div>
+      <div class="ob-illus" aria-hidden="true"></div>
       <h2 id="ob-title-3" tabindex="-1">Un mot avant de commencer</h2>
       <p class="ob-disclaimer-text">
         Cette app est un outil informatif seulement. Elle ne remplace pas l'avis d'un
@@ -2137,7 +2138,7 @@
   <!-- Écran 4 : préparation hors ligne (progression déterminée) -->
   <section class="ob-step" id="ob-step-4" aria-labelledby="ob-title-4">
     <div class="ob-body" role="status" aria-live="polite">
-      <div class="ob-illus" aria-hidden="true">📦</div>
+      <div class="ob-illus" aria-hidden="true"></div>
       <h2 id="ob-title-4" tabindex="-1">On prépare le mode hors ligne</h2>
       <p class="lead">…pour que tout marche sans réseau. Ça prend juste un instant.</p>
       <div class="ob-progress-track" aria-hidden="true"><div class="ob-progress-fill" id="ob-progress"></div></div>
@@ -2162,17 +2163,22 @@
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
     </button>
   </div>
+  <div class="profile-strip">
+    <label for="active-profile-select">Repas de</label>
+    <select id="active-profile-select" aria-label="Profil actif"></select>
+  </div>
+  <p class="profile-allergies" id="active-profile-allergies" hidden></p>
 </header>
 
 <div class="install-banner" id="install-banner">
-  <button id="install-btn" class="install-cta" type="button">📲 Ajoute l'app à ton écran d'accueil</button>
+  <button id="install-btn" class="install-cta" type="button"> Ajoute l'app à ton écran d'accueil</button>
   <button id="install-close" class="install-close" type="button" aria-label="Masquer la proposition d'installation">✕</button>
 </div>
 
 <main>
 
   <div class="offline-badge" id="offline-badge" role="status" aria-live="polite">
-    <span aria-hidden="true">📡</span>
+    <span aria-hidden="true"></span>
     <span>Hors ligne. La recherche, tes repas et la lecture d'étiquette (si déjà téléchargée) fonctionnent. Le scan de code-barres revient avec le réseau.</span>
   </div>
 
@@ -2180,57 +2186,60 @@
 
   <!-- ═══════════ ONGLET ACCUEIL ═══════════ -->
   <section class="tab-panel" id="panel-home">
-
-    <div class="card feature-card">
-      <div class="feat-head">
-        <div class="feat-ico" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <g stroke="var(--accent)"><path d="M4 7.5V6a2 2 0 0 1 2-2h1.5"/><path d="M16.5 4H18a2 2 0 0 1 2 2v1.5"/><path d="M20 16.5V18a2 2 0 0 1-2 2h-1.5"/><path d="M7.5 20H6a2 2 0 0 1-2-2v-1.5"/></g>
-            <g stroke="currentColor"><line x1="8" y1="8.5" x2="8" y2="15.5"/><line x1="10.7" y1="8.5" x2="10.7" y2="15.5"/><line x1="13.4" y1="8.5" x2="13.4" y2="15.5"/><line x1="16" y1="8.5" x2="16" y2="15.5"/></g>
-          </svg>
-        </div>
-        <div>
-          <h2>Calcul des glucides</h2>
-          <p class="feat-sub">Assiette, étiquette ou code-barres</p>
-        </div>
-      </div>
-      <button class="btn btn--action" id="home-scan" type="button">📷 Scanner le repas</button>
+    <div class="card home-summary">
+      <p class="eyebrow" id="home-meal-status">Repas en cours</p>
+      <h2 id="home-meal-title">Nouveau repas</h2>
+      <div class="home-amount" id="home-meal-amount" hidden><span id="home-meal-net">0</span> <small>g nets</small></div>
+      <p id="home-meal-description">Choisis un aliment ou prends ton assiette en photo.</p>
+      <button class="btn btn--action" id="home-continue" type="button">Composer un repas</button>
     </div>
 
-    <div class="card feature-card">
-      <div class="search-wrap">
-        <svg class="search-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-        <input type="search" id="home-db-search" placeholder="Chercher un aliment… (ex. : riz, pomme, pain)" autocomplete="off" aria-label="Chercher un aliment">
-      </div>
+    <div class="home-links">
+    <button class="btn btn--action scan-launch" id="home-scan" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="4"/></svg><span class="launch-copy"><strong>Scanner</strong><small>Photo, étiquette ou code-barres</small></span><span class="launch-arrow" aria-hidden="true">›</span></button>
+      <button class="home-link" id="home-favorites" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9z"/></svg><span>Mes favoris<small id="home-favorites-count">Aliments et recettes</small></span></button>
+      <button class="home-link" id="home-journal" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><rect x="4" y="5" width="16" height="16" rx="3"/><path d="M8 3v4m8-4v4M4 11h16"/></svg><span>Mon journal<small>Retrouver mes repas</small></span></button>
+    </div>
+    <div class="card search-card">
+      <label class="sr-only" for="home-db-search">Chercher un aliment</label>
+      <input type="search" id="home-db-search" placeholder="Chercher un aliment…" autocomplete="off">
       <div class="search-results" id="home-db-results"></div>
     </div>
-
+    <div class="home-section-head"><h2>Derniers repas</h2><button id="home-view-journal" type="button">Tout voir →</button></div>
+    <div id="home-recent-meals"></div>
   </section>
 
   <!-- ═══════════ ONGLET REPAS ═══════════ -->
   <section class="tab-panel active" id="panel-meal">
+    <div class="section-intro"><h2>Repas</h2></div>
+    <div class="total-bar">
+  <div class="inner">
+    <div class="total-copy"><div class="label">Glucides calculés</div><button class="total-toggle" id="total-toggle" type="button" aria-expanded="false" aria-controls="total-breakdown">Voir le détail ⌄</button></div>
+    <div class="value" role="status" aria-live="polite" aria-atomic="true"><span class="big" id="total-net">0</span><small>g nets</small></div>
+  </div>
+  <div class="total-breakdown" id="total-breakdown" hidden><span>Glucides totaux <b id="total-carbs">0<small> g</small></b></span><span>Fibres <b id="total-fiber">0<small> g</small></b></span></div>
+</div>
 
     <!-- Épuré : l'action principale d'abord, les explications longues
          vivent dans les accordéons ou les écrans contextuels -->
-    <div class="card">
-      <h2>🧮 Calcul des glucides</h2>
-      <button class="btn btn--action" id="scan-open-btn" type="button">📷 Scanner le repas</button>
+    <div class="card meal-scan-card">
+      <h2>Calcul des glucides</h2>
+      <button class="btn btn--action scan-launch" id="scan-open-btn" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="4"/></svg><span class="launch-copy"><strong>Scanner un repas</strong><small>Photo, étiquette ou code-barres</small></span><span class="launch-arrow" aria-hidden="true">›</span></button>
       <!-- Import : PAS de capture → ouvre la galerie/les fichiers, pas la
            caméra (la caméra en direct est le scanner). -->
       <input type="file" id="label-photo-input" accept="image/*" style="display:none;">
       <div id="label-analysis" role="status" aria-live="polite"></div>
-      <button class="btn btn-secondary" id="leftover-btn" type="button" style="display:none; margin-top:10px;">🍽️ Photographie les restes — voir ce qui a été consommé</button>
+      <button class="btn btn-secondary" id="leftover-btn" type="button" style="display:none; margin-top:10px;"> Photographie les restes — voir ce qui a été consommé</button>
       <input type="file" id="leftover-input" accept="image/*" capture="environment" hidden>
     </div>
 
-    <div class="card">
-      <h2>🔍 Chercher un aliment</h2>
-      <input type="search" id="db-search" placeholder="Chercher… (ex. : riz, pomme, pain)" autocomplete="off">
+    <div class="card search-card">
+      <label class="sr-only" for="db-search">Chercher un aliment</label>
+      <input type="search" id="db-search" placeholder="Riz, pomme, pain…" autocomplete="off">
       <div class="search-results" id="db-results"></div>
     </div>
 
     <details class="help" id="manual-details">
-      <summary>✏️ Entrer les valeurs à la main</summary>
+      <summary> Entrer les valeurs à la main</summary>
       <div class="card">
       <div style="margin-bottom:12px;">
         <label for="food-name">Nom de l'aliment</label>
@@ -2278,18 +2287,16 @@
       </div>
     </details>
 
-    <div class="card">
-      <h2>🍽️ Repas actuel</h2>
-      <div class="sec-label" id="meal-sec-label" style="display:none;">Aliments</div>
-      <div id="meal-list"><p class="empty"><span class="illus" aria-hidden="true">🍽️</span>Ton repas est vide. Ajoute ton premier aliment ci-dessus!</p></div>
-      <!-- Le total vit dans la barre fixe « À entrer dans la pompe »,
-           toujours visible sur cet onglet : une seule source, pas d'écho. -->
+    <div class="card meal-card">
+      <h2>Aliments</h2>
+      <div id="meal-list"><p class="empty"><span class="illus" aria-hidden="true"></span>Ton repas est vide. Ajoute ton premier aliment ci-dessus!</p></div>
+      <!-- Le total et son détail sont affichés en tête du repas. -->
       <p class="hint" id="duo-polyols" style="display:none; text-align:center; margin:6px 0 0;"></p>
       <div class="btn-row" style="margin-top:12px; display:none;" id="meal-actions">
         <button class="btn btn-secondary" id="clear-btn">Vider</button>
-        <button class="btn btn--action" id="finish-btn">✅ Terminer le repas</button>
+        <button class="btn btn--action" id="finish-btn"> Terminer le repas</button>
       </div>
-      <button class="btn btn-secondary" id="home-share" type="button" style="margin-top:10px;">📤 Partager le repas</button>
+      <button class="btn btn-secondary" id="home-share" type="button" style="margin-top:10px;"> Partager le repas</button>
     </div>
 
   </section>
@@ -2298,13 +2305,13 @@
   <section class="tab-panel" id="panel-recipes">
 
     <div class="card" id="favorites-card" style="display:none;">
-      <h2>⭐ Mes favoris</h2>
+      <h2> Mes favoris</h2>
       <div class="favorites-list" id="favorites-list"></div>
     </div>
 
 
     <div class="card">
-      <h2>🧑‍🍳 Calculer à partir des ingrédients</h2>
+      <h2> Calculer à partir des ingrédients</h2>
       <p class="hint" style="margin:0 0 10px;">Ajoute chaque ingrédient pesé — l'app calcule automatiquement les valeurs par 100 g du plat final.</p>
       <input type="search" id="ing-search" placeholder="Chercher dans la base… (ex. : riz)" autocomplete="off">
       <div class="search-results" id="ing-results"></div>
@@ -2344,9 +2351,9 @@
     </div>
 
     <div class="card">
-      <h2>📷 Nouvelle recette</h2>
+      <h2> Nouvelle recette</h2>
       <div class="photo-picker">
-        <div class="photo-preview" id="photo-preview">🍲</div>
+        <div class="photo-preview" id="photo-preview"></div>
         <button class="btn btn-secondary" id="photo-btn" type="button">Ajouter une photo</button>
         <input type="file" id="photo-input" accept="image/*" capture="environment" style="display:none;">
       </div>
@@ -2377,23 +2384,23 @@
           </select>
         </div>
       </div>
-      <p class="hint">💡 Astuce : pour une recette complète, additionne les glucides et fibres de tous les ingrédients, pèse le plat final, puis calcule les valeurs par 100 g (total ÷ poids × 100).</p>
+      <p class="hint"> Astuce : pour une recette complète, additionne les glucides et fibres de tous les ingrédients, pèse le plat final, puis calcule les valeurs par 100 g (total ÷ poids × 100).</p>
       <button class="btn" id="save-recipe-btn">Enregistrer la recette</button>
     </div>
 
     <div class="card">
-      <h2>📖 Mes recettes</h2>
+      <h2> Mes recettes</h2>
       <p class="hint" style="margin:0 0 12px;">Touche une recette pour l'ajouter au repas — il suffit d'indiquer le poids de ta portion.</p>
       <div class="recipe-grid" id="recipe-grid"></div>
       <div class="empty" id="recipes-empty">
-        <span class="illus" aria-hidden="true">📖</span>
+        <span class="illus" aria-hidden="true"></span>
         <p>Tu n'as pas encore de recette. Crée ta première juste au-dessus!</p>
-        <button class="btn btn-secondary" id="recipes-empty-btn" type="button" style="margin-top:10px;">🧑‍🍳 Créer ma première recette</button>
+        <button class="btn btn-secondary" id="recipes-empty-btn" type="button" style="margin-top:10px;"> Créer ma première recette</button>
       </div>
     </div>
 
     <div class="card">
-      <h2>⭐ Recettes populaires</h2>
+      <h2> Recettes populaires</h2>
       <p class="hint" style="margin:0 0 12px;">Plats courants avec valeurs moyennes par 100 g (USDA / FCÉN, recettes types). Ta version maison peut différer — pour un calcul exact, utilise « Calculer à partir des ingrédients ».</p>
       <div class="recipe-grid" id="builtin-grid"></div>
     </div>
@@ -2406,25 +2413,25 @@
   <section class="tab-panel" id="panel-journal">
 
     <div class="card">
-      <h2>📅 Repas enregistrés</h2>
+      <h2> Repas enregistrés</h2>
       <p class="hint" style="margin:0 0 8px;">S'enregistre tout seul dès le premier aliment. Touche un repas pour le détail.</p>
-      <div id="journal-list"><p class="empty"><span class="illus" aria-hidden="true">📅</span>Ton journal est vide. Enregistre ton premier repas pour le retrouver ici!</p></div>
+      <div id="journal-list"><p class="empty"><span class="illus" aria-hidden="true"></span>Ton journal est vide. Enregistre ton premier repas pour le retrouver ici!</p></div>
     </div>
 
     <div class="card">
-      <h2>📊 7 derniers jours</h2>
+      <h2> 7 derniers jours</h2>
       <p class="hint" style="margin:0 0 8px;" id="week-summary">Enregistre un premier repas pour voir ta semaine ici.</p>
       <svg class="week-chart" id="week-chart" viewBox="0 0 340 130" role="img"
            aria-label="Glucides nets par jour, 7 derniers jours"></svg>
-      <button class="link-btn" id="report-open" type="button" style="width:100%; text-align:center; margin-top:6px;">🩺 Voir le rapport détaillé</button>
+      <button class="link-btn" id="report-open" type="button" style="width:100%; text-align:center; margin-top:6px;"> Voir le rapport détaillé</button>
     </div>
 
     <div class="card">
-      <h2>💾 Sauvegarde et partage</h2>
+      <h2> Sauvegarde et partage</h2>
       <p class="hint" style="margin:0 0 10px;">Tes données restent sur cet appareil. Exporte un fichier pour les sauvegarder ou les transférer sur un autre appareil.</p>
       <div class="btn-row">
-        <button class="btn btn-secondary" id="export-btn" type="button">⬇️ Exporter</button>
-        <button class="btn btn-secondary" id="import-btn" type="button">⬆️ Importer</button>
+        <button class="btn btn-secondary" id="export-btn" type="button"> Exporter</button>
+        <button class="btn btn-secondary" id="import-btn" type="button"> Importer</button>
       </div>
       <input type="file" id="import-input" accept="application/json,.json" style="display:none;">
       <p class="hint" id="backup-status" role="status" aria-live="polite" style="margin-top:10px;"></p>
@@ -2436,7 +2443,7 @@
   <section class="tab-panel" id="panel-plus">
 
     <div class="card">
-      <h2>👥 Profils</h2>
+      <h2> Profils</h2>
       <p class="hint" style="margin:0 0 10px;">Un profil par personne (ton enfant, toi…). Chaque profil garde ses propres repas, favoris, recettes et journal sur cet appareil.</p>
       <div id="profiles-list"></div>
       <div class="scan-row" style="margin-top:10px;">
@@ -2446,7 +2453,7 @@
     </div>
 
     <div class="card">
-      <h2>☁️ Compte et synchronisation</h2>
+      <h2> Compte et synchronisation</h2>
 
       <!-- Sans compte, rien ne sort de l'appareil : c'est l'état par défaut -->
       <div id="sync-off">
@@ -2492,7 +2499,7 @@
     </div>
 
     <div class="card">
-      <h2>🧠 Ce que l’IA a appris de toi</h2>
+      <h2> Ce que l’IA a appris de toi</h2>
       <p class="hint" style="margin:0 0 10px;">Quand tu corriges une estimation photo avant de l’ajouter au repas — ou que tu la corriges dans la discussion — l’app retient la leçon et la redonne à l’IA à chaque analyse suivante. Retire une leçon si elle est fausse ou ne vaut plus.</p>
       <div id="ai-memory-list"></div>
       <label for="ai-memory-new" style="margin-top:12px;">Lui apprendre quelque chose toi-même</label>
@@ -2502,15 +2509,15 @@
         <button class="btn" id="ai-memory-add" type="button">Retenir</button>
       </div>
       <button class="btn btn-secondary" id="ai-memory-clear" type="button" style="margin-top:10px; display:none;">Tout oublier</button>
-      <button class="link-btn" id="api-key-manage" type="button" style="width:100%; text-align:center; margin-top:8px;">✨ Améliorer la lecture des photos</button>
+      <button class="link-btn" id="api-key-manage" type="button" style="width:100%; text-align:center; margin-top:8px;"> Améliorer la lecture des photos</button>
     </div>
 
     <details class="help">
-      <summary>📈 Outil interactif : glucides ↔ grammes</summary>
+      <summary> Outil interactif : glucides  grammes</summary>
       <div>
 
     <div class="card">
-      <h2>📈 Relation glucides ↔ grammes</h2>
+      <h2> Relation glucides  grammes</h2>
       <p class="hint" style="margin:0 0 12px;">Choisis un aliment, puis glisse le curseur (ou touche le graphique) pour voir les glucides nets selon le poids.</p>
 
       <label for="tool-select">Aliment ou recette</label>
@@ -2545,7 +2552,7 @@
 
       <div class="inverse-box">
         <div style="flex:1;">
-          <label for="inverse-target">🎯 Cible (glucides)</label>
+          <label for="inverse-target"> Cible (glucides)</label>
           <input type="number" id="inverse-target" inputmode="decimal" min="0" step="1" placeholder="ex. : 30">
         </div>
         <div class="result" id="inverse-result" role="status" aria-live="polite">Entre une cible pour connaître le poids à servir.</div>
@@ -2557,13 +2564,13 @@
     </details>
 
     <div class="card">
-      <h2>❓ Aide</h2>
+      <h2> Aide</h2>
       <p class="hint" style="margin:0 0 10px;">Le tour de bienvenue et les réponses aux questions courantes.</p>
       <button class="btn btn-secondary" id="help-open-plus" type="button">Ouvrir l'aide et la FAQ</button>
     </div>
 
     <div class="card">
-      <h2>ℹ️ À propos</h2>
+      <h2> À propos</h2>
       <p class="hint">GlucideNet est une <strong>aide au calcul des glucides seulement</strong>. Elle ne recommande jamais de dose d'insuline, ne calcule pas de bolus et ne remplace pas ton équipe de soins en diabète. Toutes tes données restent sur cet appareil — sauvegarde et transfert dans l'onglet Journal.</p>
     </div>
 
@@ -2575,14 +2582,14 @@
 <!-- Version longue de l'avertissement : onboarding (consentement) et
      Plus → À propos. Ici, une ligne suffit — relue à chaque écran. -->
 <p class="disclaimer">
-  ⚠️ Aide au calcul seulement — vérifie toujours la valeur entrée dans la pompe.
-  <br><span id="app-version">GlucideNet v2.52.1</span>
+  Attention — Aide au calcul seulement — vérifie toujours la valeur entrée dans la pompe.
+  <br><span id="app-version">GlucideNet v2.54.1</span>
 </p>
 
 <!-- Modal : instructions d'installation -->
 <div class="modal-overlay" id="install-modal" role="dialog" aria-modal="true" aria-labelledby="install-title">
   <div class="modal">
-    <h3 id="install-title">📲 Installer GlucideNet</h3>
+    <h3 id="install-title"> Installer GlucideNet</h3>
     <p class="stats-line">L'app s'installe directement depuis le navigateur — rien à télécharger sur un magasin d'applications.</p>
     <ul class="install-steps" id="install-steps-ios" style="display:none;">
       <li><span class="num">1</span><span>Touche le bouton <strong>Partager</strong> <span aria-hidden="true">(carré avec flèche ↑)</span> dans la barre de Safari.</span></li>
@@ -2602,18 +2609,18 @@
 <!-- Modal : scanner de code-barres -->
 <div class="modal-overlay" id="scan-modal" role="dialog" aria-modal="true" aria-labelledby="scan-title">
   <div class="modal">
-    <h3 id="scan-title">📷 Scanner ou photographier</h3>
+    <h3 id="scan-title"> Scanner ou photographier</h3>
     <!-- Amorce : on explique le bénéfice AVANT la demande système de caméra -->
     <div class="cam-primer" id="cam-primer" style="display:none;">
-      <div class="ico" aria-hidden="true">📷</div>
+      <div class="ico" aria-hidden="true"></div>
       <p>Les valeurs se remplissent toutes seules — l'app te demandera l'accès à la caméra.</p>
-      <button class="btn" id="cam-allow" type="button">📷 Scanner ou prendre une photo</button>
+      <button class="btn" id="cam-allow" type="button"> Scanner ou prendre une photo</button>
     </div>
     <p class="stats-line" id="scan-status" role="status" aria-live="polite"></p>
     <video id="scan-video" autoplay playsinline muted></video>
     <div class="scan-actions">
-      <button class="btn" id="capture-btn" type="button" style="display:none;">📸 Prendre la photo</button>
-      <button class="btn btn-secondary" id="scan-photo-btn" type="button">🖼️ Choisir une photo</button>
+      <button class="btn" id="capture-btn" type="button" style="display:none;"> Prendre la photo</button>
+      <button class="btn btn-secondary" id="scan-photo-btn" type="button"> Choisir une photo</button>
     </div>
     <label for="barcode-manual">Ou entre le code-barres toi-même</label>
     <div class="scan-row">
@@ -2633,14 +2640,14 @@
   <div class="modal modal--full">
     <div class="fiche-topbar">
       <button class="circle-btn" id="help-back" type="button" aria-label="Fermer l'aide">‹</button>
-      <h3 id="help-title" style="margin:0;">❓ Aide</h3>
+      <h3 id="help-title" style="margin:0;"> Aide</h3>
       <span style="width:48px;" aria-hidden="true"></span>
     </div>
 
-    <button class="btn btn-secondary" id="help-tour" type="button" style="margin-bottom:14px;">🔁 Revoir le tour de bienvenue</button>
+    <button class="btn btn-secondary" id="help-tour" type="button" style="margin-bottom:14px;"> Revoir le tour de bienvenue</button>
 
     <details class="help">
-      <summary>🧮 Comment sont calculés les glucides nets?</summary>
+      <summary> Comment sont calculés les glucides nets?</summary>
       <div class="card">
         <p><strong>Glucides nets = Glucides totaux − Fibres − (Polyols ÷ 2)</strong></p>
         <p>Au Canada et aux États-Unis, les fibres sont incluses dans les glucides totaux sur l'étiquette nutritionnelle. Comme les fibres ne font pas monter la glycémie, on les soustrait.</p>
@@ -2651,17 +2658,17 @@
     </details>
 
     <details class="help">
-      <summary>📸 Comment marche l'évaluation par photo?</summary>
+      <summary> Comment marche l'évaluation par photo?</summary>
       <div class="card">
         <p>Un seul bouton, trois cas : un <strong>code-barres</strong> est cherché sur Open Food Facts; une <strong>étiquette nutritionnelle</strong> est lue directement sur ton appareil (rien n'est envoyé); une <strong>assiette</strong> est estimée par l'IA — chaque aliment reçoit son contour, son poids et ses glucides, à vérifier avant d'ajouter.</p>
         <p>L'estimation visuelle reste approximative : en cas de doute, pèse. Le poids est la valeur à vérifier en premier.</p>
-        <p>Chaque aliment est <strong>encadré selon la confiance</strong> : 🟢 vert fiable, 🟡 jaune à vérifier, 🔴 rouge incertain (pèse-le). Touche la <strong>pastille numérotée</strong> d'un encadré : une info-bulle montre l'aliment, ses glucides estimés et la confiance, avec un bouton pour l'ajuster.</p>
-        <p>La lecture IA demande soit une clé API personnelle (bouton ✨), soit un accès partagé si le propriétaire de l'app t'a invité.</p>
+        <p>Chaque aliment est <strong>encadré selon la confiance</strong> :  vert fiable,  jaune à vérifier,  rouge incertain (pèse-le). Touche la <strong>pastille numérotée</strong> d'un encadré : une info-bulle montre l'aliment, ses glucides estimés et la confiance, avec un bouton pour l'ajuster.</p>
+        <p>La lecture IA demande soit une clé API personnelle (bouton ), soit un accès partagé si le propriétaire de l'app t'a invité.</p>
       </div>
     </details>
 
     <details class="help">
-      <summary>🔍 D'où viennent les valeurs des aliments?</summary>
+      <summary> D'où viennent les valeurs des aliments?</summary>
       <div class="card">
         <p>La recherche puise dans une base de plus de 250 aliments courants, valeurs par 100 g de type USDA / Fichier canadien sur les éléments nutritifs.</p>
         <p>Pour un produit emballé, <strong>l'étiquette du produit réel a toujours priorité</strong> — les bases donnent des moyennes.</p>
@@ -2669,24 +2676,24 @@
     </details>
 
     <details class="help">
-      <summary>📅 Le repas et le journal</summary>
+      <summary> Le repas et le journal</summary>
       <div class="card">
         <p>Chaque repas entre au journal <strong>dès son premier aliment</strong> et se met à jour tout seul — rien à confirmer.</p>
-        <p>« ✅ Terminer le repas » ferme le repas pour que le prochain reparte à zéro. « Vider » jette le repas, journal compris (annulable). Un repas laissé plus de 3 h se termine tout seul — il reste au journal.</p>
+        <p>«  Terminer le repas » ferme le repas pour que le prochain reparte à zéro. « Vider » jette le repas, journal compris (annulable). Un repas laissé plus de 3 h se termine tout seul — il reste au journal.</p>
         <p>Touche un repas du journal pour sa fiche complète, ou ↻ pour le recharger.</p>
       </div>
     </details>
 
     <details class="help">
-      <summary>💬 Discuter d'un résultat et leçons de l'IA</summary>
+      <summary> Discuter d'un résultat et leçons de l'IA</summary>
       <div class="card">
-        <p>Sous chaque analyse photo, « 💬 Discuter du résultat » permet de <strong>préciser</strong> (« c'est du couscous, pas du riz ») — l'estimation se corrige aussitôt — ou de <strong>comprendre</strong> (« pourquoi ce total? »).</p>
+        <p>Sous chaque analyse photo, «  Discuter du résultat » permet de <strong>préciser</strong> (« c'est du couscous, pas du riz ») — l'estimation se corrige aussitôt — ou de <strong>comprendre</strong> (« pourquoi ce total? »).</p>
         <p>Chaque correction faite avant d'ajouter le repas devient une <strong>leçon</strong> que l'IA relit à toutes les analyses suivantes. Les leçons se consultent, s'ajoutent et s'oublient dans l'onglet Plus.</p>
       </div>
     </details>
 
     <details class="help">
-      <summary>☁️ Mes données et la synchronisation</summary>
+      <summary> Mes données et la synchronisation</summary>
       <div class="card">
         <p>Par défaut, <strong>tout reste sur cet appareil</strong> — rien n'est envoyé nulle part. L'export (onglet Plus) crée un fichier de sauvegarde complet.</p>
         <p>En option, un compte (connexion par lien courriel, sans mot de passe) synchronise journal, recettes, favoris, leçons et photos entre tes appareils, via ton propre projet Supabase. Un bouton supprime définitivement le compte et tout son contenu.</p>
@@ -2694,7 +2701,7 @@
     </details>
 
     <details class="help">
-      <summary>⚠️ Ce que l'app ne fait pas</summary>
+      <summary>Attention — Ce que l'app ne fait pas</summary>
       <div class="card">
         <p>Elle ne recommande <strong>jamais de dose d'insuline</strong> et ne calcule pas de bolus. C'est une aide au calcul des glucides seulement — vérifie les valeurs entrées dans ta pompe et suis les recommandations de ton équipe de soins en diabète.</p>
       </div>
@@ -2720,7 +2727,7 @@
       <div class="hero-label">Glucides calculés</div>
       <div class="live-net" id="qty-net" role="status" aria-live="polite">0 <small>g</small></div>
       <div class="hero-sub" id="qty-net-sub">pour 0 gramme consommé</div>
-      <div class="hero-badge">✓ Valeur calculée — vérifie l'étiquette</div>
+      <div class="hero-badge" id="qty-source">Valeurs de référence · à vérifier</div>
     </div>
     <label for="qty-grams">Quantité consommée (grammes)</label>
     <!-- Gros boutons − / + espacés : utilisables avec des gants -->
@@ -2734,7 +2741,7 @@
     <!-- Mesures maison : estimer la quantité sans balance (assiette,
          garderie). L'équivalent en grammes dépend du type d'aliment. -->
     <details class="acc" id="measure-acc">
-      <summary><span class="acc-ico" aria-hidden="true">🥄</span>Mesures maison (tasse, cuillère…)</summary>
+      <summary><span class="acc-ico" aria-hidden="true"></span>Mesures maison (tasse, cuillère…)</summary>
       <div class="measure-body">
         <label for="measure-texture">Type d'aliment</label>
         <select id="measure-texture"></select>
@@ -2745,7 +2752,7 @@
     <!-- Référence compacte; « Voir les détails » déplie le calcul complet -->
     <div class="ref-card">
       <div class="ref-head">
-        <span class="ref-head-title"><span class="acc-ico" aria-hidden="true">📊</span> Référence nutritionnelle</span>
+        <span class="ref-head-title"><span class="acc-ico" aria-hidden="true"></span> Référence nutritionnelle</span>
         <button class="link-btn ref-toggle" id="ref-toggle" type="button" aria-expanded="false">Voir les détails ›</button>
       </div>
       <div class="ref-cols" id="qty-stats"></div>
@@ -2754,7 +2761,7 @@
     <div class="actions">
       <button class="btn btn--action" id="qty-add" type="button">Ajouter au repas</button>
     </div>
-    <button class="link-btn" id="qty-edit" type="button" style="display:none; width:100%; text-align:center;">✏️ Corriger les valeurs à la main</button>
+    <button class="link-btn" id="qty-edit" type="button" style="display:none; width:100%; text-align:center;"> Corriger les valeurs à la main</button>
   </div>
 </div>
 
@@ -2763,7 +2770,7 @@
   <div class="modal modal--full">
     <div class="fiche-topbar">
       <button class="circle-btn" id="mp-back" type="button" aria-label="Fermer l'analyse du repas">‹</button>
-      <h3 id="mp-title" style="margin:0;">🍽️ Repas analysé</h3>
+      <h3 id="mp-title" style="margin:0;"> Repas analysé</h3>
       <span style="width:48px;" aria-hidden="true"></span>
     </div>
     <div class="mp-photos" id="mp-photos" style="display:none;"></div>
@@ -2779,7 +2786,7 @@
          était plus grosse ») ou comprendre (« pourquoi ce total ? »). La
          question de clarification de l'IA ouvre le fil automatiquement. -->
     <details class="mp-chat" id="mp-chat">
-      <summary id="mp-chat-summary">💬 Discuter du résultat</summary>
+      <summary id="mp-chat-summary"> Discuter du résultat</summary>
       <p class="mp-chat-hint">Précise ce que l’IA n’a pas pu voir, ou demande d’où vient le chiffre. Les corrections mettent l’estimation à jour au-dessus.</p>
       <div class="mp-chat-thread" id="mp-chat-thread" role="log" aria-live="polite"></div>
       <div class="mp-chat-chips" id="mp-chat-chips"></div>
@@ -2803,8 +2810,8 @@
     <div class="actions">
       <button class="btn btn--action" id="mp-add" type="button">Ajouter au repas</button>
     </div>
-    <button class="link-btn" id="mp-angle" type="button" style="width:100%; text-align:center;">📐 Ajouter une photo sous un autre angle (précise l'estimation)</button>
-    <button class="link-btn" id="mp-leftover" type="button" style="width:100%; text-align:center;">🍽️ Repas terminé ? Photographie les restes pour les soustraire</button>
+    <button class="link-btn" id="mp-angle" type="button" style="width:100%; text-align:center;"> Ajouter une photo sous un autre angle (précise l'estimation)</button>
+    <button class="link-btn" id="mp-leftover" type="button" style="width:100%; text-align:center;"> Repas terminé ? Photographie les restes pour les soustraire</button>
     <input type="file" id="mp-file" accept="image/*" hidden>
   </div>
 </div>
@@ -2818,7 +2825,7 @@
     <div class="fiche-topbar">
       <button class="circle-btn" id="report-back" type="button" aria-label="Fermer le rapport">‹</button>
     </div>
-    <h3 id="report-title">🩺 Rapport pour la clinique</h3>
+    <h3 id="report-title"> Rapport pour la clinique</h3>
     <div class="qty-portions" id="report-periods" role="group" aria-label="Période du rapport"></div>
     <p class="hint" id="report-coverage" style="margin:8px 0 0;"></p>
     <div class="hero-card">
@@ -2832,32 +2839,32 @@
     <p class="hint" id="report-chart-note"></p>
     <div class="ref-card" style="margin-top:12px;">
       <div class="ref-head">
-        <span class="ref-head-title"><span class="acc-ico" aria-hidden="true">📌</span> Chiffres clés</span>
+        <span class="ref-head-title"><span class="acc-ico" aria-hidden="true"></span> Chiffres clés</span>
       </div>
       <div class="ref-cols" id="report-keys"></div>
       <div class="ref-cols" id="report-keys2" style="border-top:1px solid var(--border);"></div>
     </div>
     <div class="ref-card" style="margin-top:12px;">
       <div class="ref-head">
-        <span class="ref-head-title"><span class="acc-ico" aria-hidden="true">🕐</span> Par moment de la journée</span>
+        <span class="ref-head-title"><span class="acc-ico" aria-hidden="true"></span> Par moment de la journée</span>
       </div>
       <div class="ref-rows" id="report-moments"></div>
     </div>
     <div class="ref-card" style="margin-top:12px;">
       <div class="ref-head">
-        <span class="ref-head-title"><span class="acc-ico" aria-hidden="true">📊</span> Détail du calcul — moyennes par jour consigné</span>
+        <span class="ref-head-title"><span class="acc-ico" aria-hidden="true"></span> Détail du calcul — moyennes par jour consigné</span>
       </div>
       <div class="ref-rows" id="report-calc"></div>
     </div>
     <div class="sec-label" style="margin-top:14px;">Repas les plus élevés de la période</div>
     <div id="report-top"></div>
     <details class="acc" style="margin-top:10px;">
-      <summary><span class="acc-ico" aria-hidden="true">📅</span>Détail jour par jour</summary>
+      <summary><span class="acc-ico" aria-hidden="true"></span>Détail jour par jour</summary>
       <div id="report-days" style="padding:0 16px 12px;"></div>
     </details>
     <div class="actions">
-      <button class="btn btn-secondary" id="report-pdf" type="button">🖨️ Créer un PDF</button>
-      <button class="btn btn--action" id="report-share" type="button">📤 Partager</button>
+      <button class="btn btn-secondary" id="report-pdf" type="button"> Créer un PDF</button>
+      <button class="btn btn--action" id="report-share" type="button"> Partager</button>
     </div>
     <p class="hint" id="report-foot" style="text-align:center; margin-top:8px;"></p>
   </div>
@@ -2882,21 +2889,21 @@
     </div>
     <!-- Photos d'avant les annotations : l'IA resitue les aliments CONNUS
          du repas sur la photo, et la fiche devient annotée pour de bon -->
-    <button class="link-btn" id="entry-annotate" type="button" style="display:none; width:100%; text-align:center; margin:-4px 0 8px;">✨ Annoter la photo (contours et pastilles)</button>
+    <button class="link-btn" id="entry-annotate" type="button" style="display:none; width:100%; text-align:center; margin:-4px 0 8px;"> Annoter la photo (contours et pastilles)</button>
     <!-- Restes : soustraire le non-mangé d'un repas récent, même une fois
          le repas terminé — la photo enregistrée sert de « servi » -->
-    <button class="link-btn" id="entry-leftover" type="button" style="display:none; width:100%; text-align:center; margin:-4px 0 8px;">🍽️ Photographier les restes (soustraire le non-mangé)</button>
+    <button class="link-btn" id="entry-leftover" type="button" style="display:none; width:100%; text-align:center; margin:-4px 0 8px;"> Photographier les restes (soustraire le non-mangé)</button>
     <input type="file" id="entry-leftover-input" accept="image/*" capture="environment" hidden>
     <div class="sec-label">Aliments du repas</div>
     <div id="entry-items"></div>
     <div class="ref-card">
       <div class="ref-head">
-        <span class="ref-head-title"><span class="acc-ico" aria-hidden="true">📊</span> Détail du calcul</span>
+        <span class="ref-head-title"><span class="acc-ico" aria-hidden="true"></span> Détail du calcul</span>
       </div>
       <div class="ref-rows" id="entry-totals"></div>
     </div>
     <div class="actions">
-      <button class="btn btn-secondary" id="entry-delete" type="button">🗑️ Supprimer</button>
+      <button class="btn btn-secondary" id="entry-delete" type="button"> Supprimer</button>
       <button class="btn btn--action" id="entry-reload" type="button">↻ Refaire ce repas</button>
     </div>
   </div>
@@ -2908,7 +2915,7 @@
      document, Échap compris). -->
 <div class="modal-overlay" id="consumed-modal" role="dialog" aria-modal="true" aria-labelledby="cons-title">
   <div class="modal">
-    <h3 id="cons-title">🍽️ Ce qui a été consommé</h3>
+    <h3 id="cons-title"> Ce qui a été consommé</h3>
     <p class="stats-line">Comparaison des deux photos du même repas — vérifie et ajuste au besoin après la mise à jour.</p>
     <div class="mp-photos cons-photos">
       <div class="mp-photo-wrap"><img id="cons-img-before" alt="Photo du repas servi"><span class="cons-lbl">Servi</span></div>
@@ -2929,7 +2936,7 @@
      (recette, favori, aliment du repas) — une seule fiche pour tous. -->
 <div class="modal-overlay" id="editval-modal" role="dialog" aria-modal="true" aria-labelledby="editval-title">
   <div class="modal">
-    <h3 id="editval-title">✏️ Corriger les valeurs</h3>
+    <h3 id="editval-title"> Corriger les valeurs</h3>
     <p class="hint" id="editval-hint" style="margin:0 0 10px;"></p>
     <label for="editval-name">Nom</label>
     <input type="text" id="editval-name" maxlength="80" autocomplete="off">
@@ -2991,19 +2998,19 @@
       <button class="step-btn" id="mealedit-plus" type="button" aria-label="Augmenter la portion">+</button>
     </div>
     <div class="actions">
-      <button class="btn btn-secondary" id="mealedit-remove" type="button">🗑️ Retirer</button>
+      <button class="btn btn-secondary" id="mealedit-remove" type="button"> Retirer</button>
       <button class="btn btn--action" id="mealedit-save" type="button">Valider</button>
     </div>
-    <button class="link-btn" id="mealedit-fix" type="button" style="width:100%; text-align:center;">✏️ Corriger les valeurs (glucides, fibres…)</button>
+    <button class="link-btn" id="mealedit-fix" type="button" style="width:100%; text-align:center;"> Corriger les valeurs (glucides, fibres…)</button>
   </div>
 </div>
 
 <!-- Modal : clé API pour l'analyse photo -->
 <div class="modal-overlay" id="key-modal" role="dialog" aria-modal="true" aria-labelledby="key-title">
   <div class="modal">
-    <h3 id="key-title">✨ Lecture améliorée des photos</h3>
+    <h3 id="key-title"> Lecture améliorée des photos</h3>
     <p class="stats-line" id="key-invited" style="display:none;">
-      ✅ <strong>Tu es invité·e</strong> : la lecture IA fonctionne déjà sans clé, sur le compte
+       <strong>Tu es invité·e</strong> : la lecture IA fonctionne déjà sans clé, sur le compte
       du propriétaire de l’app. Tu peux quand même ajouter la tienne — elle prendra le relais
       si l’accès partagé s’arrête ou si son plafond mensuel est atteint.
     </p>
@@ -3035,17 +3042,6 @@
   <button class="tab-btn" data-tab="journal"><span class="tb-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg></span><span>Journal</span></button>
   <button class="tab-btn" data-tab="plus"><span class="tb-ico" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span><span>Plus</span></button>
 </nav>
-
-<div class="total-bar" role="status" aria-live="polite">
-  <div class="inner">
-    <div class="label">TOTAL À ENTRER DANS LA POMPE</div>
-    <div class="tb-row">
-      <div class="tb-mini"><span>Glucides totaux</span><b class="tb-carb" id="total-carbs">0<small> g</small></b></div>
-      <div class="tb-mini"><span>Fibres</span><b id="total-fiber">0<small> g</small></b></div>
-      <div class="value"><span class="big" id="total-net">0</span><small>g nets</small></div>
-    </div>
-  </div>
-</div>
 
 <div class="toast-zone" id="toast-zone" role="status" aria-live="polite"></div>
 
@@ -3372,6 +3368,16 @@
   }
 
   var $ = function (id) { return document.getElementById(id); };
+  function uiIcon(name) {
+    var paths = {
+      edit: '<path d="m16 3 5 5-12 12-6 1 1-6zM14 5l5 5"/>',
+      share: '<path d="M12 16V3m-4 4 4-4 4 4M5 13v7h14v-7"/>',
+      recipe: '<rect x="5" y="3" width="14" height="18" rx="2"/><path d="M9 8h6M9 12h6M9 16h4"/>',
+      camera: '<path d="M8 6l2-3h4l2 3h4v15H4V6z"/><circle cx="12" cy="13" r="4"/>'
+    };
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + (paths[name] || paths.recipe) + '</svg>';
+  }
+  $('photo-preview').innerHTML = uiIcon('camera');
 
   /* ── Toasts de confirmation ──
      Ton neutre et court, 5 s pour laisser le temps de lire, max 3 à
@@ -3532,15 +3538,6 @@
   });
 
   /* ── Onglets ── */
-  // Le « + » central est un vrai bouton d'action : déjà sur Calculer, il
-  // lance le calcul d'un repas (photo / scan) au lieu de ne rien faire.
-  // Enregistré AVANT le basculement d'onglet pour lire l'état d'avant :
-  // depuis un autre onglet, un premier tap amène simplement sur Calculer.
-  // isTrusted : seul un geste réel ouvre la feuille — switchTab('meal')
-  // programmatique (retour après un ajout) ne doit jamais la déclencher.
-  document.querySelector('.tab-btn--cta').addEventListener('click', function (e) {
-    if (e.isTrusted && $('panel-meal').classList.contains('active')) $('scan-open-btn').click();
-  });
   document.querySelectorAll('.tab-btn').forEach(function (btn) {
     btn.addEventListener('click', function () {
       document.querySelectorAll('.tab-btn').forEach(function (b) {
@@ -3553,22 +3550,10 @@
       $('panel-' + btn.dataset.tab).classList.add('active');
       // L'onglet actif pilote l'affichage global (barre totale, espace bas)
       document.body.dataset.tab = btn.dataset.tab;
-      // Sur Calculer, le « + » central devient l'appareil photo : il
-      // annonce son second rôle (re-taper ouvre le scanner) au lieu de
-      // surprendre.
-      var cta = document.querySelector('.tab-btn--cta');
-      if (btn.dataset.tab === 'meal') {
-        cta.querySelector('.tb-plus').textContent = '📷';
-        cta.setAttribute('aria-label', 'Scanner le repas');
-      } else {
-        cta.querySelector('.tb-plus').textContent = '+';
-        cta.removeAttribute('aria-label');
-      }
+      renderHome();
+      window.scrollTo({ top: 0, behavior: 'auto' });
     });
   });
-  // État initial : l'onglet Calculer est actif au chargement
-  document.querySelector('.tab-btn--cta .tb-plus').textContent = '📷';
-  document.querySelector('.tab-btn--cta').setAttribute('aria-label', 'Scanner le repas');
   function switchTab(name) {
     document.querySelector('.tab-btn[data-tab="' + name + '"]').click();
   }
@@ -3674,42 +3659,19 @@
     if (d && !d.open) d.open = true;
   }
 
-  bindDbSearch('db-search', 'db-results', function (f) {
-    openManualCard();
-    $('food-name').value = f.n;
-    $('carbs').value = f.c;
-    $('fiber').value = f.f;
-    $('polyols').value = '';
-    $('portion-label').value = 100;
-    $('portion-eaten').value = '';
-    $('portion-eaten').focus();
-    scrollToEl($('food-name'));
-  }, function (query) {
-    openManualCard();
-    $('food-name').value = query;
-    $('carbs').focus();
-    scrollToEl($('food-name'));
-  });
-
-  /* Recherche de l'accueil : même base, on bascule vers Calculer au choix */
-  bindDbSearch('home-db-search', 'home-db-results', function (f) {
-    switchTab('meal');
-    openManualCard();
-    $('food-name').value = f.n;
-    $('carbs').value = f.c;
-    $('fiber').value = f.f;
-    $('polyols').value = '';
-    $('portion-label').value = 100;
-    $('portion-eaten').value = '';
-    $('portion-eaten').focus();
-    scrollToEl($('food-name'));
-  }, function (query) {
+  function openDatabaseFood(f) {
+    openProductModal({ name: f.n, carbs: f.c, fiber: f.f, polyols: 0,
+      polyolType: 'half', sourceLabel: 'Base alimentaire · valeurs pour 100 g' });
+  }
+  function createManualFood(query) {
     switchTab('meal');
     openManualCard();
     $('food-name').value = query;
     $('carbs').focus();
     scrollToEl($('food-name'));
-  });
+  }
+  bindDbSearch('db-search', 'db-results', openDatabaseFood, createManualFood);
+  bindDbSearch('home-db-search', 'home-db-results', openDatabaseFood, createManualFood);
 
   /* ── Formulaire aliment ── */
   function readForm() {
@@ -3770,11 +3732,11 @@
       list.innerHTML = '';
       var emptyMeal = document.createElement('div');
       emptyMeal.className = 'empty';
-      emptyMeal.innerHTML = '<span class="illus" aria-hidden="true">🍽️</span><p>Ton repas est vide. Ajoute ton premier aliment!</p>';
+      emptyMeal.innerHTML = '<span class="illus" aria-hidden="true">🍽️</span><p>Aucun aliment ajouté.</p>';
       var goSearch = document.createElement('button');
       goSearch.className = 'btn btn-secondary';
       goSearch.type = 'button';
-      goSearch.textContent = '🔍 Chercher un aliment';
+      goSearch.textContent = 'Rechercher';
       goSearch.style.marginTop = '10px';
       goSearch.addEventListener('click', function () {
         scrollToEl($('db-search'));
@@ -3865,9 +3827,8 @@
       });
       actions.style.display = 'flex';
     }
-    // Étiquette de section et partage : visibles seulement avec un repas
+    // Le partage est disponible seulement avec un repas.
     var has = meal.length > 0;
-    $('meal-sec-label').style.display = has ? 'block' : 'none';
     $('home-share').style.display = has ? '' : 'none';
     renderTotal();
     renderHome();
@@ -3875,11 +3836,69 @@
 
   /* ── Accueil (maquette) : scanner, base d'aliments et total —
      les profils se gèrent dans l'onglet Plus, le repas dans Calculer ── */
-  function renderHome() {}
+  function renderHome() {
+    var profile = activeProfile();
+    var select = $('active-profile-select');
+    var profileOptions = JSON.stringify(PROFILES.map(function (p) { return [p.id, p.name]; }));
+    if (select.dataset.options !== profileOptions) {
+      select.innerHTML = '';
+      PROFILES.forEach(function (p) {
+        var option = document.createElement('option');
+        option.value = p.id; option.textContent = p.name;
+        select.appendChild(option);
+      });
+      select.dataset.options = profileOptions;
+    }
+    select.value = activeProfileId;
+    var allergies = $('active-profile-allergies');
+    allergies.textContent = profile.allergies ? 'Allergies / intolérances : ' + profile.allergies : '';
+    allergies.hidden = !profile.allergies;
+    var hasMeal = meal.length > 0;
+    $('home-meal-status').textContent = hasMeal ? 'Repas en cours' : 'Glucides nets';
+    $('home-meal-title').textContent = hasMeal ? meal.length + (meal.length > 1 ? ' aliments' : ' aliment') : 'Nouveau repas';
+    $('home-meal-amount').hidden = !hasMeal;
+    $('home-meal-net').textContent = round1(mealTotals(meal).net);
+    $('home-meal-description').textContent = hasMeal ? meal.map(function (it) { return it.name; }).join(' · ') : 'Recherche un aliment ou scanne ton repas.';
+    $('home-continue').textContent = hasMeal ? 'Ouvrir le repas' : 'Ajouter des aliments';
+    $('home-favorites-count').textContent = favorites.length + (favorites.length > 1 ? ' aliments' : ' aliment') + ' · ' + recipes.length + (recipes.length > 1 ? ' recettes' : ' recette');
+    var recent = history.filter(function (e) { return e.id !== lsGet(pk('gn_meal_entry')); }).slice().sort(function (a, b) { return b.ts - a.ts; }).slice(0, 3);
+    var box = $('home-recent-meals'); box.innerHTML = '';
+    if (!recent.length) {
+      var empty = document.createElement('p'); empty.className = 'recent-empty';
+      empty.textContent = 'Tes repas terminés apparaîtront ici, prêts à être retrouvés.';
+      box.appendChild(empty);
+    }
+    recent.forEach(function (entry) {
+      var b = document.createElement('button'); b.type = 'button'; b.className = 'recent-meal';
+      var copy = document.createElement('span'); copy.className = 'recent-copy';
+      var title = document.createElement('strong');
+      title.textContent = new Intl.DateTimeFormat('fr-CA', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(new Date(entry.ts));
+      var foods = document.createElement('small'); foods.textContent = entry.items.map(function (it) { return it.name; }).join(', ');
+      copy.appendChild(title); copy.appendChild(foods);
+      var net = document.createElement('span'); net.className = 'recent-net'; net.textContent = round1(entry.net) + ' g nets';
+      b.appendChild(copy); b.appendChild(net);
+      b.addEventListener('click', function () { openEntryModal(entry); });
+      box.appendChild(b);
+    });
+  }
+  $('active-profile-select').addEventListener('change', function () { switchProfile(this.value); });
+  $('home-continue').addEventListener('click', function () { switchTab('meal'); });
+  $('home-favorites').addEventListener('click', function () { switchTab('recipes'); });
+  ['home-journal', 'home-view-journal'].forEach(function (id) {
+    $(id).addEventListener('click', function () { switchTab('journal'); });
+  });
+  $('total-toggle').addEventListener('click', function () {
+    var expanded = this.getAttribute('aria-expanded') !== 'true';
+    this.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    this.textContent = expanded ? 'Masquer le détail ⌃' : 'Voir le détail ⌄';
+    $('total-breakdown').hidden = !expanded;
+    document.body.classList.toggle('total-expanded', expanded);
+  });
 
   function switchProfile(id) {
     if (id === activeProfileId) return;
     if (!lsSet('gn_active_profile', id)) {
+      $('active-profile-select').value = activeProfileId;
       toast('⚠️ Impossible de changer de profil (stockage indisponible)', { type: 'error' });
       return;
     }
@@ -3892,7 +3911,7 @@
     var when = new Intl.DateTimeFormat('fr-CA', {
       weekday: 'long', hour: '2-digit', minute: '2-digit'
     }).format(new Date());
-    var lines = ['🍽️ Repas de ' + p.name + ' — ' + when];
+    var lines = ['Repas de ' + p.name + ' — ' + when];
     var totNet = 0;
     meal.forEach(function (item) {
       var net = netCarbs(item);
@@ -3956,7 +3975,7 @@
       var edit = document.createElement('button');
       edit.type = 'button';
       edit.className = 'fav-del';
-      edit.textContent = '✏️';
+      edit.innerHTML = uiIcon('edit');
       edit.setAttribute('aria-label', 'Modifier le profil ' + prof.name);
       edit.addEventListener('click', function () {
         var name = prompt('Prénom ou surnom :', prof.name);
@@ -4028,6 +4047,7 @@
 
   /* ── Favoris ── */
   function renderFavorites() {
+    renderHome();
     var card = $('favorites-card');
     var list = $('favorites-list');
     if (favorites.length === 0) { card.style.display = 'none'; return; }
@@ -4060,7 +4080,7 @@
       var edit = document.createElement('button');
       edit.type = 'button';
       edit.className = 'fav-edit';
-      edit.textContent = '✏️';
+      edit.innerHTML = uiIcon('edit');
       edit.setAttribute('aria-label', 'Corriger le favori ' + fav.name);
       edit.addEventListener('click', function () {
         openEditVal(fav, 'Valeurs pour 100 g du favori.', function () {
@@ -4199,7 +4219,7 @@
     ['recipe-name', 'recipe-carbs', 'recipe-fiber', 'recipe-polyols'].forEach(function (id) { $(id).value = ''; });
     $('recipe-polyol-type').value = 'half';
     pendingPhoto = null;
-    $('photo-preview').innerHTML = '🍲';
+    $('photo-preview').innerHTML = uiIcon('camera');
     $('photo-btn').textContent = 'Ajouter une photo';
     $('photo-input').value = '';
     renderRecipes();
@@ -4237,7 +4257,8 @@
         img.alt = '';
         photo.appendChild(img);
       } else {
-        photo.textContent = '🍲';
+        photo.classList.add('recipe-placeholder');
+        photo.innerHTML = uiIcon('recipe');
       }
 
       var body = document.createElement('div');
@@ -4265,7 +4286,7 @@
       var editBtn = document.createElement('button');
       editBtn.type = 'button';
       editBtn.className = 'card-share';
-      editBtn.textContent = '✏️';
+      editBtn.innerHTML = uiIcon('edit');
       editBtn.title = 'Corriger';
       editBtn.setAttribute('aria-label', 'Corriger la recette ' + r.name);
       editBtn.addEventListener('click', function () {
@@ -4281,7 +4302,7 @@
       var shareBtn = document.createElement('button');
       shareBtn.type = 'button';
       shareBtn.className = 'card-share';
-      shareBtn.textContent = '📤';
+      shareBtn.innerHTML = uiIcon('share');
       shareBtn.title = 'Partager';
       shareBtn.setAttribute('aria-label', 'Partager la recette ' + r.name);
       shareBtn.addEventListener('click', function () { shareRecipe(r); });
@@ -4328,7 +4349,8 @@
 
       var photo = document.createElement('div');
       photo.className = 'photo';
-      photo.textContent = b.e;
+      photo.classList.add('recipe-placeholder');
+      photo.innerHTML = uiIcon('recipe');
 
       var body = document.createElement('div');
       body.className = 'body';
@@ -4382,7 +4404,8 @@
     if (!ov.classList.contains('open')) return; // déjà fermé : rien à dépiler
     ov.classList.remove('open');
     var back = modalFocusStack.pop();
-    if (back && back.focus) back.focus();
+    if (back && back.isConnected && back.focus) back.focus();
+    else if (document.body.dataset.tab === 'home') $('home-continue').focus();
   }
   function trapModal(id, onClose) {
     var ov = $(id);
@@ -4446,6 +4469,7 @@
     modalRecipe = recipe;
     $('qty-title').textContent = recipe.name;
     // Sous-titre : marque du produit (Open Food Facts), si connue
+    $('qty-source').textContent = recipe.sourceLabel || 'Valeurs de référence · à vérifier';
     var brandEl = $('qty-brand');
     if (recipe.brand) {
       brandEl.textContent = recipe.brand;
@@ -4626,7 +4650,7 @@
     var it = mealEditItem();
     if (!it) { mealEditEntry = null; return; }
     mealEditGramsMode = num(it.grams) > 0;
-    $('mealedit-title').textContent = foodEmoji(it.name) + ' ' + it.name;
+    $('mealedit-title').textContent = it.name;
     var input = $('mealedit-qty');
     if (mealEditGramsMode) {
       $('mealedit-label').textContent = 'Quantité consommée (grammes)';
@@ -4781,8 +4805,7 @@
     $('polyols').value = modalRecipe.polyols ? round1(modalRecipe.polyols) : '';
     $('polyol-type').value = modalRecipe.polyolType === 'full' ? 'full' : 'half';
     $('portion-label').value = 100;
-    $('portion-eaten').value = modalRecipe.serving && num(modalRecipe.serving.grams) > 0
-      ? round1(modalRecipe.serving.grams) : '';
+    $('portion-eaten').value = $('qty-grams').value;
     closeQtyModal();
     switchTab('meal');
     scrollToEl($('food-name'));
@@ -4796,7 +4819,8 @@
     $('qty-net').innerHTML = round1(net) + ' <small>g</small>';
     $('qty-net-sub').textContent = g > 0
       ? 'pour ' + round1(g) + ' grammes consommés'
-      : 'entre la quantité consommée ci-dessus';
+      : 'choisis une quantité pour calculer';
+    $('qty-add').disabled = !(g > 0 && Number.isFinite(g));
     // Le bouton principal annonce ce qu'il ajoute
     $('qty-add').textContent = g > 0
       ? 'Ajouter ' + round1(net) + ' g au repas'
@@ -4969,7 +4993,7 @@
     var sel = $('tool-select');
     sel.innerHTML = '';
     var ogR = document.createElement('optgroup');
-    ogR.label = '📖 Mes recettes';
+    ogR.label = 'Mes recettes';
     recipes.forEach(function (r, i) {
       var o = document.createElement('option');
       o.value = 'r' + i;
@@ -4987,7 +5011,7 @@
     });
     sel.appendChild(ogB);
     var ogF = document.createElement('optgroup');
-    ogF.label = '🔍 Base d’aliments (USDA)';
+    ogF.label = 'Base d’aliments (USDA)';
     FOOD_CORE.forEach(function (f, i) {
       var o = document.createElement('option');
       o.value = 'f' + i;
@@ -5620,7 +5644,7 @@
         var editLesson = document.createElement('button');
         editLesson.type = 'button';
         editLesson.className = 'forget';
-        editLesson.textContent = '✏️';
+        editLesson.innerHTML = uiIcon('edit');
         editLesson.setAttribute('aria-label', 'Corriger cette leçon');
         editLesson.addEventListener('click', function () {
           var i = aiMemory.lessons.indexOf(l);
@@ -5657,7 +5681,7 @@
     if (addLesson({ kind: 'note', text: txt })) {
       input.value = '';
       saveAiMemory();
-      toast('🧠 Retenu — l’IA en tiendra compte à la prochaine photo.');
+      toast('Retenu — l’IA en tiendra compte à la prochaine photo.');
     }
   }
   $('ai-memory-add').addEventListener('click', aiMemoryAdd);
@@ -5670,7 +5694,7 @@
     aiMemory.lessons.forEach(function (l) { forget('lesson', l); });
     aiMemory.lessons = [];
     saveAiMemory();
-    toast('🧠 Mémoire effacée — l’IA repart de zéro.');
+    toast('Mémoire effacée — l’IA repart de zéro.');
   });
   renderAiMemory();
 
@@ -5847,14 +5871,14 @@
       var retry = document.createElement('button');
       retry.className = 'btn btn-secondary';
       retry.type = 'button';
-      retry.textContent = '🔁 Réessayer';
+      retry.textContent = 'Réessayer';
       retry.addEventListener('click', function () { analyzeCapture(lastLabelImage); });
       box.appendChild(retry);
     }
     var manual = document.createElement('button');
     manual.className = 'btn btn-secondary';
     manual.type = 'button';
-    manual.textContent = '✏️ Saisir à la main';
+    manual.textContent = 'Saisir à la main';
     manual.style.marginTop = '8px';
     manual.addEventListener('click', function () {
       labelClear();
@@ -5950,7 +5974,7 @@
      (gratuit, sur l'appareil), lecture IA en secours si une clé est là. */
   function analyzeCapture(b64) {
     lastLabelImage = b64;
-    labelSkeleton('🔍 On lit l’étiquette directement sur ton appareil… (la première fois, un petit téléchargement est nécessaire)');
+    labelSkeleton('On lit l’étiquette directement sur ton appareil… (la première fois, un petit téléchargement est nécessaire)');
     getTessWorker().then(function (worker) {
       return worker.recognize('data:image/jpeg;base64,' + b64).then(function (out) {
         var res = parseNutritionText(out && out.data && out.data.text);
@@ -5973,7 +5997,7 @@
     var ai = document.createElement('button');
     ai.className = 'link-btn';
     ai.type = 'button';
-    ai.textContent = '✨ Activer la lecture IA (photos difficiles et repas en photo)';
+    ai.textContent = 'Activer la lecture IA (photos difficiles et repas en photo)';
     ai.addEventListener('click', function () {
       pendingAfterKey = 'analyze';
       openKeyModal();
@@ -6059,7 +6083,7 @@
   function analyzeLabel(images, extraNote, onError) {
     var list = Array.isArray(images) ? images : [images];
     lastAnalyzedImages = list.slice();
-    if (!onError) labelSkeleton('✨ Lecture IA de ta photo, ça prend quelques secondes…');
+    if (!onError) labelSkeleton('Lecture IA de ta photo, ça prend quelques secondes…');
     var content = list.map(function (b64) {
       return { type: 'image', source: { type: 'base64', media_type: 'image/jpeg', data: b64 } };
     });
@@ -6392,7 +6416,7 @@
     if (opts.applied) {
       var note = document.createElement('span');
       note.className = 'mp-msg-applied';
-      note.textContent = '✏️ Estimation mise à jour ci-dessus — vérifie avant d’ajouter.';
+      note.textContent = 'Estimation mise à jour ci-dessus — vérifie avant d’ajouter.';
       bubble.appendChild(note);
     }
     $('mp-chat-thread').appendChild(bubble);
@@ -6611,7 +6635,7 @@
     if (mpFoods.length === 0) return;
     var scale = $('mp-scale');
     var prev = { text: scale.textContent, cls: scale.className, disp: scale.style.display };
-    mpSetBusy(true, '🍽️ On estime ce qui reste dans l’assiette…');
+    mpSetBusy(true, 'On estime ce qui reste dans l’assiette…');
     var served = mpFoods.map(function (f) {
       return '« ' + f.name + ' » (' + round1(f.grams) + ' g servis)';
     }).join('; ');
@@ -6635,7 +6659,7 @@
           toast('⚠️ Impossible d’associer les restes aux aliments listés — ajuste les poids à la main.', { type: 'error', duration: 6000 });
           return;
         }
-        scale.textContent = '🍽️ Restes soustraits — les poids affichés correspondent à ce qui a été MANGÉ. Vérifie avant d’ajouter.';
+        scale.textContent = 'Restes soustraits — les poids affichés correspondent à ce qui a été MANGÉ. Vérifie avant d’ajouter.';
         scale.className = 'mp-scale';
         scale.style.display = 'block';
         renderMpList();
@@ -6788,7 +6812,7 @@
     var btn = $('leftover-btn');
     var prevTxt = btn.textContent;
     btn.disabled = true;
-    btn.textContent = '🍽️ Comparaison des deux photos…';
+    btn.textContent = 'Comparaison des deux photos…';
     function done() { btn.disabled = false; btn.textContent = prevTxt; }
     var served = photoMeal.foods.map(function (f) {
       return '« ' + f.name + ' » (' + round1(f.grams) + ' g servis)';
@@ -7126,7 +7150,7 @@
     var go = document.createElement('button');
     go.type = 'button';
     go.className = 'go';
-    go.textContent = '✏️ Vérifier / ajuster cet aliment';
+    go.textContent = 'Vérifier / ajuster cet aliment';
     go.addEventListener('click', function () {
       mpCloseInfo();
       mpRevealFood(fi);
@@ -7671,7 +7695,7 @@
     toast('✓ ' + count + ' aliment' + (count > 1 ? 's' : '') + ' ajouté' + (count > 1 ? 's' : '') +
       ' au repas — estimations à vérifier. Reprends une photo des restes à la fin pour voir ce qui a été consommé.', { duration: 7000 });
     if (learned > 0) {
-      toast('🧠 Tes corrections sont retenues — l’IA en tiendra compte à la prochaine photo. ' +
+      toast('Tes corrections sont retenues — l’IA en tiendra compte à la prochaine photo. ' +
         'Onglet Plus pour les revoir.', { duration: 7000 });
     }
     markEngagement();
@@ -7851,6 +7875,7 @@
   var fmtTime = new Intl.DateTimeFormat('fr-CA', { hour: '2-digit', minute: '2-digit' });
 
   function renderJournal() {
+    renderHome();
     var list = $('journal-list');
     list.innerHTML = '';
     if (history.length === 0) {
@@ -7860,7 +7885,7 @@
       var goMeal = document.createElement('button');
       goMeal.className = 'btn btn-secondary';
       goMeal.type = 'button';
-      goMeal.textContent = '🍽️ Composer un repas';
+      goMeal.textContent = 'Composer un repas';
       goMeal.style.marginTop = '10px';
       goMeal.addEventListener('click', function () { switchTab('meal'); });
       emptyJournal.appendChild(goMeal);
@@ -8342,7 +8367,7 @@
     var btn = $('entry-annotate');
     var prev = btn.textContent;
     btn.disabled = true;
-    btn.textContent = '✨ L’IA situe les aliments sur la photo…';
+    btn.textContent = 'L’IA situe les aliments sur la photo…';
     function fail() {
       btn.disabled = false;
       btn.textContent = prev;
@@ -8441,7 +8466,7 @@
     var btn = $('entry-leftover');
     var prevTxt = btn.textContent;
     btn.disabled = true;
-    btn.textContent = '🍽️ Comparaison des deux photos…';
+    btn.textContent = 'Comparaison des deux photos…';
     function done() { btn.disabled = false; btn.textContent = prevTxt; }
     // Les aliments pesés du repas, noms sans le suffixe « (photo) »
     var servedFoods = entry.items
@@ -8943,7 +8968,7 @@
     var p = activeProfile();
     var R = computeReport();
     var ja = R.joursActifs;
-    var lines = ['🩺 Rapport glucides de ' + p.name + ' — du ' + fmtRange.format(R.start) +
+    var lines = ['Rapport glucides de ' + p.name + ' — du ' + fmtRange.format(R.start) +
       ' au ' + fmtRange.format(R.now)];
     lines.push('Journal : ' + R.nbRepas + ' repas · ' + ja + (ja > 1 ? ' jours consignés' : ' jour consigné') +
       ' sur ' + reportDays);
@@ -9336,7 +9361,7 @@
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(a.href);
-    backupStatus('✅ Sauvegarde exportée (' + recipes.length + ' recettes, ' +
+    backupStatus('Sauvegarde exportée (' + recipes.length + ' recettes, ' +
       favorites.length + ' favoris, ' + history.length + ' repas, ' +
       aiMemory.lessons.length + ' leçons apprises).');
   });
@@ -9382,7 +9407,7 @@
       renderJournal();
       buildToolOptions();
       drawToolChart();
-      backupStatus('✅ Importé : ' + recipes.length + ' recettes, ' + favorites.length +
+      backupStatus('Importé : ' + recipes.length + ' recettes, ' + favorites.length +
         ' favoris, ' + history.length + ' repas, ' + aiMemory.lessons.length + ' leçons.');
     };
     reader.readAsText(file);
@@ -10108,7 +10133,7 @@
       btn.classList.add('gn-pulse');
       setTimeout(function () { btn.classList.remove('gn-pulse'); }, 4000);
       btn.scrollIntoView({ block: 'center' });
-      toast('📷 Touche « Scanner le repas » pour photographier ton assiette');
+      toast('Touche « Scanner le repas » pour photographier ton assiette');
       return;
     }
     if (action === 'discuss') {
